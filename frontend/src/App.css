@@ -1,0 +1,12 @@
+.App {
+    text-align: center;
+}
+
+#root > .container {
+    height: calc(100vh - 56px);
+}
+
+form.form {
+    width: calc(300px / 0.618) ;
+    height: 300px;
+}
