@@ -1,41 +1,44 @@
-package main
+package routine
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"time"
 
-	"github.com/caster8013/logv2rayfullstack/types"
+	"github.com/caster8013/logv2rayfullstack/database"
+	"github.com/caster8013/logv2rayfullstack/model"
+	"github.com/caster8013/logv2rayfullstack/v2ray"
+	"github.com/robfig/cron"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
 	"google.golang.org/grpc"
 )
 
+type Traffic = model.Traffic
+type User = model.User
+
 func Cron_loggingV2TrafficByUser(traffic Traffic) {
+	var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
+	defer cancel()
 
 	// write traffic record to DB
-	clientOptions := options.Client().ApplyURI(mongoURI)
-	client, err := mongo.Connect(ctx, clientOptions)
-	if err != nil {
-		log.Panic(err)
-	}
-	col := client.Database("logV2rayTrafficDB").Collection(traffic.Name)
-	userCollection := client.Database("logV2rayTrafficDB").Collection("USERS")
+
+	col := database.OpenCollection(database.Client, traffic.Name)
+	userCollection := database.OpenCollection(database.Client, "USERS")
 
 	filter := bson.D{primitive.E{Key: "email", Value: traffic.Name}}
 	user := &User{}
 	userCollection.FindOne(ctx, filter).Decode(user)
 
-	cmdConn, err := grpc.Dial(fmt.Sprintf("%s:%d", API_ADDRESS, API_PORT), grpc.WithInsecure())
+	cmdConn, err := grpc.Dial(fmt.Sprintf("%s:%d", v2ray.V2_API_ADDRESS, v2ray.V2_API_PORT), grpc.WithInsecure())
 	if err != nil {
 		log.Panic("Panic: ", err)
 	}
-	NHSClient := NewHandlerServiceClient(cmdConn, user.Path)
+	NHSClient := v2ray.NewHandlerServiceClient(cmdConn, user.Path)
 
 	now, _ := time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
-	col.InsertOne(ctx, types.TrafficInDB{
+	col.InsertOne(ctx, model.TrafficInDB{
 		Total:     traffic.Total,
 		CreatedAt: now,
 	})
@@ -64,16 +67,16 @@ func Cron_loggingV2TrafficByUser(traffic Traffic) {
 
 }
 
-func Cron_loggingV2TrafficAll_everyHour() {
+func Cron_loggingV2TrafficAll_everyHour(c *cron.Cron) {
 
-	cronInstance.AddFunc("0 */5 * * * *", func() {
+	c.AddFunc("0 */5 * * * *", func() {
 
-		cmdConn, err := grpc.Dial(fmt.Sprintf("%s:%d", API_ADDRESS, API_PORT), grpc.WithInsecure())
+		cmdConn, err := grpc.Dial(fmt.Sprintf("%s:%d", v2ray.V2_API_ADDRESS, v2ray.V2_API_PORT), grpc.WithInsecure())
 		if err != nil {
 			log.Panic("Panic: ", err)
 		}
 
-		NSSClient := NewStatsServiceClient(cmdConn)
+		NSSClient := v2ray.NewStatsServiceClient(cmdConn)
 		all, _ := NSSClient.GetAllUserTraffic(true)
 		if len(all) != 0 {
 			for _, item := range all {

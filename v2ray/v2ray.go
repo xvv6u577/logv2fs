@@ -1,4 +1,4 @@
-package main
+package v2ray
 
 import (
 	"context"
@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/caster8013/logv2rayfullstack/types"
+	"github.com/caster8013/logv2rayfullstack/model"
 	"github.com/v2fly/v2ray-core/v4/app/proxyman/command"
 	statsservice "github.com/v2fly/v2ray-core/v4/app/stats/command"
 	"github.com/v2fly/v2ray-core/v4/common/protocol"
@@ -17,8 +17,19 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+const (
+	V2_API_ADDRESS = "127.0.0.1"
+	V2_API_PORT    = 8070
+	ALTERID        = 64
+	LEVEL          = 0
 
-type Traffic = types.Traffic
+	PLAIN   = "plain"
+	DELETE  = "delete"
+	OVERDUE = "overdue"
+)
+
+type Traffic = model.Traffic
+type User = model.User
 
 type StatsServiceClient struct {
 	statsservice.StatsServiceClient
@@ -56,7 +67,7 @@ func (s *StatsServiceClient) GetUserTraffic(name string, reset bool) (uint64, er
 	return uint64(res.Stat.Value), nil
 }
 
-func (s *StatsServiceClient) GetAllUserTraffic(reset bool) ([]Traffic, error){
+func (s *StatsServiceClient) GetAllUserTraffic(reset bool) ([]Traffic, error) {
 
 	regEx := `stat:{name:"(?P<tag>[\w]+)>>>(?P<name>[\w]+)>>>traffic>>>(?P<direction>[\w]+)"[\s]+value:(?P<value>[\d]+)}`
 	compRegEx := regexp.MustCompile(regEx)
@@ -69,7 +80,7 @@ func (s *StatsServiceClient) GetAllUserTraffic(reset bool) ([]Traffic, error){
 		Reset_:  reset,
 	}
 
-	response, err := s.QueryStats(context.Background(),request)
+	response, err := s.QueryStats(context.Background(), request)
 	if err != nil {
 		return nil, err
 	}
@@ -87,13 +98,13 @@ func (s *StatsServiceClient) GetAllUserTraffic(reset bool) ([]Traffic, error){
 			} else {
 				userTrafficExtracted[n[2]] = traffic
 			}
-			
+
 		}
 	}
 
 	for name, value := range userTrafficExtracted {
 		middleStuff = append(middleStuff, Traffic{
-			Name: name,
+			Name:  name,
 			Total: value,
 		})
 	}
@@ -118,7 +129,7 @@ func NewHandlerServiceClient(client *grpc.ClientConn, inboundTag string) *Handle
 func (h *HandlerServiceClient) DelUser(email string) error {
 	req := &command.AlterInboundRequest{
 		Tag:       h.inboundTag,
-		Operation: serial.ToTypedMessage(&command.RemoveUserOperation{ Email: email }),
+		Operation: serial.ToTypedMessage(&command.RemoveUserOperation{Email: email}),
 	}
 	return h.AlterInbound(req)
 }
@@ -129,9 +140,9 @@ func (h *HandlerServiceClient) AddUser(u User) error {
 		Level: LEVEL,
 		Email: u.Email,
 		Account: serial.ToTypedMessage(&vmess.Account{
-				Id:               u.ID,
-				AlterId:          ALTERID,
-				SecuritySettings: &protocol.SecurityConfig{ Type: protocol.SecurityType_AUTO },
+			Id:               u.UUID,
+			AlterId:          ALTERID,
+			SecuritySettings: &protocol.SecurityConfig{Type: protocol.SecurityType_AUTO},
 		}),
 	}
 	req := &command.AlterInboundRequest{
@@ -145,5 +156,5 @@ func (h *HandlerServiceClient) AlterInbound(req *command.AlterInboundRequest) er
 
 	_, err := h.HandlerServiceClient.AlterInbound(context.Background(), req)
 	return err
-	
+
 }
