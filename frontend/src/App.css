@@ -2,11 +2,11 @@
     text-align: center;
 }
 
-#root > .container {
-    height: calc(100vh - 56px);
+.login {
+    min-height: 100vh;
 }
 
-form.form {
-    width: calc(300px / 0.618) ;
-    height: 300px;
+.card {
+    width: 30rem;
+    height: calc(0.675 * 30rem);
 }
