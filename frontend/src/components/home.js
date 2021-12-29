@@ -1,6 +1,10 @@
 import { Container, Navbar, Nav, NavDropdown } from "react-bootstrap";
+// import { Navigate } from "react-router-dom";
+// import useAuth from "../useAuth";
 
 const Home = () => {
+	// const { authed } = useAuth();
+
 	return (
 		<Navbar bg="light" expand="lg" fixed="top">
 			<Container>

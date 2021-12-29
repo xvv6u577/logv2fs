@@ -6,15 +6,33 @@
 ## Backend
 
 ```
-cd ~/Go/src/github.com/logv2rayfullstack
-go run . server # or go run ./ s
+cd logv2rayfullstack
+
+# 运行程序
+go run . server 
+# or 
+go run ./ s
 ```
 
 ## Frontend
 
 ```
-cd ~/Go/src/github.com/logv2rayfullstack
-create-react-app frontend
+cd logv2rayfullstack
+npx create-react-app frontend --template redux
 cd frontend
+
 npm start
+
+# 生成生产环境文件
+npm run build
 ```
+
+### Thanks To:
+
+> Frontend
+
+- [Protected Routes and Authentication with React Router](https://ui.dev/react-router-protected-routes-authentication/)
+
+> Backend
+
+- [Build user authentication in Golang with JWT and mongoDB](https://dev.to/joojodontoh/build-user-authentication-in-golang-with-jwt-and-mongodb-2igd)

@@ -1,21 +1,30 @@
-import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
+import { createSlice } from "@reduxjs/toolkit";
+
+const token = JSON.parse(localStorage.getItem("token"));
 
 export const loginSlice = createSlice({
 	name: "login",
 	initialState: {
-		isLogin: false,
-		user: {},
+		isLogin: token ? true : false,
+		token: token ? token : "",
 	},
 	reducers: {
 		login: (state, action) => { 
-			return action.payload 
+			localStorage.setItem("token", JSON.stringify(action.payload.token));
+			return {
+				isLogin: true,
+				...action.payload
+			} 
 		},
-		redirect: (state, action) => {},
-	},
+		logout: (state, action) => {
+			localStorage.removeItem("token");
+			return {
+				isLogin: false,
+				...action.payload
+			}
+		}
+	}
 });
 
-export const { login } = loginSlice.actions;
-// export const user = (state) => state.login.user;
-// export const isLogin = (state) => state.login.isLogin;
-
+export const { login, logout } = loginSlice.actions;
 export default loginSlice.reducer;

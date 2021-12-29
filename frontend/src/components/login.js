@@ -1,20 +1,20 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { Container, Form, Button, Card, Alert } from "react-bootstrap";
-import { Navigate } from "react-router-dom";
+import { useNavigate, Navigate } from "react-router-dom";
 import axios from "axios";
-import { login } from "../store/login";
 import { alert } from "../store/message";
+import { login } from "../store/login";
 
 const Login = () => {
 	const [name, setName] = useState("");
 	const [password, setPassword] = useState("");
 
 	const dispatch = useDispatch();
-	// const user = useSelector(state => state.login.user);
-	const isLogin = useSelector((state) => state.login.isLogin);
-	const content = useSelector((state) => state.message.content);
-	const show = useSelector((state) => state.message.show);
+	const navigate = useNavigate();
+
+	const loginState = useSelector((state) => state.login);
+	const message = useSelector((state) => state.message);
 
 	const handleSubmit = (e) => {
 		e.preventDefault();
@@ -25,18 +25,17 @@ const Login = () => {
 				password: password,
 			})
 			.then((response) => {
-				dispatch(login({ isLogin: true, user: response.data }));
 				if (response.data) {
-					localStorage.setItem("token", JSON.stringify(response.data.token));
+					dispatch(login({ token: response.data.token }));
+					navigate("/home")
 				}
 			})
 			.catch((err) => {
 				dispatch(alert({ show: true, content: err.toString() }));
 			});
-
 	};
 
-	if (isLogin) {
+	if (loginState.isLogin) {
 		return <Navigate to="/home" />;
 	}
 
@@ -71,7 +70,9 @@ const Login = () => {
 						</Button>
 					</Form>
 				</Card.Body>
-				<Alert show={show} variant="danger">{content}</Alert>
+				<Alert show={message.show} variant="danger">
+					{message.content}
+				</Alert>
 			</Card>
 		</Container>
 	);
