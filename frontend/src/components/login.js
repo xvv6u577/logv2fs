@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { Container, Form, Button, Card, Alert } from "react-bootstrap";
 import { useNavigate, Navigate } from "react-router-dom";
@@ -40,7 +40,7 @@ const Login = () => {
 	}
 
 	return (
-		<Container className="login d-flex justify-content-center align-items-center">
+		<Container className="main d-flex justify-content-center align-items-center">
 			<Card>
 				<Card.Body>
 					<Card.Title>Start from login</Card.Title>

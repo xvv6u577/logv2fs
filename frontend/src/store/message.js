@@ -14,7 +14,4 @@ export const messageSlice = createSlice({
 });
 
 export const { alert } = messageSlice.actions;
-// export const show = (state) => state.message.show;
-// export const content = (state) => state.message.content;
-
 export default messageSlice.reducer;

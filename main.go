@@ -120,7 +120,7 @@ func main() {
 }
 
 func V2rayProcess() {
-	cmd := exec.Command("/usr/local/bin/v2ray", "-config", "/Users/caster/Desktop/v2ray-2-instances/transit-server/config.json")
+	cmd := exec.Command("/opt/homebrew/bin/v2ray", "-config", "/Users/guestuser2/Desktop/v2ray-2-instances/transit-server/config.json")
 	// cmd := exec.Command("/usr/local/bin/v2ray", "-config", "/Users/caster/Desktop/config.json")
 
 	if err := cmd.Run(); err != nil {

@@ -10,31 +10,30 @@ import (
 	"github.com/joho/godotenv"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.mongodb.org/mongo-driver/mongo/readpref"
 )
 
 //DBinstance func
 func DBinstance() *mongo.Client {
-	err := godotenv.Load(".env")
-
-	if err != nil {
-		log.Fatal("Error loading .env file")
-	}
-
-	MongoDB := os.Getenv("mongoURI")
-
-	client, err := mongo.NewClient(options.Client().ApplyURI(MongoDB))
-	if err != nil {
-		log.Fatal(err)
-	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-
 	defer cancel()
-	err = client.Connect(ctx)
-	if err != nil {
-		log.Fatal(err)
+
+	if err := godotenv.Load(".env"); err != nil {
+		log.Panic("Error loading .env file")
 	}
-	fmt.Println("Connected to MongoDB!")
+	MongoDB := os.Getenv("mongoURI")
+
+	client, err := mongo.Connect(ctx, options.Client().ApplyURI(MongoDB))
+	if err != nil {
+		log.Panic(err)
+	}
+
+	if err := client.Ping(ctx, readpref.Primary()); err != nil {
+		log.Panic(err)
+	}
+
+	fmt.Println("MongoDB successfully connected and pinged.")
 
 	return client
 }
