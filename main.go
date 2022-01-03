@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"os/user"
 	"runtime/debug"
 	"time"
 
@@ -120,8 +121,22 @@ func main() {
 }
 
 func V2rayProcess() {
-	cmd := exec.Command("/opt/homebrew/bin/v2ray", "-config", "/Users/guestuser2/Desktop/v2ray-2-instances/transit-server/config.json")
-	// cmd := exec.Command("/usr/local/bin/v2ray", "-config", "/Users/caster/Desktop/config.json")
+
+	currentUser, err := user.Current()
+	if err != nil {
+		log.Panic(err)
+	}
+
+	var cmd *exec.Cmd
+	if currentUser.Username == "caster" {
+
+		cmd = exec.Command("/usr/local/bin/v2ray", "-config", "/Users/caster/Desktop/v2ray-2-instances/transit-server/config.json")
+
+	} else if currentUser.Username == "guestuser2" {
+
+		cmd = exec.Command("/opt/homebrew/bin/v2ray", "-config", "/Users/guestuser2/Desktop/v2ray-2-instances/transit-server/config.json")
+
+	}
 
 	if err := cmd.Run(); err != nil {
 		log.Panic("Panic: ", err)
