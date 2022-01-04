@@ -30,7 +30,7 @@ const Home = () => {
 
 		if (loginState.jwt.Role === "admin") {
 			axios
-				.get("http://localhost:8079/v1/alluser", {
+				.get(process.env.REACT_APP_API_HOST + "alluser", {
 					headers: { token },
 				})
 				.then((response) => {
@@ -41,7 +41,7 @@ const Home = () => {
 				});
 		} else if (loginState.jwt.Role === "normal") {
 			axios
-				.get("http://localhost:8079/v1/user/" + loginState.jwt.Email, {
+				.get(process.env.REACT_APP_API_HOST + "user/" + loginState.jwt.Email, {
 					headers: { token },
 				})
 				.then((response) => {
@@ -102,7 +102,9 @@ const Home = () => {
 							<ListGroup.Item
 								as="li"
 								className="d-flex justify-content-between align-items-start"
-								variant={element.email === loginState.jwt.Email ? "dark":"light"}
+								variant={
+									element.email === loginState.jwt.Email ? "dark" : "light"
+								}
 							>
 								<div className="ms-2 me-auto">
 									<div className="fw-bold">

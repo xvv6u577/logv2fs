@@ -20,14 +20,14 @@ const Login = () => {
 		e.preventDefault();
 
 		axios
-			.post("http://localhost:8079/v1/login", {
+			.post(process.env.REACT_APP_API_HOST + "login", {
 				email: name,
 				password: password,
 			})
 			.then((response) => {
 				if (response.data) {
 					dispatch(login({ token: response.data.token }));
-					navigate("/home")
+					navigate("/home");
 				}
 			})
 			.catch((err) => {

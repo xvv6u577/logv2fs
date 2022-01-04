@@ -5,6 +5,8 @@
 
 ## Backend
 
+> 环境变量：.env
+
 ```
 cd logv2rayfullstack
 
@@ -15,6 +17,8 @@ go run ./ s
 ```
 
 ## Frontend
+
+> 环境变量：frontend/.env
 
 ```
 cd logv2rayfullstack
