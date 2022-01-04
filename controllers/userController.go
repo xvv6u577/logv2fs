@@ -60,6 +60,11 @@ func VerifyPassword(userPassword string, providedPassword string) (bool, string)
 //CreateUser is the api used to tget a single user
 func SignUp() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		if err := helper.CheckUserType(c, "admin"); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"sign up error": err.Error()})
+			return
+		}
+
 		var ctx, cancel = context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 		var user model.User

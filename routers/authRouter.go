@@ -30,7 +30,7 @@ func AuthRoutes(incomingRoutes *gin.Engine) {
 	// --header "Content-Type: application/json" \
 	// --request "POST" \
 	// --data '{"email": "email","password": "email","status":"plain","uuid": "98a131b0-69a5-41ef-9339-d6dbcabaa773", "path": "ray", "role":"normal"}'
-	incomingRoutes.POST("/v1/signup", controller.SignUp())
+	// incomingRoutes.POST("/v1/signup", controller.SignUp())
 
 	// http://127.0.0.1:8079/v1/user/login
 	// body:
