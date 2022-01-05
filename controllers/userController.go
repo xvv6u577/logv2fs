@@ -305,7 +305,7 @@ func TakeItOfflineByUserName() gin.HandlerFunc {
 			return
 		}
 
-		c.JSON(http.StatusOK, gin.H{"message": "user deleted from v2ray, info updated in database."})
+		c.JSON(http.StatusOK, gin.H{"message": "User is offline!"})
 	}
 }
 
@@ -347,7 +347,7 @@ func TakeItOnlineByUserName() gin.HandlerFunc {
 			return
 		}
 
-		c.JSON(http.StatusOK, gin.H{"message": "user added from v2ray, info updated in database."})
+		c.JSON(http.StatusOK, gin.H{"message": "User is online!"})
 	}
 }
 
@@ -370,25 +370,26 @@ func DeleteUserByUserName() gin.HandlerFunc {
 		cmdConn, err := grpc.Dial(fmt.Sprintf("%s:%d", v2ray.V2_API_ADDRESS, v2ray.V2_API_PORT), grpc.WithInsecure())
 		if err != nil {
 			msg := "v2ray connection failed."
-			c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
+			c.JSON(http.StatusInternalServerError, gin.H{"v2ray connection error": msg})
 			return
 		}
 
+		v2ray_msg := ""
 		NHSClient := v2ray.NewHandlerServiceClient(cmdConn, user.Path)
 		err = NHSClient.DelUser(name)
 		if err != nil {
-			msg := "v2ray delete user failed."
-			c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
-			return
+			v2ray_msg = " V2ray delete user failed!"
+			// c.JSON(http.StatusInternalServerError, gin.H{"v2ray service error": msg})
+			// return
 		}
 
 		err = database.DeleteUserByName(name)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			c.JSON(http.StatusInternalServerError, gin.H{"DB service error": err.Error()})
 			return
 		}
 
-		c.JSON(http.StatusOK, gin.H{"message": "user deleted from v2ray, info deleted in database."})
+		c.JSON(http.StatusOK, gin.H{"message": "Delete user successfully!" + v2ray_msg})
 	}
 }
 

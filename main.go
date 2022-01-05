@@ -183,7 +183,7 @@ func runServer() {
 	routers.UserRoutes(router)
 
 	router.NoRoute(func(c *gin.Context) {
-		c.JSON(http.StatusNotFound, gin.H{"error": "page not found."})
+		c.JSON(http.StatusNotFound, gin.H{"final error": "no route found."})
 	})
 
 	router.Run(fmt.Sprintf("%s:%d", SERVER_ADDRESS, SERVER_PORT))

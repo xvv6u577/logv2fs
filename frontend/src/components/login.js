@@ -1,9 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { Container, Form, Button, Card, Alert } from "react-bootstrap";
 import { useNavigate, Navigate } from "react-router-dom";
 import axios from "axios";
-import { alert } from "../store/message";
+import { info, success, alert } from "../store/message";
 import { login } from "../store/login";
 
 const Login = () => {
@@ -34,6 +34,14 @@ const Login = () => {
 				dispatch(alert({ show: true, content: err.toString() }));
 			});
 	};
+
+	useEffect(()=>{
+		if (message.show === true) {
+			setTimeout(()=>{
+				dispatch(alert({show: false}))
+			}, 5000)
+		}
+	},[message])
 
 	if (loginState.isLogin) {
 		return <Navigate to="/home" />;
@@ -70,7 +78,7 @@ const Login = () => {
 						</Button>
 					</Form>
 				</Card.Body>
-				<Alert show={message.show} variant="danger">
+				<Alert show={message.show} variant={message.type}>
 					{message.content}
 				</Alert>
 			</Card>

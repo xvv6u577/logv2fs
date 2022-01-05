@@ -4,14 +4,21 @@ export const messageSlice = createSlice({
 	name: "message",
 	initialState: {
 		show: false,
+		type: "",
 		content: "",
 	},
 	reducers: {
-		alert: (state, action) => {
-			return action.payload;
+		info: (state, action) => {
+			return {...action.payload, type: "info"};
 		},
+		alert: (state, action) => {
+			return {...action.payload, type: "warning"};
+		},
+		success: (state, action) => {
+			return {...action.payload, type: "success"};
+		}
 	},
 });
 
-export const { alert } = messageSlice.actions;
+export const { info, success, alert } = messageSlice.actions;
 export default messageSlice.reducer;
