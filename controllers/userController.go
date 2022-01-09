@@ -25,6 +25,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -179,10 +180,6 @@ func Login() gin.HandlerFunc {
 			return
 		}
 
-		if foundUser.Email == "" {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "user not found"})
-			return
-		}
 		token, refreshToken, _ := helper.GenerateAllTokens(foundUser.Email, foundUser.UUID, foundUser.Path, foundUser.Role, foundUser.User_id)
 
 		helper.UpdateAllTokens(token, refreshToken, foundUser.User_id)
@@ -190,6 +187,119 @@ func Login() gin.HandlerFunc {
 
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		c.JSON(http.StatusOK, foundUser)
+	}
+}
+
+func EditUser() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
+		defer cancel()
+
+		var user, foundUser model.User
+
+		if err := c.BindJSON(&user); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		err := userCollection.FindOne(ctx, bson.M{"email": user.Email}).Decode(&foundUser)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "login or passowrd is incorrect"})
+			return
+		}
+
+		var replacedDocument bson.M
+		newFoundUser := bson.M{}
+
+		if foundUser.Role != user.Role {
+			newFoundUser["role"] = user.Role
+		}
+		if foundUser.Status != user.Status {
+			newFoundUser["status"] = user.Status
+		}
+		if foundUser.Password != user.Password {
+			newFoundUser["password"] = user.Password
+		}
+		if foundUser.Name != user.Name {
+			newFoundUser["name"] = user.Name
+		}
+		if foundUser.Usedtraffic != user.Usedtraffic {
+			newFoundUser["used"] = user.Usedtraffic
+		}
+		if foundUser.Credittraffic != user.Credittraffic {
+			newFoundUser["credit"] = user.Credittraffic
+		}
+		if foundUser.Path != user.Path {
+			newFoundUser["path"] = user.Path
+		}
+		if foundUser.UUID != user.UUID {
+			newFoundUser["uuid"] = user.UUID
+		}
+
+		err = userCollection.FindOneAndUpdate(
+			ctx,
+			bson.M{"email": user.Email},
+			bson.M{"$set": newFoundUser},
+			options.FindOneAndUpdate().SetUpsert(true),
+		).Decode(&replacedDocument)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"FindOneAndUpdate error": err.Error()})
+			return
+		}
+
+		if foundUser.Status == "plain" && (foundUser.Path != user.Path || foundUser.UUID != user.UUID) {
+			cmdConn, err := grpc.Dial(fmt.Sprintf("%s:%d", v2ray.V2_API_ADDRESS, v2ray.V2_API_PORT), grpc.WithInsecure())
+			if err != nil {
+				msg := "v2ray connection failed."
+				c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
+				return
+			}
+
+			NHSClient := v2ray.NewHandlerServiceClient(cmdConn, foundUser.Path)
+			err = NHSClient.DelUser(user.Email)
+			if err != nil {
+				msg := "v2ray delete user failed."
+				c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
+				return
+			}
+
+			if user.Status == "plain" {
+				NHSClient = v2ray.NewHandlerServiceClient(cmdConn, foundUser.Path)
+				err = NHSClient.AddUser(foundUser)
+				if err != nil {
+					msg := "v2ray add user failed."
+					c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
+					return
+				}
+			}
+
+		}
+
+		if foundUser.Status != "plain" && user.Status == "plain" {
+			cmdConn, err := grpc.Dial(fmt.Sprintf("%s:%d", v2ray.V2_API_ADDRESS, v2ray.V2_API_PORT), grpc.WithInsecure())
+			if err != nil {
+				msg := "v2ray connection failed."
+				c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
+				return
+			}
+
+			NHSClient := v2ray.NewHandlerServiceClient(cmdConn, foundUser.Path)
+			err = NHSClient.AddUser(foundUser)
+			if err != nil {
+				msg := "v2ray add user failed."
+				c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
+				return
+			}
+
+		}
+
+		err = userCollection.FindOne(ctx, bson.M{"email": user.Email}).Decode(&foundUser)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"FindOne error": err.Error()})
 			return
 		}
 
@@ -245,25 +355,24 @@ func GetUsers() gin.HandlerFunc {
 //GetUser is the api used to get a single user
 func GetUser() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
+		defer cancel()
+
+		var user model.User
 		userId := c.Param("user_id")
 
 		if err := helper.MatchUserTypeAndUid(c, userId); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
-		var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
-
-		var user model.User
 
 		err := userCollection.FindOne(ctx, bson.M{"user_id": userId}).Decode(&user)
-		defer cancel()
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
 
 		c.JSON(http.StatusOK, user)
-
 	}
 }
 

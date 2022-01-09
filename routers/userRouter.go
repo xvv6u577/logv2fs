@@ -27,6 +27,7 @@ func UserRoutes(incomingRoutes *gin.Engine) {
 	// --request "POST" \
 	// --data '{"email": "email","password": "email","status":"plain","uuid": "98a131b0-69a5-41ef-9339-d6dbcabaa773", "path": "ray", "role":"normal"}'
 	incomingRoutes.POST("/v1/signup", controller.SignUp())
+	incomingRoutes.POST("/v1/edit/:name", controller.EditUser())
 
 	incomingRoutes.GET("/v1/users", controller.GetUsers())
 	incomingRoutes.GET("/v1/alluser", controller.GetAllUsers())
