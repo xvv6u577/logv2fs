@@ -99,6 +99,10 @@ func SignUp() gin.HandlerFunc {
 			user.Name = user.Email
 		}
 
+		if user.Path == "" {
+			user.Path = "ray"
+		}
+
 		password := HashPassword(user.Password)
 		user.Password = password
 
@@ -208,7 +212,7 @@ func EditUser() gin.HandlerFunc {
 
 		err := userCollection.FindOne(ctx, bson.M{"email": user.Email}).Decode(&foundUser)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "login or passowrd is incorrect"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "email is incorrect"})
 			return
 		}
 
@@ -218,11 +222,10 @@ func EditUser() gin.HandlerFunc {
 		if foundUser.Role != user.Role {
 			newFoundUser["role"] = user.Role
 		}
-		if foundUser.Status != user.Status {
-			newFoundUser["status"] = user.Status
-		}
-		if foundUser.Password != user.Password {
-			newFoundUser["password"] = user.Password
+
+		password := HashPassword(user.Password)
+		if foundUser.Password != password {
+			newFoundUser["password"] = password
 		}
 		if foundUser.Name != user.Name {
 			newFoundUser["name"] = user.Name
@@ -233,11 +236,10 @@ func EditUser() gin.HandlerFunc {
 		if foundUser.Credittraffic != user.Credittraffic {
 			newFoundUser["credit"] = user.Credittraffic
 		}
-		if foundUser.Path != user.Path {
-			newFoundUser["path"] = user.Path
-		}
-		if foundUser.UUID != user.UUID {
-			newFoundUser["uuid"] = user.UUID
+
+		if len(newFoundUser) == 0 {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "no new value in post data."})
+			return
 		}
 
 		err = userCollection.FindOneAndUpdate(
@@ -249,52 +251,6 @@ func EditUser() gin.HandlerFunc {
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"FindOneAndUpdate error": err.Error()})
 			return
-		}
-
-		if foundUser.Status == "plain" && (foundUser.Path != user.Path || foundUser.UUID != user.UUID) {
-			cmdConn, err := grpc.Dial(fmt.Sprintf("%s:%d", v2ray.V2_API_ADDRESS, v2ray.V2_API_PORT), grpc.WithInsecure())
-			if err != nil {
-				msg := "v2ray connection failed."
-				c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
-				return
-			}
-
-			NHSClient := v2ray.NewHandlerServiceClient(cmdConn, foundUser.Path)
-			err = NHSClient.DelUser(user.Email)
-			if err != nil {
-				msg := "v2ray delete user failed."
-				c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
-				return
-			}
-
-			if user.Status == "plain" {
-				NHSClient = v2ray.NewHandlerServiceClient(cmdConn, foundUser.Path)
-				err = NHSClient.AddUser(foundUser)
-				if err != nil {
-					msg := "v2ray add user failed."
-					c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
-					return
-				}
-			}
-
-		}
-
-		if foundUser.Status != "plain" && user.Status == "plain" {
-			cmdConn, err := grpc.Dial(fmt.Sprintf("%s:%d", v2ray.V2_API_ADDRESS, v2ray.V2_API_PORT), grpc.WithInsecure())
-			if err != nil {
-				msg := "v2ray connection failed."
-				c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
-				return
-			}
-
-			NHSClient := v2ray.NewHandlerServiceClient(cmdConn, foundUser.Path)
-			err = NHSClient.AddUser(foundUser)
-			if err != nil {
-				msg := "v2ray add user failed."
-				c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
-				return
-			}
-
 		}
 
 		err = userCollection.FindOne(ctx, bson.M{"email": user.Email}).Decode(&foundUser)

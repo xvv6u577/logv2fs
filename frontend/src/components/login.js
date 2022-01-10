@@ -26,6 +26,7 @@ const Login = () => {
 			})
 			.then((response) => {
 				if (response.data) {
+					localStorage.setItem("token", JSON.stringify(response.data.token));
 					dispatch(login({ token: response.data.token }));
 					navigate("/home");
 				}

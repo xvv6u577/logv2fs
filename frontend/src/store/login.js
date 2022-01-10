@@ -16,13 +16,13 @@ function jwtVerify(token) {
 	return {isLogin: true, jwt: decodedJWT}
 }
 
+const initialState = jwtVerify(token)
+
 export const loginSlice = createSlice({
 	name: "login",
-	initialState: jwtVerify(token),
+	initialState,
 	reducers: {
 		login: (state, action) => { 
-
-			localStorage.setItem("token", JSON.stringify(action.payload.token));
 			return jwtVerify(action.payload.token)
 
 		},

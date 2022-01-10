@@ -21,126 +21,102 @@ import { formatBytes } from "../service/service";
 
 const token = JSON.parse(localStorage.getItem("token"));
 
-function ConfirmDelUser(props) {
+function AddUser({ btnName, addUserFunc }) {
 	const [show, setShow] = useState(false);
-
 	const handleClose = () => setShow(false);
 	const handleShow = () => setShow(true);
 
-	return (
-		<>
-			<Button variant="dark mx-1" size="lg" onClick={handleShow}>
-				{props.name}
-			</Button>
-
-			<Modal show={show} onHide={handleClose}>
-				<Modal.Header closeButton>
-					<Modal.Title>Notice!</Modal.Title>
-				</Modal.Header>
-				<Modal.Body>确认删除用户？</Modal.Body>
-				<Modal.Footer>
-					<Button variant="secondary" onClick={handleClose}>
-						关闭
-					</Button>
-					<Button
-						variant="primary"
-						onClick={() => {
-							props.deleteUserFunc();
-							handleClose();
-						}}
-					>
-						确认
-					</Button>
-				</Modal.Footer>
-			</Modal>
-		</>
-	);
-}
-
-function EditUser(props) {
-	const [show, setShow] = useState(false);
-
-	const [status, setStatus] = useState(props.user.status);
-	const [role, setRole] = useState(props.user.role);
-	// const [email, setEmail] = useState('');
-	const [password, setPassword] = useState(props.user.password);
-	const [name, setName] = useState(props.user.name);
-	const [used, setUsed] = useState(props.user.used);
-	const [credit, setCredit] = useState(props.user.credit);
-	const [path, setPath] = useState(props.user.path);
-	const [uuid, setUuid] = useState(props.user.uuid);
-
-	const handleClose = () => setShow(false);
-	const handleShow = () => setShow(true);
+	const initialState = {
+		email: "",
+		password: "",
+		name: "",
+		path: "ray",
+		role: "normal",
+	};
+	const [{ email, password, name, path, role }, setState] =
+		useState(initialState);
+	const clearState = () => {
+		setState({ ...initialState });
+	};
 
 	const dispatch = useDispatch();
 	const message = useSelector((state) => state.message);
 
-	useEffect(() => {
-		setStatus(props.user.status)
-	}, [props.user])
-
-	const handleEditUser = useCallback((e) => {
+	const handleAddUser = (e) => {
 		e.preventDefault();
 		axios({
 			method: "post",
-			url: process.env.REACT_APP_API_HOST + "edit/" + props.user.email,
+			url: process.env.REACT_APP_API_HOST + "signup",
 			headers: { token },
 			data: {
 				role,
-				status,
-				email: props.user.email,
+				email,
 				password,
 				name,
-				used: parseInt(used),
-				credit: parseInt(credit),
 				path,
-				uuid,
+				status: "plain",
 			},
 		})
 			.then((response) => {
-				dispatch(success({ show: true, content: "user info updated!" }));
-				props.editUserFunc()
+				dispatch(success({ show: true, content: "user added in success!" }));
+				addUserFunc();
+				clearState();
 			})
 			.catch((err) => {
 				dispatch(alert({ show: true, content: err.toString() }));
 			});
-	}, []);
+	};
+
+	const onChange = (e) => {
+		const { name, value } = e.target;
+		setState((prevState) => ({ ...prevState, [name]: value }));
+	};
 
 	return (
 		<>
-			<Button variant="outline-success mx-1" size="lg" onClick={handleShow}>
-				{props.name}
+			<Button variant="success" size="lg" onClick={handleShow}>
+				{btnName}
 			</Button>
 
 			<Modal show={show} onHide={handleClose}>
 				<Modal.Header closeButton>
-					<Modal.Title>Edit User</Modal.Title>
+					<Modal.Title>Add User</Modal.Title>
 				</Modal.Header>
 				<Modal.Body>
-					<Form id="editForm" onSubmit={handleEditUser}>
+					<Form id="editForm" onSubmit={handleAddUser}>
 						<Row className="mb-3">
-							<Form.Group as={Col} controlId="formGridName">
-								<Form.Label>Email</Form.Label>
+							<Form.Group as={Col} controlId="formGridEmail">
+								<Form.Label>Email(4-100 characters)*</Form.Label>
 								<Form.Control
 									type="input"
 									name="email"
-									placeholder={props.user.email}
-									value={props.user.email}
-									disabled
+									placeholder="email"
+									value={email}
+									onChange={onChange}
+									required
 								/>
 							</Form.Group>
 
 							<Form.Group as={Col} controlId="formGridPassword">
-								<Form.Label>Password</Form.Label>
+								<Form.Label>Password(6+ characters)*</Form.Label>
 								<Form.Control
-									type="password"
+									type="test"
 									name="password"
-									onChange={(e) => setPassword(e.target.value)}
-									placeholder="Password"
+									onChange={onChange}
+									placeholder="password"
 									value={password}
-									autoComplete=""
+									required
 								/>
+							</Form.Group>
+						</Row>
+
+						<Row className="mb-3">
+							<Form.Group as={Col} controlId="formGridUserType">
+								<Form.Label>User Type</Form.Label>
+								<Form.Select name="role" onChange={onChange} value={role}>
+									<option value="admin">Admin</option>
+									<option value="normal">Normal</option>
+								</Form.Select>
 							</Form.Group>
 
 							<Form.Group as={Col} controlId="formGridTag">
@@ -148,98 +124,20 @@ function EditUser(props) {
 								<Form.Control
 									type="input"
 									name="name"
-									onChange={(e) => setName(e.target.value)}
-									placeholder={props.user.name}
+									onChange={onChange}
+									placeholder="name"
 									value={name}
 								/>
 							</Form.Group>
-						</Row>
-						<hr />
-						<Row className="mb-3">
-							<Form.Group as={Col} controlId="formGridUserType">
-								<Form.Label>User Type</Form.Label>
-								<Form.Select
-									name="role"
-									onChange={(e) => setRole(e.target.value)}
-									value={role}
-								>
-									<option value="admin">Admin</option>
-									<option value="normal">Normal</option>
-								</Form.Select>
-							</Form.Group>
-						</Row>
 
-						<Row className="mb-3">
-							<Form.Group as={Col} controlId="formGridUserStatus">
-								<Form.Label>User Status</Form.Label>
-								<Form.Select
-									name="status"
-									onChange={(e) => setStatus(e.target.value)}
-									value={status}
-								>
-									<option value="plain">Plain</option>
-									<option value="delete">Delete</option>
-									<option value="overdue">Overdue</option>
-								</Form.Select>
-							</Form.Group>
-						</Row>
-
-						<Row className="mb-3">
-							<Form.Group as={Col} controlId="formGridTrafficeUsed">
-								<Form.Label>已用流量</Form.Label>
+							<Form.Group as={Col} controlId="formGridPath">
+								<Form.Label>Path</Form.Label>
 								<Form.Control
-									type="number"
-									name="used"
-									onChange={(e) => setUsed(e.target.value)}
-									placeholder={props.user.used}
-									value={used}
-								/>
-							</Form.Group>
-
-							<Form.Group as={Col} controlId="formGridTrafficCredit">
-								<Form.Label>每月限额</Form.Label>
-								<Form.Control
-									type="number"
-									name="credit"
-									onChange={(e) => setCredit(e.target.value)}
-									placeholder={props.user.credit}
-									value={credit}
-								/>
-							</Form.Group>
-						</Row>
-
-						<hr />
-						<Row className="mb-3">
-							<Form.Group controlId="formGridDomains">
-								<Form.Label>Domains: </Form.Label>
-								<Badge pill bg="light" text="dark">
-									<h6>
-										{props.user.domain
-											? props.user.domain
-											: "w8.undervineyard.com"}
-									</h6>
-								</Badge>
-							</Form.Group>
-
-							<Form.Group controlId="formGridPath">
-								<Form.Label>Path: </Form.Label>
-								<Form.Control
-									type="text"
-									name="credit"
-									onChange={(e) => setPath(e.target.value)}
-									placeholder={props.user.path}
+									type="input"
+									name="path"
+									onChange={onChange}
+									placeholder="optional"
 									value={path}
-								/>
-							</Form.Group>
-
-							<Form.Group controlId="formGridUuid">
-								<Form.Label>UUID: </Form.Label>
-								<Form.Control
-									type="text"
-									name="uuid"
-									onChange={(e) => setUuid(e.target.value)}
-									placeholder={props.user.uuid}
-									value={uuid}
 								/>
 							</Form.Group>
 						</Row>
@@ -378,9 +276,10 @@ const Home = () => {
 					</Navbar.Collapse>
 					<Navbar.Collapse className="justify-content-end">
 						{loginState.jwt.Role === "admin" && (
-							<Button onClick={handleAddUser} variant="success">
-								添加用户
-							</Button>
+							<AddUser
+								btnName="添加用户"
+								addUserFunc={() => updateState(rerender + 9)}
+							/>
 						)}
 						<Navbar.Text className="mx-2">
 							Signed in as: <b>{loginState.jwt.Email}</b>,
@@ -434,16 +333,9 @@ const Home = () => {
 									</h6>
 								</div>
 								<div className="d-flex justify-content-center align-items-center my-auto">
-									{/* <Button
-										onClick={() => handleEditUser(element.email)}
-										variant="outline-success mx-1"
-										size="lg"
-									>
-										Edit
-									</Button> */}
 									<EditUser
-										name="Edit"
-										editUserFunc={()=>updateState(rerender + 7)}
+										btnName="Edit"
+										editUserFunc={() => updateState(rerender + 7)}
 										user={element}
 									/>
 									{element.status === "plain" ? (
@@ -483,7 +375,7 @@ const Home = () => {
 										</Button>
 									)}
 									<ConfirmDelUser
-										name="Delete User"
+										btnName="Delete User"
 										deleteUserFunc={() => handleDeleteUser(element.email)}
 									/>
 								</div>
@@ -515,5 +407,231 @@ const Home = () => {
 		</Container>
 	);
 };
+
+function ConfirmDelUser({ btnName, deleteUserFunc }) {
+	const [show, setShow] = useState(false);
+
+	const handleClose = () => setShow(false);
+	const handleShow = () => setShow(true);
+
+	return (
+		<>
+			<Button variant="dark mx-1" size="lg" onClick={handleShow}>
+				{btnName}
+			</Button>
+
+			<Modal show={show} onHide={handleClose}>
+				<Modal.Header closeButton>
+					<Modal.Title>Notice!</Modal.Title>
+				</Modal.Header>
+				<Modal.Body>确认删除用户？</Modal.Body>
+				<Modal.Footer>
+					<Button variant="secondary" onClick={handleClose}>
+						关闭
+					</Button>
+					<Button
+						variant="primary"
+						onClick={() => {
+							deleteUserFunc();
+							handleClose();
+						}}
+					>
+						确认
+					</Button>
+				</Modal.Footer>
+			</Modal>
+		</>
+	);
+}
+
+function EditUser({ btnName, user, editUserFunc }) {
+
+	const [show, setShow] = useState(false);
+	const handleClose = () => setShow(false);
+	const handleShow = () => setShow(true);
+
+	const [status, setStatus] = useState(user.status);
+	const [{ used, password, name, role, credit }, setState] = useState({
+		used: user.used,
+		password: user.password,
+		name: user.name,
+		role: user.role,
+		credit:user.credit
+	});
+
+	const onChange = (e) => {
+		const { name, value } = e.target;
+		setState((prevState) => ({ ...prevState, [name]: value }));
+	};
+
+	const dispatch = useDispatch();
+	const message = useSelector((state) => state.message);
+
+	useEffect(() => {
+		setStatus(user.status);
+	}, [user.status]);
+
+	const handleEditUser = (e) => {
+		e.preventDefault();
+		axios({
+			method: "post",
+			url: process.env.REACT_APP_API_HOST + "edit/" + user.email,
+			headers: { token },
+			data: {
+				role,
+				email: user.email,
+				password,
+				name,
+				used: parseInt(used),
+				credit: parseInt(credit),
+			},
+		})
+			.then((response) => {
+				dispatch(success({ show: true, content: "user info updated!" }));
+				editUserFunc();
+			})
+			.catch((err) => {
+				dispatch(alert({ show: true, content: err.toString() }));
+			});
+	};
+
+	return (
+		<>
+			<Button variant="outline-success mx-1" size="lg" onClick={handleShow}>
+				{btnName}
+			</Button>
+
+			<Modal show={show} onHide={handleClose}>
+				<Modal.Header closeButton>
+					<Modal.Title>Edit User</Modal.Title>
+				</Modal.Header>
+				<Modal.Body>
+					<Form id="editForm" onSubmit={handleEditUser}>
+						<Row className="mb-3">
+							<Form.Group controlId="formGridDomains">
+								<Form.Label>User Status:</Form.Label>
+								<Badge pill bg="light" text="dark" className="mx-1">
+									<b className="h4">{status}</b>
+								</Badge>
+							</Form.Group>
+						</Row>
+						<Row className="mb-3">
+							<Form.Group as={Col} controlId="formGridName">
+								<Form.Label>Email</Form.Label>
+								<Form.Control
+									type="input"
+									name="email"
+									placeholder={user.email}
+									value={user.email}
+									disabled
+								/>
+							</Form.Group>
+
+							<Form.Group as={Col} controlId="formGridPassword">
+								<Form.Label>Password</Form.Label>
+								<Form.Control
+									type="password"
+									name="password"
+									onChange={onChange}
+									placeholder="Password"
+									value={password}
+									autoComplete=""
+								/>
+							</Form.Group>
+						</Row>
+						<hr />
+						<Row className="mb-3">
+							<Form.Group as={Col} controlId="formGridUserType">
+								<Form.Label>User Type</Form.Label>
+								<Form.Select
+									name="role"
+									onChange={onChange}
+									value={role}
+								>
+									<option value="admin">Admin</option>
+									<option value="normal">Normal</option>
+								</Form.Select>
+							</Form.Group>
+
+							<Form.Group as={Col} controlId="formGridTag">
+								<Form.Label>Name</Form.Label>
+								<Form.Control
+									type="input"
+									name="name"
+									onChange={onChange}
+									placeholder={user.name}
+									value={name}
+								/>
+							</Form.Group>
+						</Row>
+
+						<Row className="mb-3"></Row>
+
+						<Row className="mb-3">
+							<Form.Group as={Col} controlId="formGridTrafficeUsed">
+								<Form.Label>已用流量</Form.Label>
+								<Form.Control
+									type="number"
+									name="used"
+									onChange={onChange}
+									placeholder={user.used}
+									value={used}
+								/>
+							</Form.Group>
+
+							<Form.Group as={Col} controlId="formGridTrafficCredit">
+								<Form.Label>每月限额</Form.Label>
+								<Form.Control
+									type="number"
+									name="credit"
+									onChange={onChange}
+									placeholder={user.credit}
+									value={credit}
+								/>
+							</Form.Group>
+						</Row>
+
+						<hr />
+						<Row className="mb-3">
+							<Form.Group controlId="formGridDomains">
+								<Form.Label>Domains: </Form.Label>
+								<Badge pill bg="light" text="dark">
+									<b className="h5">
+										{user.domain ? user.domain : "w8.undervineyard.com"}
+									</b>
+								</Badge>
+							</Form.Group>
+
+							<Form.Group controlId="formGridPath">
+								<Form.Label>Path: </Form.Label>
+								<Badge pill bg="light" text="dark" className="mx-1">
+									<b className="h5">{user.path}</b>
+								</Badge>
+							</Form.Group>
+
+							<Form.Group controlId="formGridUuid">
+								<Form.Label>UUID: </Form.Label>
+								<Badge pill bg="light" text="dark" className="mx-1">
+									<b className="h5">{user.uuid}</b>
+								</Badge>
+							</Form.Group>
+						</Row>
+					</Form>
+					<Alert show={message.show} variant={message.type}>
+						{message.content}
+					</Alert>
+				</Modal.Body>
+				<Modal.Footer>
+					<Button variant="secondary" onClick={handleClose}>
+						关闭
+					</Button>
+					<Button type="submit" variant="primary" form="editForm">
+						提交
+					</Button>
+				</Modal.Footer>
+			</Modal>
+		</>
+	);
+}
 
 export default Home;
