@@ -14,6 +14,10 @@ func AuthRoutes(incomingRoutes *gin.Engine) {
 	incomingRoutes.Use(static.Serve("/login", static.LocalFile("./frontend/build/", false)))
 	incomingRoutes.Use(static.Serve("/home", static.LocalFile("./frontend/build/", false)))
 	incomingRoutes.Use(static.Serve("/logout", static.LocalFile("./frontend/build/", false)))
+	incomingRoutes.Use(static.Serve("/macos", static.LocalFile("./frontend/build/", false)))
+	incomingRoutes.Use(static.Serve("/windows", static.LocalFile("./frontend/build/", false)))
+	incomingRoutes.Use(static.Serve("/iphone", static.LocalFile("./frontend/build/", false)))
+	incomingRoutes.Use(static.Serve("/android", static.LocalFile("./frontend/build/", false)))
 
 	// http://127.0.0.1:8079/v1/user/signup
 	// body:

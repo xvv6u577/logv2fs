@@ -5,15 +5,15 @@ const token = JSON.parse(localStorage.getItem("token"));
 function jwtVerify(token) {
 
 	if (token === null) {
-		return {isLogin: false, jwt: {}}
+		return {isLogin: false, jwt: {}, token: ""}
 	}
 
 	const decodedJWT = JSON.parse(atob(token.split(".")[1]))
 	if (decodedJWT.exp * 1000 < Date.now()){
-		return {isLogin: false, jwt: decodedJWT}
+		return {isLogin: false, jwt: decodedJWT, token}
 	}
 
-	return {isLogin: true, jwt: decodedJWT}
+	return {isLogin: true, jwt: decodedJWT, token}
 }
 
 const initialState = jwtVerify(token)

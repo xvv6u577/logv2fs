@@ -154,7 +154,7 @@ func SignUp() gin.HandlerFunc {
 
 		fmt.Println(user.Email, "created at v2ray and database.")
 
-		c.JSON(http.StatusOK, gin.H{"message": "user " + user.Email + " created at v2ray and database."})
+		c.JSON(http.StatusOK, gin.H{"message": "user " + user.Name + " created at v2ray and database."})
 
 	}
 }
@@ -370,7 +370,7 @@ func TakeItOfflineByUserName() gin.HandlerFunc {
 			return
 		}
 
-		c.JSON(http.StatusOK, gin.H{"message": "User is offline!"})
+		c.JSON(http.StatusOK, gin.H{"message": "User " + user.Name + " is offline!"})
 	}
 }
 
@@ -412,7 +412,7 @@ func TakeItOnlineByUserName() gin.HandlerFunc {
 			return
 		}
 
-		c.JSON(http.StatusOK, gin.H{"message": "User is online!"})
+		c.JSON(http.StatusOK, gin.H{"message": "User " + user.Name + " is online!"})
 	}
 }
 
@@ -432,20 +432,22 @@ func DeleteUserByUserName() gin.HandlerFunc {
 			return
 		}
 
-		cmdConn, err := grpc.Dial(fmt.Sprintf("%s:%d", v2ray.V2_API_ADDRESS, v2ray.V2_API_PORT), grpc.WithInsecure())
-		if err != nil {
-			msg := "v2ray connection failed."
-			c.JSON(http.StatusInternalServerError, gin.H{"v2ray connection error": msg})
-			return
-		}
+		if user.Status == "plain" {
 
-		v2ray_msg := ""
-		NHSClient := v2ray.NewHandlerServiceClient(cmdConn, user.Path)
-		err = NHSClient.DelUser(name)
-		if err != nil {
-			v2ray_msg = " V2ray delete user failed!"
-			// c.JSON(http.StatusInternalServerError, gin.H{"v2ray service error": msg})
-			// return
+			cmdConn, err := grpc.Dial(fmt.Sprintf("%s:%d", v2ray.V2_API_ADDRESS, v2ray.V2_API_PORT), grpc.WithInsecure())
+			if err != nil {
+				msg := "v2ray connection failed."
+				c.JSON(http.StatusInternalServerError, gin.H{"v2ray connection error": msg})
+				return
+			}
+
+			NHSClient := v2ray.NewHandlerServiceClient(cmdConn, user.Path)
+			err = NHSClient.DelUser(name)
+			if err != nil {
+				msg := " V2ray delete user failed!"
+				c.JSON(http.StatusInternalServerError, gin.H{"v2ray service error": msg})
+				return
+			}
 		}
 
 		err = database.DeleteUserByName(name)
@@ -454,7 +456,7 @@ func DeleteUserByUserName() gin.HandlerFunc {
 			return
 		}
 
-		c.JSON(http.StatusOK, gin.H{"message": "Delete user successfully!" + v2ray_msg})
+		c.JSON(http.StatusOK, gin.H{"message": "Delete user " + user.Name + " successfully!"})
 	}
 }
 
@@ -544,59 +546,3 @@ func GetUserByName() gin.HandlerFunc {
 		c.JSON(http.StatusOK, user)
 	}
 }
-
-// func addUserByName(c *gin.Context) {
-
-// 	var errors error
-// 	name := c.Param("name")
-
-// 	uuidV4, err := uuid.NewV4()
-// 	if err != nil {
-// 		errors = multierror.Append(errors, err)
-// 	}
-
-// 	bytes, err := bcrypt.GenerateFromPassword([]byte(name), 8)
-// 	if err != nil {
-// 		errors = multierror.Append(errors, err)
-// 	}
-
-// 	now, _ := time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
-// 	user := User{
-// 		Path:          "ray",
-// 		Email:         name,
-// 		UUID:          uuidV4.String(),
-// 		CreatedAt:     now,
-// 		UpdatedAt:     now,
-// 		Credittraffic: 1073741824,
-// 		Password:      string(bytes),
-// 		Status:        "plain",
-// 	}
-
-// 	cmdConn, err := grpc.Dial(fmt.Sprintf("%s:%d", v2ray.V2_API_ADDRESS, v2ray.V2_API_PORT), grpc.WithInsecure())
-// 	if err != nil {
-// 		errors = multierror.Append(errors, err)
-// 	}
-
-// 	NHSClient := v2ray.NewHandlerServiceClient(cmdConn, user.Path)
-// 	err = NHSClient.AddUser(user)
-// 	if err != nil {
-// 		errors = multierror.Append(errors, err)
-// 	}
-
-// 	err = database.CreateUserByName(&user)
-// 	if err != nil {
-// 		errors = multierror.Append(errors, err)
-// 	}
-
-// 	if errors != nil {
-// 		fmt.Println("Error: ", errors.Error())
-
-// 		c.JSON(http.StatusInternalServerError, gin.H{"message": errors.Error()})
-
-// 		return
-// 	}
-
-// 	fmt.Println(name, "created at v2ray and database.")
-
-// 	c.JSON(http.StatusCreated, gin.H{"message": "user " + name + " created at v2ray and database."})
-// }
