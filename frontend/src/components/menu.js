@@ -25,7 +25,7 @@ const Menu = ({}) => {
 				<Navbar.Toggle aria-controls="basic-navbar-nav" />
 				<Navbar.Collapse id="basic-navbar-nav">
 					<Nav>
-						<Nav.Link href="/home">Home</Nav.Link>
+						<Nav.Link href="/home">User Management Panel</Nav.Link>
 					</Nav>
 					<Nav>
 						<Nav.Link href="/macos">MacOS</Nav.Link>

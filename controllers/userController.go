@@ -159,7 +159,7 @@ func SignUp() gin.HandlerFunc {
 	}
 }
 
-//Login is the api used to tget a single user
+//Login is the api used to get a single user
 func Login() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
@@ -168,19 +168,19 @@ func Login() gin.HandlerFunc {
 		var foundUser model.User
 
 		if err := c.BindJSON(&user); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			c.JSON(http.StatusBadRequest, gin.H{"bingJSON error": err.Error()})
 			return
 		}
 
 		err := userCollection.FindOne(ctx, bson.M{"email": user.Email}).Decode(&foundUser)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "login or passowrd is incorrect"})
+			c.JSON(http.StatusInternalServerError, gin.H{"findone error": err.Error()})
 			return
 		}
 
 		passwordIsValid, msg := VerifyPassword(user.Password, foundUser.Password)
 		if !passwordIsValid {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
+			c.JSON(http.StatusInternalServerError, gin.H{"verify password error": msg})
 			return
 		}
 
@@ -190,7 +190,7 @@ func Login() gin.HandlerFunc {
 		err = userCollection.FindOne(ctx, bson.M{"user_id": foundUser.User_id}).Decode(&foundUser)
 
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			c.JSON(http.StatusInternalServerError, gin.H{"last findone error": err.Error()})
 			return
 		}
 

@@ -29,8 +29,9 @@ function AddUser({ btnName }) {
 		name: "",
 		path: "ray",
 		role: "normal",
+		uuid: ""
 	};
-	const [{ email, password, name, path, role }, setState] =
+	const [{ email, password, name, path, role, uuid }, setState] =
 		useState(initialState);
 	const clearState = () => {
 		setState({ ...initialState });
@@ -49,10 +50,11 @@ function AddUser({ btnName }) {
 				name,
 				path,
 				status: "plain",
+				uuid
 			},
 		})
 			.then((response) => {
-				dispatch(success({ show: true, content: "user added in success!" }));
+				dispatch(success({ show: true, content: "user " + name +  " added in success!" }));
 				dispatch(doRerender({rerender: !rerenderSignal.rerender}))
 				clearState();
 			})
@@ -106,7 +108,7 @@ function AddUser({ btnName }) {
 
 						<Row className="mb-3">
 							<Form.Group as={Col} controlId="formGridUserType">
-								<Form.Label>User Type</Form.Label>
+								<Form.Label>User Type(optinal)</Form.Label>
 								<Form.Select name="role" onChange={onChange} value={role}>
 									<option value="admin">Admin</option>
 									<option value="normal">Normal</option>
@@ -114,7 +116,7 @@ function AddUser({ btnName }) {
 							</Form.Group>
 
 							<Form.Group as={Col} controlId="formGridTag">
-								<Form.Label>Name</Form.Label>
+								<Form.Label>Name(optinal)</Form.Label>
 								<Form.Control
 									type="input"
 									name="name"
@@ -125,13 +127,25 @@ function AddUser({ btnName }) {
 							</Form.Group>
 
 							<Form.Group as={Col} controlId="formGridPath">
-								<Form.Label>Path</Form.Label>
+								<Form.Label>Path(optinal)</Form.Label>
 								<Form.Control
 									type="input"
 									name="path"
 									onChange={onChange}
 									placeholder="optional"
 									value={path}
+								/>
+							</Form.Group>
+						</Row>
+						<Row className="mb-3">
+							<Form.Group as={Col} controlId="formGridUserUuid">
+								<Form.Label>UUID(optinal)</Form.Label>
+								<Form.Control
+									type="input"
+									name="uuid"
+									onChange={onChange}
+									placeholder="UUID"
+									value={uuid}
 								/>
 							</Form.Group>
 						</Row>

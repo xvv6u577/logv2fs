@@ -3,7 +3,7 @@ import { useSelector, useDispatch } from "react-redux";
 import { Container, Form, Button, Card, Alert } from "react-bootstrap";
 import { useNavigate, Navigate } from "react-router-dom";
 import axios from "axios";
-import { info, success, alert } from "../store/message";
+import { alert } from "../store/message";
 import { login } from "../store/login";
 
 const Login = () => {
