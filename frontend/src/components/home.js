@@ -14,13 +14,13 @@ import {
 	Tooltip,
 } from "react-bootstrap";
 import { useSelector, useDispatch } from "react-redux";
-import { alert, messageSlice, success } from "../store/message";
+import { alert, info, success } from "../store/message";
+import { doRerender } from "../store/rerender";
 import { formatBytes } from "../service/service";
 import axios from "axios";
 
 const Home = () => {
 	const [users, setUsers] = useState([]);
-	const [rerender, updateState] = useState(0);
 	const loginState = useSelector((state) => state.login);
 	const message = useSelector((state) => state.message);
 	const rerenderSignal = useSelector((state) => state.rerender);
@@ -33,7 +33,7 @@ const Home = () => {
 				headers: { token: loginState.token },
 			})
 			.then((response) => {
-				updateState(rerender + 5);
+				dispatch(doRerender({ rerender: !rerenderSignal.rerender }));
 				dispatch(success({ show: true, content: response.data.message }));
 			})
 			.catch((err) => {
@@ -47,7 +47,7 @@ const Home = () => {
 				headers: { token: loginState.token },
 			})
 			.then((response) => {
-				updateState(rerender + 3);
+				dispatch(doRerender({ rerender: !rerenderSignal.rerender }));
 				dispatch(success({ show: true, content: response.data.message }));
 			})
 			.catch((err) => {
@@ -61,7 +61,7 @@ const Home = () => {
 				headers: { token: loginState.token },
 			})
 			.then((response) => {
-				updateState(rerender + 1);
+				dispatch(doRerender({ rerender: !rerenderSignal.rerender }));
 				dispatch(success({ show: true, content: response.data.message }));
 			})
 			.catch((err) => {
@@ -70,16 +70,12 @@ const Home = () => {
 	};
 
 	useEffect(() => {
-		updateState(rerender + 9);
-	}, [rerenderSignal]);
-
-	useEffect(() => {
 		if (message.show === true) {
 			setTimeout(() => {
 				dispatch(alert({ show: false }));
 			}, 5000);
 		}
-	}, [message]);
+	}, [message, dispatch]);
 
 	useEffect(() => {
 		if (loginState.jwt.Role === "admin") {
@@ -105,7 +101,7 @@ const Home = () => {
 					dispatch(alert({ show: true, content: err.toString() }));
 				});
 		}
-	}, [dispatch, rerender]);
+	}, [rerenderSignal, loginState.jwt.Email, dispatch, loginState.jwt.Role, loginState.token]);
 
 	return (
 		<Container className="py-3">
@@ -125,12 +121,21 @@ const Home = () => {
 									key={index}
 									placement="right"
 									overlay={
-										<Tooltip id={`tooltip-${index}`}>
-											Tooltip on <strong>{index}</strong>.
+										<Tooltip id={`tooltip-${index}`} className="myToolTip">
+											domain: <b>{Object.values(element.nodeinuse).toString()}</b> <br />
+											uuid: <b>{element.uuid}</b>
+											<br />
+											path: <b>{element.path}</b>
+											<br />
 										</Tooltip>
 									}
 								>
-									<div className="fw-bold">
+									<div
+										className="fw-bold info-hover"
+										onClick={() => {
+											navigator.clipboard.writeText(process.env.REACT_APP_API_HOST + "suburl/"+element.email);
+										}}
+									>
 										<h5>
 											<b>{element.name}</b>
 											<Badge bg="success" className="mx-1" pill>
@@ -162,7 +167,9 @@ const Home = () => {
 							<div className="d-flex justify-content-center align-items-center my-auto">
 								<EditUser
 									btnName="Edit"
-									editUserFunc={() => updateState(rerender + 7)}
+									editUserFunc={() =>
+										dispatch(doRerender({ rerender: !rerenderSignal.rerender }))
+									}
 									user={element}
 								/>
 								{element.status === "plain" ? (

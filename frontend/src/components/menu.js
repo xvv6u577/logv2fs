@@ -9,7 +9,7 @@ import { logout } from "../store/login";
 import AddUser from "./adduser";
 
 
-const Menu = ({}) => {
+const Menu = () => {
 
     const loginState = useSelector((state) => state.login);
     const dispatch = useDispatch();

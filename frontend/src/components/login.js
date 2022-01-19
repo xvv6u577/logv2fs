@@ -42,7 +42,7 @@ const Login = () => {
 				dispatch(alert({show: false}))
 			}, 5000)
 		}
-	},[message])
+	},[dispatch, message])
 
 	if (loginState.isLogin) {
 		return <Navigate to="/home" />;

@@ -24,3 +24,20 @@
 ol.list-group li {
 	background-color: transparent;
 }
+
+.myToolTip > .tooltip-inner {
+	max-width: 100%;
+	text-align: left;
+}
+
+.info-hover {
+	border-bottom: 4px solid transparent;;
+}
+.info-hover:hover {
+	border-bottom: 4px solid #D5BA5E;
+}
+
+.inline {
+	display: inline-block !important;
+	font-size: 1rem;
+}
