@@ -32,7 +32,7 @@ const Login = () => {
 				}
 			})
 			.catch((err) => {
-				dispatch(alert({ show: true, content: err.toString() }));
+				dispatch(alert({ show: true, content: err.data.toString() }));
 			});
 	};
 

@@ -75,7 +75,7 @@ func SignUp() gin.HandlerFunc {
 			}
 		}
 
-		var ctx, cancel = context.WithTimeout(context.Background(), 10*time.Second)
+		var ctx, cancel = context.WithTimeout(context.Background(), 60*time.Second)
 		defer cancel()
 		var user model.User
 
@@ -166,14 +166,17 @@ func SignUp() gin.HandlerFunc {
 		user.Token = &token
 		user.Refresh_token = &refreshToken
 
-		_, insertErr := userCollection.InsertOne(ctx, user)
-		if insertErr != nil {
-			msg := "User item was not created"
-			c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
+		_, err = userCollection.InsertOne(ctx, user)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
 
-		_ = database.Client.Database("logV2rayTrafficDB").CreateCollection(ctx, user.Email)
+		err = database.Client.Database("logV2rayTrafficDB").CreateCollection(ctx, user.Email)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
 
 		cmdConn, err := grpc.Dial(fmt.Sprintf("%s:%d", v2ray.V2_API_ADDRESS, v2ray.V2_API_PORT), grpc.WithInsecure())
 		if err != nil {
@@ -200,7 +203,7 @@ func SignUp() gin.HandlerFunc {
 //Login is the api used to get a single user
 func Login() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
+		var ctx, cancel = context.WithTimeout(context.Background(), 60*time.Second)
 		defer cancel()
 		var user model.User
 		var foundUser model.User
@@ -238,12 +241,15 @@ func Login() gin.HandlerFunc {
 
 func EditUser() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		if err := helper.CheckUserType(c, "admin"); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
+
+		if BOOT_MODE != "wild" {
+			if err := helper.CheckUserType(c, "admin"); err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+				return
+			}
 		}
 
-		var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
+		var ctx, cancel = context.WithTimeout(context.Background(), 60*time.Second)
 		defer cancel()
 
 		var user, foundUser model.User
@@ -308,11 +314,14 @@ func EditUser() gin.HandlerFunc {
 
 func GetUsers() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		if err := helper.CheckUserType(c, "admin"); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
+
+		if BOOT_MODE != "wild" {
+			if err := helper.CheckUserType(c, "admin"); err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+				return
+			}
 		}
-		var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
+		var ctx, cancel = context.WithTimeout(context.Background(), 60*time.Second)
 
 		// recordPerPage := 10
 		recordPerPage, err := strconv.Atoi(c.Query("recordPerPage"))
@@ -354,7 +363,7 @@ func GetUsers() gin.HandlerFunc {
 //GetUser is the api used to get a single user
 func GetUser() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
+		var ctx, cancel = context.WithTimeout(context.Background(), 60*time.Second)
 		defer cancel()
 
 		var user model.User
@@ -377,9 +386,12 @@ func GetUser() gin.HandlerFunc {
 
 func TakeItOfflineByUserName() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		if err := helper.CheckUserType(c, "admin"); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
+
+		if BOOT_MODE != "wild" {
+			if err := helper.CheckUserType(c, "admin"); err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+				return
+			}
 		}
 
 		name := c.Param("name")
@@ -419,9 +431,11 @@ func TakeItOfflineByUserName() gin.HandlerFunc {
 
 func TakeItOnlineByUserName() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		if err := helper.CheckUserType(c, "admin"); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
+		if BOOT_MODE != "wild" {
+			if err := helper.CheckUserType(c, "admin"); err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+				return
+			}
 		}
 
 		name := c.Param("name")
@@ -461,9 +475,12 @@ func TakeItOnlineByUserName() gin.HandlerFunc {
 
 func DeleteUserByUserName() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		if err := helper.CheckUserType(c, "admin"); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
+
+		if BOOT_MODE != "wild" {
+			if err := helper.CheckUserType(c, "admin"); err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+				return
+			}
 		}
 
 		name := c.Param("name")
@@ -534,9 +551,12 @@ func GetTrafficByUser() gin.HandlerFunc {
 
 func GetAllUserTraffic() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		if err := helper.CheckUserType(c, "admin"); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
+
+		if BOOT_MODE != "wild" {
+			if err := helper.CheckUserType(c, "admin"); err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+				return
+			}
 		}
 
 		cmdConn, err := grpc.Dial(fmt.Sprintf("%s:%d", v2ray.V2_API_ADDRESS, v2ray.V2_API_PORT), grpc.WithInsecure())

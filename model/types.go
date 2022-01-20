@@ -8,13 +8,13 @@ import (
 
 type User struct {
 	ID            primitive.ObjectID `bson:"_id"`
-	Email         string             `json:"email" bson:"email" validate:"required,min=4,max=100"`
-	UUID          string             `json:"uuid" bson:"uuid"`
+	Email         string             `json:"email" bson:"email" validate:"required,min=2,max=100"`
+	Password      string             `json:"password" validate:"required,min=6"`
 	Path          string             `json:"path" bson:"path" validate:"required,eq=ray|eq=cas|eq=kay"`
-	Name          string             `json:"name" bson:"name"`
-	Password      string             `json:"password" bson:"password" validate:"required,min=6"`
+	UUID          string             `json:"uuid" bson:"uuid"`
 	Role          string             `json:"role" bson:"role" validate:"required,eq=admin|eq=normal"`                 // role: "admin", "normal"
 	Status        string             `json:"status" bson:"status" validate:"required,eq=plain|eq=deleted|eq=overdue"` // status: "plain", "deleted", "overdue"
+	Name          string             `json:"name" bson:"name"`
 	Token         *string            `json:"token"`
 	Refresh_token *string            `json:"refresh_token"`
 	User_id       string             `json:"user_id"`

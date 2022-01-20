@@ -18,6 +18,7 @@ import { alert, info, success } from "../store/message";
 import { doRerender } from "../store/rerender";
 import { formatBytes } from "../service/service";
 import axios from "axios";
+import { logout } from "../store/login";
 
 const Home = () => {
 	const [users, setUsers] = useState([]);
@@ -84,7 +85,14 @@ const Home = () => {
 					headers: { token: loginState.token },
 				})
 				.then((response) => {
-					setUsers(response.data);
+					let user = response.data.filter(
+						(ele) => ele.email === loginState.jwt.Email
+					);
+					if (user.length != 0) {
+						setUsers(response.data);
+					} else {
+						dispatch(logout());
+					}
 				})
 				.catch((err) => {
 					dispatch(alert({ show: true, content: err.toString() }));
@@ -95,13 +103,23 @@ const Home = () => {
 					headers: { token: loginState.token },
 				})
 				.then((response) => {
-					setUsers([response.data]);
+					if (response.data.length === 0) {
+						dispatch(logout());
+					} else {
+						setUsers([response.data]);
+					}
 				})
 				.catch((err) => {
 					dispatch(alert({ show: true, content: err.toString() }));
 				});
 		}
-	}, [rerenderSignal, loginState.jwt.Email, dispatch, loginState.jwt.Role, loginState.token]);
+	}, [
+		rerenderSignal,
+		loginState.jwt.Email,
+		dispatch,
+		loginState.jwt.Role,
+		loginState.token,
+	]);
 
 	return (
 		<Container className="py-3">
@@ -122,7 +140,9 @@ const Home = () => {
 									placement="right"
 									overlay={
 										<Tooltip id={`tooltip-${index}`} className="myToolTip">
-											domain: <b>{Object.values(element.nodeinuse).toString()}</b> <br />
+											domain:{" "}
+											<b>{Object.values(element.nodeinuse).toString()}</b>{" "}
+											<br />
 											uuid: <b>{element.uuid}</b>
 											<br />
 											path: <b>{element.path}</b>
@@ -133,7 +153,11 @@ const Home = () => {
 									<div
 										className="fw-bold info-hover"
 										onClick={() => {
-											navigator.clipboard.writeText(process.env.REACT_APP_API_HOST + "suburl/"+element.email);
+											navigator.clipboard.writeText(
+												process.env.REACT_APP_API_HOST +
+													"suburl/" +
+													element.email
+											);
 										}}
 									>
 										<h5>
