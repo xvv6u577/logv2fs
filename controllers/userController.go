@@ -35,8 +35,11 @@ var Domains = map[string]string{"w8": "w8.undervineyard.com", "rm": "rm.undervin
 var userCollection *mongo.Collection = database.OpenCollection(database.Client, "USERS")
 var validate = validator.New()
 var BOOT_MODE = os.Getenv("BOOT_MODE")
+var V2_API_ADDRESS = os.Getenv("V2_API_ADDRESS")
+var V2_API_PORT = os.Getenv("V2_API_PORT")
 
 type User = model.User
+type TrafficAtPeriod = model.TrafficAtPeriod
 type Node = model.Node
 
 //HashPassword is used to encrypt the password before it is stored in the DB
@@ -78,6 +81,7 @@ func SignUp() gin.HandlerFunc {
 		var ctx, cancel = context.WithTimeout(context.Background(), 60*time.Second)
 		defer cancel()
 		var user model.User
+		var current = time.Now()
 
 		CREDIT := os.Getenv("CREDIT")
 
@@ -115,8 +119,8 @@ func SignUp() gin.HandlerFunc {
 		password := HashPassword(user.Password)
 		user.Password = password
 
-		user.CreatedAt, _ = time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
-		user.UpdatedAt, _ = time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
+		user.CreatedAt = current
+		user.UpdatedAt = current
 
 		if user.UUID == "" {
 			uuidV4, _ := uuid.NewV4()
@@ -160,6 +164,27 @@ func SignUp() gin.HandlerFunc {
 			user.Usedtraffic = 0
 		}
 
+		var current_year = current.Local().Format("2006")
+		var current_month = current.Local().Format("200601")
+		var current_day = current.Local().Format("20060102")
+
+		user.UsedByCurrentDay = TrafficAtPeriod{
+			Period: current_day,
+			Amount: 0,
+		}
+		user.UsedByCurrentMonth = TrafficAtPeriod{
+			Period: current_month,
+			Amount: 0,
+		}
+		user.UsedByCurrentYear = TrafficAtPeriod{
+			Period: current_year,
+			Amount: 0,
+		}
+
+		user.TrafficByDay = []TrafficAtPeriod{}
+		user.TrafficByMonth = []TrafficAtPeriod{}
+		user.TrafficByYear = []TrafficAtPeriod{}
+
 		user.ID = primitive.NewObjectID()
 		user.User_id = user.ID.Hex()
 		token, refreshToken, _ := helper.GenerateAllTokens(user.Email, user.UUID, user.Path, user.Role, user.User_id)
@@ -178,7 +203,7 @@ func SignUp() gin.HandlerFunc {
 			return
 		}
 
-		cmdConn, err := grpc.Dial(fmt.Sprintf("%s:%d", v2ray.V2_API_ADDRESS, v2ray.V2_API_PORT), grpc.WithInsecure())
+		cmdConn, err := grpc.Dial(fmt.Sprintf("%s:%s", V2_API_ADDRESS, V2_API_PORT), grpc.WithInsecure())
 		if err != nil {
 			msg := "v2ray connection failed."
 			c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
@@ -403,7 +428,7 @@ func TakeItOfflineByUserName() gin.HandlerFunc {
 			return
 		}
 
-		cmdConn, err := grpc.Dial(fmt.Sprintf("%s:%d", v2ray.V2_API_ADDRESS, v2ray.V2_API_PORT), grpc.WithInsecure())
+		cmdConn, err := grpc.Dial(fmt.Sprintf("%s:%s", V2_API_ADDRESS, V2_API_PORT), grpc.WithInsecure())
 		if err != nil {
 			msg := "v2ray connection failed."
 			c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
@@ -447,7 +472,7 @@ func TakeItOnlineByUserName() gin.HandlerFunc {
 			return
 		}
 
-		cmdConn, err := grpc.Dial(fmt.Sprintf("%s:%d", v2ray.V2_API_ADDRESS, v2ray.V2_API_PORT), grpc.WithInsecure())
+		cmdConn, err := grpc.Dial(fmt.Sprintf("%s:%s", V2_API_ADDRESS, V2_API_PORT), grpc.WithInsecure())
 		if err != nil {
 			msg := "v2ray connection failed."
 			c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
@@ -494,7 +519,7 @@ func DeleteUserByUserName() gin.HandlerFunc {
 
 		if user.Status == "plain" {
 
-			cmdConn, err := grpc.Dial(fmt.Sprintf("%s:%d", v2ray.V2_API_ADDRESS, v2ray.V2_API_PORT), grpc.WithInsecure())
+			cmdConn, err := grpc.Dial(fmt.Sprintf("%s:%s", V2_API_ADDRESS, V2_API_PORT), grpc.WithInsecure())
 			if err != nil {
 				msg := "v2ray connection failed."
 				c.JSON(http.StatusInternalServerError, gin.H{"v2ray connection error": msg})
@@ -529,7 +554,7 @@ func GetTrafficByUser() gin.HandlerFunc {
 			return
 		}
 
-		cmdConn, err := grpc.Dial(fmt.Sprintf("%s:%d", v2ray.V2_API_ADDRESS, v2ray.V2_API_PORT), grpc.WithInsecure())
+		cmdConn, err := grpc.Dial(fmt.Sprintf("%s:%s", V2_API_ADDRESS, V2_API_PORT), grpc.WithInsecure())
 		if err != nil {
 			log.Panic(err)
 		}
@@ -559,7 +584,7 @@ func GetAllUserTraffic() gin.HandlerFunc {
 			}
 		}
 
-		cmdConn, err := grpc.Dial(fmt.Sprintf("%s:%d", v2ray.V2_API_ADDRESS, v2ray.V2_API_PORT), grpc.WithInsecure())
+		cmdConn, err := grpc.Dial(fmt.Sprintf("%s:%s", V2_API_ADDRESS, V2_API_PORT), grpc.WithInsecure())
 		if err != nil {
 			log.Panic("Panic: ", err)
 		}

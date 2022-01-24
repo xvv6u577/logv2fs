@@ -18,10 +18,8 @@ import (
 )
 
 const (
-	V2_API_ADDRESS = "127.0.0.1"
-	V2_API_PORT    = 8070
-	ALTERID        = 64
-	LEVEL          = 0
+	ALTERID = 64
+	LEVEL   = 0
 
 	PLAIN   = "plain"
 	DELETE  = "delete"

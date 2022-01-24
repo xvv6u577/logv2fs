@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
-	"os/user"
 	"runtime/debug"
 	"time"
 
@@ -22,22 +21,14 @@ import (
 	"google.golang.org/grpc"
 )
 
-const (
-	SERVER_ADDRESS = "127.0.0.1"
-	SERVER_PORT    = 8079
-)
-
 type User = model.User
 
 var cronInstance *cron.Cron
-
-// var collection *mongo.Collection
 
 func init() {
 
 	cronInstance = cron.New()
 	cronInstance.Start()
-	// collection = database.OpenCollection(database.Client, "USERS")
 }
 
 func main() {
@@ -68,7 +59,6 @@ func main() {
 				Aliases: []string{"c"},
 				Usage:   "run cron job",
 				Action: func(c *cli.Context) error {
-					// CronTest()
 					return nil
 				},
 			},
@@ -86,13 +76,17 @@ func main() {
 						err := database.AddDBUserProperty()
 						return err
 
-					case "emptyuserall":
+					case "delusers":
 						err := database.EmptyUsersInfoInDB()
 						return err
 
-					case "deldbs":
+					case "delcols":
 						err := database.DeleteUsersDBs()
 						return err
+					case "delall":
+						database.AddDBUserProperty()
+						database.DeleteUsersDBs()
+						return nil
 
 					default:
 						fmt.Println(tag)
@@ -122,22 +116,10 @@ func main() {
 
 func V2rayProcess() {
 
-	currentUser, err := user.Current()
-	if err != nil {
-		log.Panic(err)
-	}
+	V2RAY := os.Getenv("V2RAY")
+	V2RAY_CONFIG := os.Getenv("V2RAY_CONFIG")
 
-	var cmd *exec.Cmd
-	if currentUser.Username == "caster" {
-
-		cmd = exec.Command("/usr/local/bin/v2ray", "-config", "/Users/caster/Desktop/v2ray-2-instances/transit-server/config.json")
-
-	} else if currentUser.Username == "guestuser2" {
-
-		cmd = exec.Command("/opt/homebrew/bin/v2ray", "-config", "/Users/guestuser2/Desktop/v2ray-2-instances/transit-server/config.json")
-
-	}
-
+	var cmd = exec.Command(V2RAY, "-config", V2RAY_CONFIG)
 	if err := cmd.Run(); err != nil {
 		log.Panic("Panic: ", err)
 	}
@@ -147,11 +129,16 @@ func runServer() {
 	// wait v2ray process to be ready.
 	time.Sleep(time.Second)
 
-	// add users in databases to v2ray service
+	var V2_API_ADDRESS = os.Getenv("V2_API_ADDRESS")
+	var V2_API_PORT = os.Getenv("V2_API_PORT")
+
+	var SERVER_ADDRESS = os.Getenv("SERVER_ADDRESS")
+	var SERVER_PORT = os.Getenv("SERVER_PORT")
+
 	allUsersInDB, _ := database.GetAllUsersInfo()
 	if len(allUsersInDB) != 0 {
 
-		cmdConn, err := grpc.Dial(fmt.Sprintf("%s:%d", v2ray.V2_API_ADDRESS, v2ray.V2_API_PORT), grpc.WithInsecure())
+		cmdConn, err := grpc.Dial(fmt.Sprintf("%s:%s", V2_API_ADDRESS, V2_API_PORT), grpc.WithInsecure())
 		if err != nil {
 			log.Panic(err)
 		}
@@ -163,22 +150,16 @@ func runServer() {
 			}
 		}
 	}
-
 	// add cron
-	routine.Cron_loggingV2TrafficAll_everyHour(cronInstance)
-
-	// gin.SetMode(gin.ReleaseMode)
+	routine.Cron_loggingJobs(cronInstance)
 
 	// default:
 	// router := gin.Default()
 
-	// customized:
 	router := gin.New()
 	router.Use(gin.Logger())
 	router.Use(recoverFromError)
 
-	// user auth tutorial:
-	// https://dev.to/joojodontoh/build-user-authentication-in-golang-with-jwt-and-mongodb-2igd
 	routers.AuthRoutes(router)
 	routers.UserRoutes(router)
 
@@ -186,7 +167,7 @@ func runServer() {
 		c.JSON(http.StatusNotFound, gin.H{"final error": "no route found."})
 	})
 
-	router.Run(fmt.Sprintf("%s:%d", SERVER_ADDRESS, SERVER_PORT))
+	router.Run(fmt.Sprintf("%s:%s", SERVER_ADDRESS, SERVER_PORT))
 
 }
 

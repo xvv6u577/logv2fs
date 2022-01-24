@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
 	"time"
 
 	"github.com/caster8013/logv2rayfullstack/database"
@@ -17,71 +18,241 @@ import (
 
 type Traffic = model.Traffic
 type User = model.User
+type TrafficAtPeriod = model.TrafficAtPeriod
+
+var V2_API_ADDRESS = os.Getenv("V2_API_ADDRESS")
+var V2_API_PORT = os.Getenv("V2_API_PORT")
+var CRON_INTERVAL_BY_HOUR = os.Getenv("CRON_INTERVAL_BY_HOUR")
+var CRON_INTERVAL_BY_DAY = os.Getenv("CRON_INTERVAL_BY_DAY")
+var CRON_INTERVAL_BY_MONTH = os.Getenv("CRON_INTERVAL_BY_MONTH")
+var CRON_INTERVAL_BY_YEAR = os.Getenv("CRON_INTERVAL_BY_YEAR")
 
 func Cron_loggingV2TrafficByUser(traffic Traffic) {
 	var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
 	defer cancel()
 
-	// write traffic record to DB
+	var current = time.Now()
+	// var current_year = current.Local().Format("2006")
+	// var current_month = current.Local().Format("200601")
+	var current_day = current.Local().Format("20060102")
 
-	col := database.OpenCollection(database.Client, traffic.Name)
+	// write traffic record to DB
+	userTrafficCollection := database.OpenCollection(database.Client, traffic.Name)
 	userCollection := database.OpenCollection(database.Client, "USERS")
 
 	filter := bson.D{primitive.E{Key: "email", Value: traffic.Name}}
 	user := &User{}
-	userCollection.FindOne(ctx, filter).Decode(user)
+	err := userCollection.FindOne(ctx, filter).Decode(user)
+	if err != nil {
+		log.Panic("Panic: ", err)
+	}
 
-	cmdConn, err := grpc.Dial(fmt.Sprintf("%s:%d", v2ray.V2_API_ADDRESS, v2ray.V2_API_PORT), grpc.WithInsecure())
+	cmdConn, err := grpc.Dial(fmt.Sprintf("%s:%s", V2_API_ADDRESS, V2_API_PORT), grpc.WithInsecure())
 	if err != nil {
 		log.Panic("Panic: ", err)
 	}
 	NHSClient := v2ray.NewHandlerServiceClient(cmdConn, user.Path)
 
-	now, _ := time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
-	col.InsertOne(ctx, model.TrafficInDB{
+	userTrafficCollection.InsertOne(ctx, model.TrafficInDB{
 		Total:     traffic.Total,
-		CreatedAt: now,
+		CreatedAt: current,
 	})
 
 	// 超额的话，删除用户。之后，Usedtraffic += Total
 	if user.Status == "plain" {
-		now, _ := time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
 
-		if int64(user.Usedtraffic) > int64(user.Credittraffic) {
+		var update bson.D
+
+		if traffic.Total+int64(user.Usedtraffic) > int64(user.Credittraffic) {
 			NHSClient.DelUser(user.Email)
 
-			update := bson.D{primitive.E{Key: "$set", Value: bson.D{
+			update = bson.D{primitive.E{Key: "$set", Value: bson.D{
+				primitive.E{Key: "used_by_current_day", Value: primitive.D{
+					primitive.E{Key: "amount", Value: traffic.Total + int64(user.UsedByCurrentDay.Amount)},
+					primitive.E{Key: "period", Value: current_day},
+				}},
 				primitive.E{Key: "used", Value: traffic.Total + int64(user.Usedtraffic)},
-				primitive.E{Key: "updated_at", Value: now},
+				primitive.E{Key: "updated_at", Value: current},
 				primitive.E{Key: "status", Value: "overdue"},
 			}}}
-			userCollection.FindOneAndUpdate(ctx, filter, update)
 		} else {
-			update := bson.D{primitive.E{Key: "$set", Value: bson.D{
+			update = bson.D{primitive.E{Key: "$set", Value: bson.D{
+				primitive.E{Key: "used_by_current_day", Value: primitive.D{
+					primitive.E{Key: "amount", Value: traffic.Total + int64(user.UsedByCurrentDay.Amount)},
+					primitive.E{Key: "period", Value: current_day},
+				}},
 				primitive.E{Key: "used", Value: traffic.Total + int64(user.Usedtraffic)},
-				primitive.E{Key: "updated_at", Value: now},
+				primitive.E{Key: "updated_at", Value: current},
 			}}}
-			userCollection.FindOneAndUpdate(ctx, filter, update)
 		}
+
+		userCollection.FindOneAndUpdate(ctx, filter, update)
 	}
 
 }
 
-func Cron_loggingV2TrafficAll_everyHour(c *cron.Cron) {
+func Cron_loggingJobs(c *cron.Cron) {
 
-	c.AddFunc("0 */5 * * * *", func() {
+	c.AddFunc(CRON_INTERVAL_BY_HOUR, func() {
 
-		cmdConn, err := grpc.Dial(fmt.Sprintf("%s:%d", v2ray.V2_API_ADDRESS, v2ray.V2_API_PORT), grpc.WithInsecure())
+		fmt.Println("1分钟")
+		cmdConn, err := grpc.Dial(fmt.Sprintf("%s:%s", V2_API_ADDRESS, V2_API_PORT), grpc.WithInsecure())
 		if err != nil {
 			log.Panic("Panic: ", err)
 		}
 
 		NSSClient := v2ray.NewStatsServiceClient(cmdConn)
-		all, _ := NSSClient.GetAllUserTraffic(true)
-		if len(all) != 0 {
-			for _, item := range all {
-				Cron_loggingV2TrafficByUser(item)
+		allUserTraffic, err := NSSClient.GetAllUserTraffic(true)
+		if err != nil {
+			log.Panic("NSSClient.GetAllUserTraffic err: ", err.Error())
+		}
+		if len(allUserTraffic) != 0 {
+			for _, trafficPerUser := range allUserTraffic {
+				Cron_loggingV2TrafficByUser(trafficPerUser)
 			}
 		}
+
 	})
+
+	c.AddFunc(CRON_INTERVAL_BY_DAY, func() {
+		fmt.Println("2分钟")
+		var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
+		defer cancel()
+
+		var current = time.Now()
+		var next = current.Add(2 * time.Minute)
+		// var current_year = current.Local().Format("2006")
+		var current_month = current.Local().Format("200601")
+		// var current_day = current.Local().Format("20060102")
+		var next_day = next.Local().Format("20060102")
+
+		filter := bson.D{{}}
+		userCollection := database.OpenCollection(database.Client, "USERS")
+		cursor, err := userCollection.Find(ctx, filter)
+		if err != nil {
+			log.Panic("Panic: ", err)
+		}
+
+		for cursor.Next(ctx) {
+			var currentUser User
+			err := cursor.Decode(&currentUser)
+			if err != nil {
+				log.Panic("Panic: ", err)
+			}
+
+			singleUserFilter := bson.D{primitive.E{Key: "email", Value: currentUser.Email}}
+			trafficByDay := currentUser.TrafficByDay
+			trafficByDay = append(trafficByDay, currentUser.UsedByCurrentDay)
+			update := bson.D{primitive.E{Key: "$set", Value: bson.D{
+				primitive.E{Key: "used_by_current_month", Value: primitive.D{
+					primitive.E{Key: "amount", Value: currentUser.UsedByCurrentMonth.Amount + currentUser.UsedByCurrentDay.Amount},
+					primitive.E{Key: "period", Value: current_month},
+				}},
+				primitive.E{Key: "used_by_current_day", Value: primitive.D{
+					primitive.E{Key: "amount", Value: 0},
+					primitive.E{Key: "period", Value: next_day},
+				}},
+				primitive.E{Key: "traffic_by_day", Value: trafficByDay},
+				primitive.E{Key: "updated_at", Value: current},
+			}}}
+
+			userCollection.FindOneAndUpdate(ctx, singleUserFilter, update)
+		}
+
+		cursor.Close(ctx)
+	})
+
+	c.AddFunc(CRON_INTERVAL_BY_MONTH, func() {
+		fmt.Println("3分钟")
+		var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
+		defer cancel()
+
+		var current = time.Now()
+		var next = current.Add(2 * time.Minute)
+		var current_year = current.Local().Format("2006")
+		// var next_year = next.Local().Format("2006")
+		// var current_month = current.Local().Format("200601")
+		var next_month = next.Local().Format("200601")
+		// var current_day = current.Local().Format("20060102")
+
+		filter := bson.D{{}}
+		userCollection := database.OpenCollection(database.Client, "USERS")
+		cursor, err := userCollection.Find(ctx, filter)
+		if err != nil {
+			log.Panic("Panic: ", err)
+		}
+
+		for cursor.Next(ctx) {
+			var currentUser User
+			err := cursor.Decode(&currentUser)
+			if err != nil {
+				log.Panic("Panic: ", err)
+			}
+
+			singleUserFilter := bson.D{primitive.E{Key: "email", Value: currentUser.Email}}
+			trafficByMonth := currentUser.TrafficByMonth
+			trafficByMonth = append(trafficByMonth, currentUser.UsedByCurrentMonth)
+			update := bson.D{primitive.E{Key: "$set", Value: bson.D{
+				primitive.E{Key: "used_by_current_year", Value: primitive.D{
+					primitive.E{Key: "amount", Value: currentUser.UsedByCurrentYear.Amount + currentUser.UsedByCurrentMonth.Amount},
+					primitive.E{Key: "period", Value: current_year},
+				}},
+				primitive.E{Key: "used_by_current_month", Value: primitive.D{
+					primitive.E{Key: "amount", Value: 0},
+					primitive.E{Key: "period", Value: next_month},
+				}},
+				primitive.E{Key: "traffic_by_month", Value: trafficByMonth},
+				// primitive.E{Key: "used", Value: 0},
+				primitive.E{Key: "updated_at", Value: current},
+			}}}
+
+			userCollection.FindOneAndUpdate(ctx, singleUserFilter, update)
+		}
+		cursor.Close(ctx)
+	})
+
+	c.AddFunc(CRON_INTERVAL_BY_YEAR, func() {
+		fmt.Println("5分钟")
+		var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
+		defer cancel()
+
+		var current = time.Now()
+		var next = current.Add(2 * time.Minute)
+		// var current_year = current.Local().Format("2006")
+		var next_year = next.Local().Format("2006")
+		// var current_month = current.Local().Format("200601")
+		// var current_day = current.Local().Format("20060102")
+
+		filter := bson.D{{}}
+		userCollection := database.OpenCollection(database.Client, "USERS")
+		cursor, err := userCollection.Find(ctx, filter)
+		if err != nil {
+			log.Panic("Panic: ", err)
+		}
+
+		for cursor.Next(ctx) {
+			var currentUser User
+			err := cursor.Decode(&currentUser)
+			if err != nil {
+				log.Panic("Panic: ", err)
+			}
+
+			singleUserFilter := bson.D{primitive.E{Key: "email", Value: currentUser.Email}}
+			trafficByYear := currentUser.TrafficByYear
+			trafficByYear = append(trafficByYear, currentUser.UsedByCurrentYear)
+			update := bson.D{primitive.E{Key: "$set", Value: bson.D{
+				primitive.E{Key: "used_by_current_year", Value: primitive.D{
+					primitive.E{Key: "amount", Value: 0},
+					primitive.E{Key: "period", Value: next_year},
+				}},
+				primitive.E{Key: "traffic_by_year", Value: trafficByYear},
+				primitive.E{Key: "updated_at", Value: current},
+			}}}
+
+			userCollection.FindOneAndUpdate(ctx, singleUserFilter, update)
+		}
+
+		cursor.Close(ctx)
+	})
+
 }

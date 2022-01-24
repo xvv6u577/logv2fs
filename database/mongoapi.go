@@ -18,7 +18,7 @@ type User = model.User
 var validate = validator.New()
 
 func AddDBUserProperty() error {
-	var ctx, cancel = context.WithTimeout(context.Background(), 10*time.Second)
+	var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
 	defer cancel()
 
 	filter := bson.M{}
@@ -29,7 +29,7 @@ func AddDBUserProperty() error {
 }
 
 func EmptyUsersInfoInDB() error {
-	var ctx, cancel = context.WithTimeout(context.Background(), 10*time.Second)
+	var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
 	defer cancel()
 
 	filter := bson.M{}
@@ -39,7 +39,7 @@ func EmptyUsersInfoInDB() error {
 }
 
 func DeleteUsersDBs() error {
-	var ctx, cancel = context.WithTimeout(context.Background(), 10*time.Second)
+	var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
 	defer cancel()
 
 	users := []string{
@@ -48,7 +48,7 @@ func DeleteUsersDBs() error {
 		"xiaohe", "bsclks", "joy", "sarah", "guowanyue", "baofeng", "jonah", "yuxiaofang", "cuixiaoli", "wangyakun", "pty", "wupeng", "xiangwei", "changhua",
 		"weihongwei", "zhihu", "lujixiawu", "hepengfei", "mengchch", "21cpiaomu", "cuiyang", "bscdavid", "wangling", "21clsj", "anchagu", "bjbfl", "maylee",
 		"frankw", "pansir", "yizhu", "huohuo", "chunxia", "caster", "yutou", "camel", "rongfan", "cannan", "wuqiong", "huidi", "zhaorui", "yanyong",
-		"lijiaxin", "yongming", "jspotter", "haotian", "wrong", "sisi", "linbo", "bscalbert", "21caiqing", "shanshan", "bqgeorge",
+		"lijiaxin", "yongming", "jspotter", "haotian", "wrong", "sisi", "linbo", "bscalbert", "21caiqing", "shanshan", "bqgeorge", "7a2", "9b1", "bobhe", "lizheyu", "tianshu", "xiaoshen", "zhangyusheng",
 	}
 
 	for _, name := range users {
@@ -61,7 +61,7 @@ func DeleteUsersDBs() error {
 }
 
 func DeleteUserByName(email string) error {
-	var ctx, cancel = context.WithTimeout(context.Background(), 10*time.Second)
+	var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
 	defer cancel()
 
 	filter := bson.D{primitive.E{Key: "email", Value: email}}
@@ -76,7 +76,7 @@ func DeleteUserByName(email string) error {
 }
 
 func CreateUserByName(user *User) error {
-	var ctx, cancel = context.WithTimeout(context.Background(), 10*time.Second)
+	var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
 	defer cancel()
 
 	validationErr := validate.Struct(user)
@@ -106,7 +106,7 @@ func CreateUserByName(user *User) error {
 }
 
 func UpdateUserStatusByName(name string, status string) error {
-	var ctx, cancel = context.WithTimeout(context.Background(), 10*time.Second)
+	var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
 	defer cancel()
 
 	filter := bson.D{primitive.E{Key: "email", Value: name}}
@@ -126,7 +126,7 @@ func GetAllUsersInfo() ([]*User, error) {
 }
 
 func GetUserByName(name string) (User, error) {
-	var ctx, cancel = context.WithTimeout(context.Background(), 10*time.Second)
+	var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
 	defer cancel()
 
 	var user User
@@ -143,7 +143,7 @@ func GetUserByName(name string) (User, error) {
 }
 
 func FilterUsers(filter interface{}) ([]*User, error) {
-	var ctx, cancel = context.WithTimeout(context.Background(), 10*time.Second)
+	var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
 	defer cancel()
 
 	var users []*User
