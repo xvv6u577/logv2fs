@@ -88,7 +88,7 @@ const Home = () => {
 					let user = response.data.filter(
 						(ele) => ele.email === loginState.jwt.Email
 					);
-					if (user.length != 0) {
+					if (user.length !== 0) {
 						setUsers(response.data);
 					} else {
 						dispatch(logout());
@@ -103,6 +103,7 @@ const Home = () => {
 					headers: { token: loginState.token },
 				})
 				.then((response) => {
+					console.log(response.data);
 					if (response.data.length === 0) {
 						dispatch(logout());
 					} else {
@@ -233,7 +234,7 @@ const Home = () => {
 									</Button>
 								)}
 								<ConfirmDelUser
-									btnName="Delete User"
+									btnName="Delete"
 									deleteUserFunc={() => handleDeleteUser(element.email)}
 								/>
 							</div>
@@ -244,8 +245,58 @@ const Home = () => {
 				<Card style={{ width: "auto" }}>
 					<Card.Header>Basic Information</Card.Header>
 					<Card.Body>
-						<Card.Title>{users[0] && users[0].email}</Card.Title>
+						<Card.Title>Name: {users[0] && users[0].email}</Card.Title>
 						<Card.Text>
+							<h6>
+								<Badge bg="light" text="dark">
+									今日:{" "}
+								</Badge>
+								{users[0] && users[0].used_by_current_day.period}
+								<Badge bg="light" text="dark">
+									已用流量:{" "}
+								</Badge>
+								{formatBytes(users[0] && users[0].used_by_current_day.amount)}
+							</h6>
+							{/* <ListGroup horizontal>
+								{users[0] &&
+									users[0].traffic_by_day.map((element) => {
+										return (<ListGroup.Item>
+											<Badge bg="light" text="dark">
+												日期:{" "}
+											</Badge>
+											{element.period}
+											<Badge bg="light" text="dark">
+												流量:{" "}
+											</Badge>
+											{formatBytes(element.amount)}
+										</ListGroup.Item>)
+									})}
+							</ListGroup> */}
+							<h6>
+								<Badge bg="light" text="dark">
+									本月:{" "}
+								</Badge>
+								{users[0] && users[0].used_by_current_month.period}
+								<Badge bg="light" text="dark">
+									已用流量:{" "}
+								</Badge>
+								{formatBytes(users[0] && users[0].used_by_current_month.amount)}
+							</h6>
+							{/* <ListGroup horizontal>
+								{users[0] &&
+									users[0].traffic_by_month.map((element) => {
+										return (<ListGroup.Item>
+											<Badge bg="light" text="dark">
+												月份:{" "}
+											</Badge>
+											{element.period}
+											<Badge bg="light" text="dark">
+												流量:{" "}
+											</Badge>
+											{formatBytes(element.amount)}
+										</ListGroup.Item>)
+									})}
+							</ListGroup> */}
 							<h6>
 								<Badge bg="light" text="dark">
 									总流量:{" "}
@@ -257,7 +308,7 @@ const Home = () => {
 								{formatBytes(users[0] && users[0].used)}
 							</h6>
 						</Card.Text>
-						<Button variant="primary">Go somewhere</Button>
+						{/* <Button variant="primary">Go somewhere</Button> */}
 					</Card.Body>
 				</Card>
 			)}

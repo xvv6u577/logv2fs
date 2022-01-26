@@ -76,17 +76,13 @@ func main() {
 						err := database.AddDBUserProperty()
 						return err
 
-					case "delusers":
+					case "delallusers":
 						err := database.EmptyUsersInfoInDB()
 						return err
 
-					case "delcols":
+					case "delalltables":
 						err := database.DeleteUsersDBs()
 						return err
-					case "delall":
-						database.AddDBUserProperty()
-						database.DeleteUsersDBs()
-						return nil
 
 					default:
 						fmt.Println(tag)

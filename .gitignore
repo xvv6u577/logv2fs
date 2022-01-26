@@ -6,6 +6,7 @@
 /frontend/.env
 /frontend/tool/*.json
 /frontend/tool/generateUsers.js
+/frontend/tool/pushUsersToDB.js
 
 # testing
 /frontend/coverage

@@ -52,9 +52,7 @@ func DeleteUsersDBs() error {
 	}
 
 	for _, name := range users {
-
 		OpenCollection(Client, name).Drop(ctx)
-
 	}
 
 	return nil
