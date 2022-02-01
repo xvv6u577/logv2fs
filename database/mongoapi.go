@@ -3,6 +3,7 @@ package database
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log"
 	"time"
 
@@ -16,6 +17,14 @@ import (
 type User = model.User
 
 var validate = validator.New()
+
+func ImportFromJsonFile(path string) error {
+	var err error
+
+	fmt.Println(path)
+
+	return err
+}
 
 func AddDBUserProperty() error {
 	var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)

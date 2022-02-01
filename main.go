@@ -36,6 +36,15 @@ func main() {
 	app := &cli.App{
 		Name:  "logv2rayfullstack",
 		Usage: "A simple CLI program to manage logv2ray backend",
+		Flags: []cli.Flag{
+			&cli.StringFlag{
+				Name:    "flag",
+				Aliases: []string{"f"},
+				Value:   "",
+				Usage:   "appoint flag",
+				// Destination: &flag,
+			},
+		},
 		Commands: []*cli.Command{
 			{
 				Name:    "server",
@@ -65,14 +74,18 @@ func main() {
 			{
 				Name:    "mongo",
 				Aliases: []string{"db"},
-				Usage:   "manage mongoDB",
+				Flags: []cli.Flag{
+					&cli.StringFlag{Name: "path", Aliases: []string{"p"}},
+				},
+				Usage: "manage mongoDB",
 				Action: func(c *cli.Context) error {
 
 					tag := c.Args().First()
+					path := c.Args().Get(1)
 
 					switch tag {
 
-					case "tweet":
+					case "adduserproperty":
 						err := database.AddDBUserProperty()
 						return err
 
@@ -84,8 +97,13 @@ func main() {
 						err := database.DeleteUsersDBs()
 						return err
 
+					case "import":
+						// go run ./ db import /root/home/db.json
+						err := database.ImportFromJsonFile(path)
+						return err
+
 					default:
-						fmt.Println(tag)
+						fmt.Println(tag, path, c.String("path"))
 					}
 
 					return nil
