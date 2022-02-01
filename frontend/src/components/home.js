@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
 	Container,
 	Button,
@@ -14,7 +14,7 @@ import {
 	Tooltip,
 } from "react-bootstrap";
 import { useSelector, useDispatch } from "react-redux";
-import { alert, info, success } from "../store/message";
+import { alert, success } from "../store/message";
 import { doRerender } from "../store/rerender";
 import { formatBytes } from "../service/service";
 import axios from "axios";
@@ -242,73 +242,62 @@ const Home = () => {
 					))}
 				</ListGroup>
 			) : (
-				<Card style={{ width: "auto" }}>
-					<Card.Header>Basic Information</Card.Header>
+				<Card className="user-page-card" bg="light">
+					<Card.Header>{users[0] && users[0].name}</Card.Header>
 					<Card.Body>
-						<Card.Title>Name: {users[0] && users[0].email}</Card.Title>
+						<Card.Title></Card.Title>
 						<Card.Text>
-							<h6>
-								<Badge bg="light" text="dark">
-									今日:{" "}
-								</Badge>
-								{users[0] && users[0].used_by_current_day.period}
-								<Badge bg="light" text="dark">
+							<div className="">
+								<Badge bg="info" text="dark">
+									今日: {users[0] && users[0].used_by_current_day.period}
 									已用流量:{" "}
+									{formatBytes(users[0] && users[0].used_by_current_day.amount)}
 								</Badge>
-								{formatBytes(users[0] && users[0].used_by_current_day.amount)}
-							</h6>
-							{/* <ListGroup horizontal>
-								{users[0] &&
-									users[0].traffic_by_day.map((element) => {
-										return (<ListGroup.Item>
-											<Badge bg="light" text="dark">
-												日期:{" "}
-											</Badge>
-											{element.period}
-											<Badge bg="light" text="dark">
-												流量:{" "}
-											</Badge>
-											{formatBytes(element.amount)}
-										</ListGroup.Item>)
-									})}
-							</ListGroup> */}
-							<h6>
-								<Badge bg="light" text="dark">
-									本月:{" "}
-								</Badge>
-								{users[0] && users[0].used_by_current_month.period}
-								<Badge bg="light" text="dark">
+							</div>
+
+							<div className="">
+								<Badge bg="info" text="dark">
+									本月: {users[0] && users[0].used_by_current_month.period}
 									已用流量:{" "}
+									{formatBytes(
+										users[0] && users[0].used_by_current_month.amount
+									)}
 								</Badge>
-								{formatBytes(users[0] && users[0].used_by_current_month.amount)}
-							</h6>
-							{/* <ListGroup horizontal>
-								{users[0] &&
-									users[0].traffic_by_month.map((element) => {
-										return (<ListGroup.Item>
-											<Badge bg="light" text="dark">
-												月份:{" "}
-											</Badge>
-											{element.period}
-											<Badge bg="light" text="dark">
-												流量:{" "}
-											</Badge>
-											{formatBytes(element.amount)}
-										</ListGroup.Item>)
-									})}
-							</ListGroup> */}
-							<h6>
-								<Badge bg="light" text="dark">
-									总流量:{" "}
+							</div>
+
+							<div className="">
+								<Badge bg="info" text="dark">
+									已用总流量: {formatBytes(users[0] && users[0].used)}
 								</Badge>
-								{formatBytes(users[0] && users[0].credit)}
-								<Badge bg="light" text="dark">
-									已用流量:{" "}
-								</Badge>
-								{formatBytes(users[0] && users[0].used)}
-							</h6>
+							</div>
 						</Card.Text>
-						{/* <Button variant="primary">Go somewhere</Button> */}
+
+						<h6>每月流量（月份/流量）:</h6>
+						<div>
+							{users[0] &&
+								users[0].traffic_by_month
+									.sort((a, b) => b.period - a.period)
+									.map((element) => {
+										return (
+											<Badge pill bg="dark" text="white">
+												{element.period} / {formatBytes(element.amount)}
+											</Badge>
+										);
+									})}
+						</div>
+						<h6 className="pt-2">每日流量(日期/流量):</h6>
+						<div>
+							{users[0] &&
+								users[0].traffic_by_day
+									.sort((a, b) => b.period - a.period)
+									.map((element) => {
+										return (
+											<Badge pill bg="dark" text="white">
+												{element.period} / {formatBytes(element.amount)}
+											</Badge>
+										);
+									})}
+						</div>
 					</Card.Body>
 				</Card>
 			)}

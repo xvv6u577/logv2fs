@@ -41,3 +41,8 @@ ol.list-group li {
 	display: inline-block !important;
 	font-size: 1rem;
 }
+
+.user-page-card {
+	height: auto;
+	width: auto;
+}
