@@ -17,12 +17,13 @@ const Menu = () => {
 				<Navbar.Brand href="/">Logv2ray Frontend</Navbar.Brand>
 				<Navbar.Toggle aria-controls="basic-navbar-nav" />
 				<Navbar.Collapse id="basic-navbar-nav">
+					{loginState.jwt.Role === "admin" && 
+						<Nav>
+							<Nav.Link href="/home">User Management Panel</Nav.Link>
+						</Nav>
+					}
 					<Nav>
-						<Nav.Link href="/home">
-							{loginState.jwt.Role === "admin"
-								? "User Management Panel"
-								: "My Panel"}
-						</Nav.Link>
+						<Nav.Link href="/mypanel">My Panel</Nav.Link>
 					</Nav>
 					<Nav>
 						<Nav.Link href="/macos">MacOS</Nav.Link>

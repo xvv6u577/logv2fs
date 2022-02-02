@@ -5,7 +5,6 @@ import {
 	Alert,
 	Badge,
 	ListGroup,
-	Card,
 	Modal,
 	Form,
 	Row,
@@ -79,47 +78,28 @@ const Home = () => {
 	}, [message, dispatch]);
 
 	useEffect(() => {
-		if (loginState.jwt.Role === "admin") {
-			axios
-				.get(process.env.REACT_APP_API_HOST + "alluser", {
-					headers: { token: loginState.token },
-				})
-				.then((response) => {
-					let user = response.data.filter(
-						(ele) => ele.email === loginState.jwt.Email
-					);
-					if (user.length !== 0) {
-						setUsers(response.data);
-					} else {
-						dispatch(logout());
-					}
-				})
-				.catch((err) => {
-					dispatch(alert({ show: true, content: err.toString() }));
-				});
-		} else if (loginState.jwt.Role === "normal") {
-			axios
-				.get(process.env.REACT_APP_API_HOST + "user/" + loginState.jwt.Email, {
-					headers: { token: loginState.token },
-				})
-				.then((response) => {
-					console.log(response.data);
-					if (response.data.length === 0) {
-						dispatch(logout());
-					} else {
-						setUsers([response.data]);
-					}
-				})
-				.catch((err) => {
-					dispatch(alert({ show: true, content: err.toString() }));
-				});
-		}
+		axios
+			.get(process.env.REACT_APP_API_HOST + "alluser", {
+				headers: { token: loginState.token },
+			})
+			.then((response) => {
+				let user = response.data.filter(
+					(ele) => ele.email === loginState.jwt.Email
+				);
+				if (user.length !== 0) {
+					setUsers(response.data);
+				} else {
+					dispatch(logout());
+				}
+			})
+			.catch((err) => {
+				dispatch(alert({ show: true, content: err.toString() }));
+			});
 	}, [
 		rerenderSignal,
 		loginState.jwt.Email,
-		dispatch,
-		loginState.jwt.Role,
 		loginState.token,
+		dispatch,
 	]);
 
 	return (
@@ -128,8 +108,7 @@ const Home = () => {
 				{" "}
 				{message.content}{" "}
 			</Alert>
-			{loginState.jwt.Role === "admin" ? (
-				<ListGroup as="ol" className="py-2" numbered>
+			<ListGroup as="ol" className="" numbered>
 					{users.map((element, index) => (
 						<ListGroup.Item
 							as="li"
@@ -161,7 +140,7 @@ const Home = () => {
 											);
 										}}
 									>
-										<h5>
+										<div>
 											<b>{element.name}</b>
 											<Badge bg="success" className="mx-1" pill>
 												{element.role === "admin" ? "管理员" : "普通用户"}
@@ -174,20 +153,17 @@ const Home = () => {
 													It's Me
 												</Badge>
 											)}
-										</h5>
+										</div>
 									</div>
 								</OverlayTrigger>
 
-								<h6>
+								<div>
 									<Badge bg="light" text="dark">
-										总流量:{" "}
+										今日:{" "}{element.used_by_current_day.period}{" "}已用流量:{" "}{formatBytes(element.used_by_current_day.amount)}{"， "}
+										本月:{" "}{element.used_by_current_month.period}{" "}已用流量:{" "}{formatBytes(element.used_by_current_month.amount)}{"， "}
+										流量限额:{" "}{formatBytes(element.credit)}{" "}已用总流量:{" "}{formatBytes(element.used)}
 									</Badge>
-									{formatBytes(element.credit)}
-									<Badge bg="light" text="dark">
-										已用流量:{" "}
-									</Badge>
-									{formatBytes(element.used)}
-								</h6>
+								</div>
 							</div>
 							<div className="d-flex justify-content-center align-items-center my-auto">
 								<EditUser
@@ -240,67 +216,7 @@ const Home = () => {
 							</div>
 						</ListGroup.Item>
 					))}
-				</ListGroup>
-			) : (
-				<Card className="user-page-card" bg="light">
-					<Card.Header>{users[0] && users[0].name}</Card.Header>
-					<Card.Body>
-						<Card.Title></Card.Title>
-						<Card.Text>
-							<div className="">
-								<Badge bg="info" text="dark">
-									今日: {users[0] && users[0].used_by_current_day.period}
-									已用流量:{" "}
-									{formatBytes(users[0] && users[0].used_by_current_day.amount)}
-								</Badge>
-							</div>
-
-							<div className="">
-								<Badge bg="info" text="dark">
-									本月: {users[0] && users[0].used_by_current_month.period}
-									已用流量:{" "}
-									{formatBytes(
-										users[0] && users[0].used_by_current_month.amount
-									)}
-								</Badge>
-							</div>
-
-							<div className="">
-								<Badge bg="info" text="dark">
-									已用总流量: {formatBytes(users[0] && users[0].used)}
-								</Badge>
-							</div>
-						</Card.Text>
-
-						<h6>每月流量（月份/流量）:</h6>
-						<div>
-							{users[0] &&
-								users[0].traffic_by_month
-									.sort((a, b) => b.period - a.period)
-									.map((element) => {
-										return (
-											<Badge pill bg="dark" text="white">
-												{element.period} / {formatBytes(element.amount)}
-											</Badge>
-										);
-									})}
-						</div>
-						<h6 className="pt-2">每日流量(日期/流量):</h6>
-						<div>
-							{users[0] &&
-								users[0].traffic_by_day
-									.sort((a, b) => b.period - a.period)
-									.map((element) => {
-										return (
-											<Badge pill bg="dark" text="white">
-												{element.period} / {formatBytes(element.amount)}
-											</Badge>
-										);
-									})}
-						</div>
-					</Card.Body>
-				</Card>
-			)}
+			</ListGroup>
 		</Container>
 	);
 };

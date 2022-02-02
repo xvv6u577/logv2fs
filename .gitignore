@@ -5,6 +5,8 @@
 /frontend/download
 /frontend/.env
 /frontend/tool/*.json
+frontend/tool/dbTest.js
+frontend/tool/test.js
 
 # testing
 /frontend/coverage

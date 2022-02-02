@@ -11,6 +11,7 @@ import Windows from "./components/windows";
 import Android from "./components/android";
 import Iphone from "./components/iphone";
 import Footer from "./components/footer";
+import Mypanel from "./components/mypanel";
 
 function RequireAuth({ children }) {
 	const loginState = useSelector((state) => state.login);
@@ -28,6 +29,18 @@ function App() {
 			<Routes>
 				<Route path="/" element={<Login />}></Route>
 				<Route path="/login" element={<Login />}></Route>
+				<Route
+					path="/mypanel"
+					element={
+						<RequireAuth>
+							<Container className="main px-0" fluid>
+								<Menu />
+								<Mypanel />
+								<Footer />
+							</Container>
+						</RequireAuth>
+					}
+				></Route>
 				<Route
 					path="/home"
 					element={

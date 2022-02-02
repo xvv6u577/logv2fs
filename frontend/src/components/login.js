@@ -28,11 +28,11 @@ const Login = () => {
 				if (response.data) {
 					localStorage.setItem("token", JSON.stringify(response.data.token));
 					dispatch(login({ token: response.data.token }));
-					navigate("/home");
+					navigate("/mypanel");
 				}
 			})
 			.catch((err) => {
-				dispatch(alert({ show: true, content: err.data.toString() }));
+				dispatch(alert({ show: true, content: err.toString() }));
 			});
 	};
 
@@ -40,12 +40,12 @@ const Login = () => {
 		if (message.show === true) {
 			setTimeout(()=>{
 				dispatch(alert({show: false}))
-			}, 5000)
+			}, 10000)
 		}
 	},[dispatch, message])
 
 	if (loginState.isLogin) {
-		return <Navigate to="/home" />;
+		return <Navigate to="/mypanel" />;
 	}
 
 	return (
