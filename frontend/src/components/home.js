@@ -11,6 +11,7 @@ import {
 	Col,
 	OverlayTrigger,
 	Tooltip,
+	Accordion,
 } from "react-bootstrap";
 import { useSelector, useDispatch } from "react-redux";
 import { alert, success } from "../store/message";
@@ -95,27 +96,28 @@ const Home = () => {
 			.catch((err) => {
 				dispatch(alert({ show: true, content: err.toString() }));
 			});
-	}, [
-		rerenderSignal,
-		loginState.jwt.Email,
-		loginState.token,
-		dispatch,
-	]);
+	}, [rerenderSignal, loginState.jwt.Email, loginState.token, dispatch]);
 
 	return (
-		<Container className="py-3">
+		<Container className="my-3 home-list">
 			<Alert show={message.show} variant={message.type}>
 				{" "}
 				{message.content}{" "}
 			</Alert>
-			<ListGroup as="ol" className="" numbered>
+			<ListGroup
+				as="ol"
+				className="list-group list-group-striped list-group-hover"
+				numbered
+			>
+				<Accordion>
 					{users.map((element, index) => (
-						<ListGroup.Item
-							as="li"
-							className="d-flex justify-content-between align-items-start"
-						>
-							<div className="ms-2 me-auto">
-								<OverlayTrigger
+						<Accordion.Item eventKey={index}>
+							<ListGroup.Item
+								as="li"
+								className="d-flex justify-content-between align-items-start"
+							>
+								<div className="ms-2 me-auto">
+									{/* <OverlayTrigger
 									key={index}
 									placement="right"
 									overlay={
@@ -130,7 +132,8 @@ const Home = () => {
 										</Tooltip>
 									}
 								>
-									<div
+								</OverlayTrigger> */}
+									{/* <div
 										className="fw-bold info-hover"
 										onClick={() => {
 											navigator.clipboard.writeText(
@@ -140,82 +143,121 @@ const Home = () => {
 											);
 										}}
 									>
-										<div>
-											<b>{element.name}</b>
-											<Badge bg="success" className="mx-1" pill>
-												{element.role === "admin" ? "管理员" : "普通用户"}
-											</Badge>
-											<Badge bg="primary" className="mx-1" pill>
-												{element.status === "plain" ? "在线" : "已下线"}
-											</Badge>
-											{element.email === loginState.jwt.Email && (
-												<Badge bg="info" className="mx-1" pill>
-													It's Me
-												</Badge>
-											)}
-										</div>
-									</div>
-								</OverlayTrigger>
-
-								<div>
-									<Badge bg="light" text="dark">
-										今日:{" "}{element.used_by_current_day.period}{" "}已用流量:{" "}{formatBytes(element.used_by_current_day.amount)}{"， "}
-										本月:{" "}{element.used_by_current_month.period}{" "}已用流量:{" "}{formatBytes(element.used_by_current_month.amount)}{"， "}
-										流量限额:{" "}{formatBytes(element.credit)}{" "}已用总流量:{" "}{formatBytes(element.used)}
+									</div> */}
+									<span className="home-traffic-fs">{index+1}</span>
+									{"."}
+									<b>{element.name}</b>
+									<Badge bg="success" className="mx-1" pill>
+										{element.role === "admin" ? "管理员" : "普通用户"}
 									</Badge>
+									<Badge bg="primary" className="mx-1" pill>
+										{element.status === "plain" ? "在线" : "已下线"}
+									</Badge>
+									{element.email === loginState.jwt.Email && (
+										<Badge bg="info" className="mx-1" pill>
+											It's Me
+										</Badge>
+									)}
+
+									<span className="home-traffic-fs">
+										今日流量: {formatBytes(element.used_by_current_day.amount)}
+										{"， "}
+										本月流量:{" "}
+										{formatBytes(element.used_by_current_month.amount)}
+										{"， "}
+										已用总流量: {formatBytes(element.used)}
+									</span>
 								</div>
-							</div>
-							<div className="d-flex justify-content-center align-items-center my-auto">
-								<EditUser
-									btnName="Edit"
-									editUserFunc={() =>
-										dispatch(doRerender({ rerender: !rerenderSignal.rerender }))
-									}
-									user={element}
-								/>
-								{element.status === "plain" ? (
-									<Button
-										onClick={() => handleOffline(element.email)}
-										variant="success mx-1"
-										size=""
-									>
-										Disable
-									</Button>
-								) : (
-									<Button
-										onClick={() => handleOffline(element.email)}
-										variant="success mx-1"
-										size=""
-										disabled
-									>
-										Disable
-									</Button>
-								)}
-								{element.status === "plain" ? (
-									<Button
-										onClick={() => handleOnline(element.email)}
-										variant="success mx-1"
-										size=""
-										disabled
-									>
-										Enable
-									</Button>
-								) : (
-									<Button
-										onClick={() => handleOnline(element.email)}
-										variant="success mx-1"
-										size=""
-									>
-										Enable
-									</Button>
-								)}
-								<ConfirmDelUser
-									btnName="Delete"
-									deleteUserFunc={() => handleDeleteUser(element.email)}
-								/>
-							</div>
-						</ListGroup.Item>
+								<div className="d-flex justify-content-center align-items-center">
+									<EditUser
+										btnName="Edit"
+										editUserFunc={() =>
+											dispatch(
+												doRerender({ rerender: !rerenderSignal.rerender })
+											)
+										}
+										user={element}
+									/>
+									{element.status === "plain" ? (
+										<Button
+											onClick={() => handleOffline(element.email)}
+											variant="success mx-1"
+											size="sm"
+										>
+											Disable
+										</Button>
+									) : (
+										<Button
+											onClick={() => handleOffline(element.email)}
+											variant="success mx-1"
+											size="sm"
+											disabled
+										>
+											Disable
+										</Button>
+									)}
+									{element.status === "plain" ? (
+										<Button
+											onClick={() => handleOnline(element.email)}
+											variant="success mx-1"
+											size="sm"
+											disabled
+										>
+											Enable
+										</Button>
+									) : (
+										<Button
+											onClick={() => handleOnline(element.email)}
+											variant="success mx-1"
+											size="sm"
+										>
+											Enable
+										</Button>
+									)}
+									<ConfirmDelUser
+										btnName="Delete"
+										deleteUserFunc={() => handleDeleteUser(element.email)}
+									/>
+									<Accordion.Header></Accordion.Header>
+								</div>
+							</ListGroup.Item>
+							<Accordion.Body>
+								<div className="py-1">
+									<p className="lh-sm">用户名: {element.email}</p>
+									<p className="lh-sm">密码: {element.email.length < 6 ? "mypassword":element.email}</p>
+									<p className="text-break lh-sm">Subscription: {element.suburl}</p>
+								</div>
+								<div className="home-traffic-fs">
+									<h6 className="">每月流量</h6>
+									{element.traffic_by_month &&
+										element.traffic_by_month
+											.sort((a, b) => b.period - a.period)
+											.map((element) => {
+												return (
+													<Badge pill bg="dark" text="white">
+														{element.period} / {formatBytes(element.amount)}
+													</Badge>
+												);
+											})}
+								</div>
+								<div className="home-traffic-fs">
+									<h6 className="pt-2">每日流量</h6>
+									{element.traffic_by_day &&
+										element.traffic_by_day
+											.sort((a, b) => b.period - a.period)
+											// .slice(0, 90)
+											.map((element) => {
+												return (
+													<Badge pill bg="dark" text="white">
+														{element.period} / {formatBytes(element.amount)}
+													</Badge>
+												);
+											})}
+								</div>
+							</Accordion.Body>
+						</Accordion.Item>
 					))}
+				</Accordion>
 			</ListGroup>
 		</Container>
 	);
@@ -229,7 +271,7 @@ function ConfirmDelUser({ btnName, deleteUserFunc }) {
 
 	return (
 		<>
-			<Button variant="dark mx-1" size="" onClick={handleShow}>
+			<Button variant="dark mx-1" size="sm" onClick={handleShow}>
 				{btnName}
 			</Button>
 
@@ -310,7 +352,7 @@ function EditUser({ btnName, user, editUserFunc }) {
 
 	return (
 		<>
-			<Button variant="outline-success mx-1" size="" onClick={handleShow}>
+			<Button variant="outline-success mx-1" size="sm" onClick={handleShow}>
 				{btnName}
 			</Button>
 

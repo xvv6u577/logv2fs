@@ -1,5 +1,5 @@
-import { useEffect,useState } from "react";
-import { Container, Card,Badge } from "react-bootstrap";
+import { useEffect, useState } from "react";
+import { Container, Badge } from "react-bootstrap";
 import { alert } from "../store/message";
 import { useSelector, useDispatch } from "react-redux";
 import { formatBytes } from "../service/service";
@@ -26,7 +26,7 @@ function Mypanel() {
 				headers: { token: loginState.token },
 			})
 			.then((response) => {
-                setUser(response.data);
+				setUser(response.data);
 			})
 			.catch((err) => {
 				dispatch(alert({ show: true, content: err.toString() }));
@@ -34,63 +34,67 @@ function Mypanel() {
 	}, [rerenderSignal, loginState.jwt.Email, loginState.token, dispatch]);
 
 	return (
-		<Container className="py-3">
-			<Card className="user-page-card" bg="light">
-				<Card.Header>{user && user.name}</Card.Header>
-				<Card.Body>
-					<Card.Title></Card.Title>
-					<Card.Text>
-						<div className="">
-							<Badge bg="info" text="dark">
-								今日: {user.used_by_current_day && user.used_by_current_day.period}
-								已用流量:{" "}
-								{user.used_by_current_day && formatBytes(user.used_by_current_day.amount)}
-							</Badge>
-						</div>
-
-						<div className="">
-							<Badge bg="info" text="dark">
-								本月: {user.used_by_current_month && user.used_by_current_month.period}
-								已用流量:{" "}
-								{user.used_by_current_month && formatBytes(user.used_by_current_month.amount)}
-							</Badge>
-						</div>
-
-						<div className="">
-							<Badge bg="info" text="dark">
-								已用总流量: {user && formatBytes(user.used)}
-							</Badge>
-						</div>
-					</Card.Text>
-
-					<h6>每月流量（月份/流量）:</h6>
-					<div>
-						{user.traffic_by_month &&
-							user.traffic_by_month
-								.sort((a, b) => b.period - a.period)
-								.map((element) => {
-									return (
-										<Badge pill bg="dark" text="white">
-											{element.period} / {formatBytes(element.amount)}
-										</Badge>
-									);
-								})}
+		<Container className="py-5">
+			<div className="row mypanel-row justify-content-evenly">
+				<div className="mypanel-card col">
+					<div className="h3">
+						{user.used_by_current_day &&
+							formatBytes(user.used_by_current_day.amount)}
 					</div>
-					<h6 className="pt-2">每日流量(日期/流量):</h6>
-					<div>
-						{user.traffic_by_day &&
-							user.traffic_by_day
-								.sort((a, b) => b.period - a.period)
-								.map((element) => {
-									return (
-										<Badge pill bg="dark" text="white">
-											{element.period} / {formatBytes(element.amount)}
-										</Badge>
-									);
-								})}
+					<p>
+						今日已用流量 (
+						{user.used_by_current_day && user.used_by_current_day.period})
+					</p>
+				</div>
+				<div className="mypanel-card col">
+					<div className="h3">
+						{user.used_by_current_month &&
+							formatBytes(user.used_by_current_month.amount)}
 					</div>
-				</Card.Body>
-			</Card>
+					<p>
+						本月已用流量 (
+						{user.used_by_current_month && user.used_by_current_month.period})
+					</p>
+				</div>
+				<div className="mypanel-card col">
+					<div className="h3">{user && formatBytes(user.used)}</div>
+					<p>已用总流量</p>
+				</div>
+			</div>
+
+			<div className="d-flex flex-column py-3">
+				<div className="py-3">
+					<div className="h4 py-3">
+						每月流量<span className="h6">(月份/流量)</span>
+					</div>
+					{user.traffic_by_month &&
+						user.traffic_by_month
+							.sort((a, b) => b.period - a.period)
+							.map((element) => {
+								return (
+									<Badge pill bg="dark" text="white">
+										{element.period} / {formatBytes(element.amount)}
+									</Badge>
+								);
+							})}
+				</div>
+				<div className="py-3">
+					<div className="h4 py-3">
+						过去3个月每日流量<span className="h6">(日期/流量)</span>
+					</div>
+					{user.traffic_by_day &&
+						user.traffic_by_day
+							.sort((a, b) => b.period - a.period)
+							.slice(0, 90)
+							.map((element) => {
+								return (
+									<Badge pill bg="dark" text="white">
+										{element.period} / {formatBytes(element.amount)}
+									</Badge>
+								);
+							})}
+				</div>
+			</div>
 		</Container>
 	);
 }

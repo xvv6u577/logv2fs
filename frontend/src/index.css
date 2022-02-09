@@ -1,8 +1,10 @@
 body {
-    font-family: Optima-Regular,Optima,PingFangSC-light,PingFangTC-light,'PingFang SC',Cambria,Cochin,Georgia,Times,'Times New Roman',serif;
-    background-color: #f7f7f7;
+	font-family: Optima-Regular, Optima, PingFangSC-light, PingFangTC-light,
+		"PingFang SC", Cambria, Cochin, Georgia, Times, "Times New Roman", serif !important;
+	background-color: rgb(12, 17, 42) !important;
+	color: rgba(255, 255, 255, 0.8) !important;
 }
 
 #root {
-    min-height: 100vh;
+	min-height: 100vh;
 }

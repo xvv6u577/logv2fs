@@ -1,11 +1,16 @@
-.App {
-	text-align: center;
-}
-
 .main {
 	display: flex;
-    flex-direction: column;
+	flex-direction: column;
 	min-height: 100vh;
+}
+
+.login-main {
+	min-height: 100vh;
+	color: rgba(51, 29, 29, 0.5);
+}
+
+.login-main .card {
+	background-color: rgba(252, 252, 252, 0.719);
 }
 
 .content {
@@ -21,7 +26,41 @@
 	height: calc(0.675 * 30rem);
 }
 
-ol.list-group li {
+.home-list {
+	background-color: #343434 !important;
+}
+
+.home-list ol li {
+	background-color: transparent;
+	color: rgba(228, 208, 208, 0.8);
+	border-bottom: 1px solid rgba(204, 173, 173, 0.877);
+}
+
+.home-list ol.list-group.list-group-striped li:nth-of-type(odd){
+    background: rgba(52, 52, 52, 1);
+}
+.home-list ol.list-group.list-group-striped li:nth-of-type(even){
+    background: rgba(41, 44, 49, 1);
+}
+.home-list ol.list-group.list-group-hover li:hover{
+    background: rgba(110, 116, 98, 0.2);
+}
+
+.home-traffic-fs {
+	font-size: 14px;
+}
+
+.home-list .accordion-item {
+	background-color:rgb(66, 55, 62);
+	border: none;
+}
+.home-list .accordion-item .accordion-header {
+	font-size: 14px;
+}
+.home-list .accordion-item .accordion-header button.accordion-button{
+	padding: 0;
+}
+.home-list .accordion-item .accordion-body {
 	background-color: transparent;
 }
 
@@ -31,10 +70,10 @@ ol.list-group li {
 }
 
 .info-hover {
-	border-bottom: 4px solid transparent;;
+	border-bottom: 4px solid transparent;
 }
 .info-hover:hover {
-	border-bottom: 4px solid #D5BA5E;
+	border-bottom: 4px solid #d5ba5e;
 }
 
 .inline {
@@ -42,7 +81,29 @@ ol.list-group li {
 	font-size: 1rem;
 }
 
-.user-page-card {
-	height: auto;
-	width: auto;
+.mypanel-row {
+	margin: 0 auto !important;
+	border: 1px solid #343434 !important;
+	border-radius: 10px !important;
+	background-color: #343434 !important;
+}
+
+.mypanel-card {
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	align-items: center;
+	height: 200px;
+	text-align: center;
+	padding: 20px auto;
+}
+.mypanel-card .h3 {
+	color: rgba(255, 255, 255, 0.8);
+	margin: 0px auto;
+}
+
+.mypanel-card p {
+	margin: 0px auto;
+	color: rgba(255, 255, 255, 0.4);
+	font-size: small;
 }

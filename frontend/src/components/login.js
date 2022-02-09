@@ -32,27 +32,28 @@ const Login = () => {
 				}
 			})
 			.catch((err) => {
-				dispatch(alert({ show: true, content: err.toString() }));
+				dispatch(alert({ show: true, content: "name or password 输入错误!" }));
+				console.log(err.toString());
 			});
 	};
 
-	useEffect(()=>{
+	useEffect(() => {
 		if (message.show === true) {
-			setTimeout(()=>{
-				dispatch(alert({show: false}))
-			}, 10000)
+			setTimeout(() => {
+				dispatch(alert({ show: false }));
+			}, 10000);
 		}
-	},[dispatch, message])
+	}, [dispatch, message]);
 
 	if (loginState.isLogin) {
 		return <Navigate to="/mypanel" />;
 	}
 
 	return (
-		<Container className="main d-flex justify-content-center align-items-center">
+		<Container className="login-main d-flex flex-column justify-content-center align-items-center">
 			<Card>
 				<Card.Body>
-					<Card.Title>Start from login</Card.Title>
+					<Card.Title>Let's start from login</Card.Title>
 					<Card.Subtitle className="mb-2 text-muted"></Card.Subtitle>
 					<Form onSubmit={handleSubmit}>
 						<Form.Group className="mb-3" controlId="formBasicEmail">
@@ -74,9 +75,11 @@ const Login = () => {
 								autoComplete=""
 							/>
 						</Form.Group>
-						<Button variant="primary" type="submit">
-							Submit
-						</Button>
+						<div className="d-grid gap-2">
+							<Button variant="primary" type="submit">
+								Submit
+							</Button>
+						</div>
 					</Form>
 				</Card.Body>
 				<Alert show={message.show} variant={message.type}>
