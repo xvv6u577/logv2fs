@@ -13,6 +13,7 @@ frontend/tool/test.js
 
 # production
 /frontend/build
+/pre-setup
 
 # misc
 .DS_Store

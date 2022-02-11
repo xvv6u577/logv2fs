@@ -64,6 +64,12 @@
 	background-color: transparent;
 }
 
+.modal-content {
+	background-color: rgba(200, 200, 200,1) !important;
+	color: rgba(51, 29, 29, 1) !important;
+	
+}
+
 .myToolTip > .tooltip-inner {
 	max-width: 100%;
 	text-align: left;

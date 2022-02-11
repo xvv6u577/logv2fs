@@ -234,19 +234,19 @@ func Login() gin.HandlerFunc {
 		var foundUser model.User
 
 		if err := c.BindJSON(&user); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"bingJSON error": err.Error()})
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
 
 		err := userCollection.FindOne(ctx, bson.M{"email": user.Email}).Decode(&foundUser)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"findone error": err.Error()})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
 
 		passwordIsValid, msg := VerifyPassword(user.Password, foundUser.Password)
 		if !passwordIsValid {
-			c.JSON(http.StatusInternalServerError, gin.H{"verify password error": msg})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
 			return
 		}
 
@@ -256,7 +256,7 @@ func Login() gin.HandlerFunc {
 		err = userCollection.FindOne(ctx, bson.M{"user_id": foundUser.User_id}).Decode(&foundUser)
 
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"last findone error": err.Error()})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
 
@@ -297,9 +297,11 @@ func EditUser() gin.HandlerFunc {
 			newFoundUser["role"] = user.Role
 		}
 
-		password := HashPassword(user.Password)
-		if foundUser.Password != password {
-			newFoundUser["password"] = password
+		if user.Password != "" {
+			password := HashPassword(user.Password)
+			if foundUser.Password != user.Password && foundUser.Password != password {
+				newFoundUser["password"] = password
+			}
 		}
 		if foundUser.Name != user.Name {
 			newFoundUser["name"] = user.Name
@@ -323,13 +325,13 @@ func EditUser() gin.HandlerFunc {
 			options.FindOneAndUpdate().SetUpsert(true),
 		).Decode(&replacedDocument)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"FindOneAndUpdate error": err.Error()})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
 
 		err = userCollection.FindOne(ctx, bson.M{"email": user.Email}).Decode(&foundUser)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"FindOne error": err.Error()})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
 
@@ -522,7 +524,7 @@ func DeleteUserByUserName() gin.HandlerFunc {
 			cmdConn, err := grpc.Dial(fmt.Sprintf("%s:%s", V2_API_ADDRESS, V2_API_PORT), grpc.WithInsecure())
 			if err != nil {
 				msg := "v2ray connection failed."
-				c.JSON(http.StatusInternalServerError, gin.H{"v2ray connection error": msg})
+				c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
 				return
 			}
 
@@ -530,14 +532,14 @@ func DeleteUserByUserName() gin.HandlerFunc {
 			err = NHSClient.DelUser(name)
 			if err != nil {
 				msg := " V2ray delete user failed!"
-				c.JSON(http.StatusInternalServerError, gin.H{"v2ray service error": msg})
+				c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
 				return
 			}
 		}
 
 		err = database.DeleteUserByName(name)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"DB service error": err.Error()})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
 

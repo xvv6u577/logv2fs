@@ -2,7 +2,6 @@
 
 > 作为goagent, shadowsocks, v2ray项目的后继者，记念他们在对抗信息审查所作的努力！
 
-
 ## Backend
 
 > 环境变量：.env
@@ -14,6 +13,10 @@ cd logv2rayfullstack
 go run . server 
 # or 
 go run ./ s
+
+# 清空数据库
+go run ./ mongo delallusers
+go run ./ mongo delalltables
 ```
 
 ## Frontend
@@ -26,10 +29,23 @@ npx create-react-app frontend --template redux
 cd frontend
 
 npm start
-
-# 生成生产环境文件
+```
+### 生成生产环境文件
+```
 npm run build
 ```
+### 辅助脚本 ./tool/ 
+#### 生成 users.json
+```
+node ./tool/generateUsers.js
+```
+#### 把users.json,db.json数据添加到mongoDB (wild mode有效)
+```
+node ./tool/pushUsersToDB.js
+node ./tool/pushJsonFileToDB.js
+```
+
+
 
 ### Thanks To:
 

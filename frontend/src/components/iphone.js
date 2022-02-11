@@ -70,7 +70,7 @@ function Ihpone() {
 				URL:{" "}
 				<div className="inline h4">
 					<Badge bg="secondary" pill className="mx-1">
-						{process.env.REACT_APP_API_HOST + "suburl/" + loginState.jwt.Email}
+						{process.env.REACT_APP_SUBURL + "/static/" + loginState.jwt.Email}
 					</Badge>
 				</div>
 			</p>

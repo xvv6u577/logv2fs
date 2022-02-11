@@ -52,7 +52,11 @@ const Home = () => {
 				dispatch(success({ show: true, content: response.data.message }));
 			})
 			.catch((err) => {
-				dispatch(alert({ show: true, content: err.toString() }));
+				if (err.response) {
+					dispatch(alert({ show: true, content: err.response.data.error }));
+				} else {
+					dispatch(alert({ show: true, content: err.toString() }));
+				}
 			});
 	};
 
@@ -66,7 +70,11 @@ const Home = () => {
 				dispatch(success({ show: true, content: response.data.message }));
 			})
 			.catch((err) => {
-				dispatch(alert({ show: true, content: err.toString() }));
+				if (err.response) {
+					dispatch(alert({ show: true, content: err.response.data.error }));
+				} else {
+					dispatch(alert({ show: true, content: err.toString() }));
+				}
 			});
 	};
 
@@ -94,7 +102,11 @@ const Home = () => {
 				}
 			})
 			.catch((err) => {
-				dispatch(alert({ show: true, content: err.toString() }));
+				if (err.response) {
+					dispatch(alert({ show: true, content: err.response.data.error }));
+				} else {
+					dispatch(alert({ show: true, content: err.toString() }));
+				}
 			});
 	}, [rerenderSignal, loginState.jwt.Email, loginState.token, dispatch]);
 
@@ -144,7 +156,7 @@ const Home = () => {
 										}}
 									>
 									</div> */}
-									<span className="home-traffic-fs">{index+1}</span>
+									<span className="home-traffic-fs">{index + 1}</span>
 									{"."}
 									<b>{element.name}</b>
 									<Badge bg="success" className="mx-1" pill>
@@ -222,10 +234,28 @@ const Home = () => {
 								</div>
 							</ListGroup.Item>
 							<Accordion.Body>
-								<div className="py-1">
-									<p className="lh-sm">用户名: {element.email}</p>
-									<p className="lh-sm">密码: {element.email.length < 6 ? "mypassword":element.email}</p>
-									<p className="text-break lh-sm">Subscription: {element.suburl}</p>
+								<div className="my-2">
+									<div className="">
+										<span className="mx-2">用户名: {element.email}</span>
+										{", "}
+										<span className="mx-2">
+											密码:{" "}
+											{element.email.length < 6 ? "mypassword" : element.email}
+										</span>
+									</div>
+									<div className="">
+										<span className="mx-2">path: {element.path}</span>
+										{", "}
+										<span className="mx-2">uuid: {element.uuid}</span>
+									</div>
+									<div className="text-break lh-sm">
+										<span className="mx-2">
+											SubUrl:{" "}
+											{process.env.REACT_APP_SUBURL +
+												"/static/" +
+												element.email}
+										</span>
+									</div>
 								</div>
 								<div className="home-traffic-fs">
 									<h6 className="">每月流量</h6>
@@ -346,7 +376,11 @@ function EditUser({ btnName, user, editUserFunc }) {
 				editUserFunc();
 			})
 			.catch((err) => {
-				dispatch(alert({ show: true, content: err.toString() }));
+				if (err.response) {
+					dispatch(alert({ show: true, content: err.response.data.error }));
+				} else {
+					dispatch(alert({ show: true, content: err.toString() }));
+				}
 			});
 	};
 

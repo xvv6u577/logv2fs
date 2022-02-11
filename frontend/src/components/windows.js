@@ -43,8 +43,8 @@ function Windows() {
 			<p>
 				下载客户端:{" "}
 				<div className="inline h4">
-					<a href={process.env.REACT_APP_API_HOST + "v2rayw.zip"}>
-						{process.env.REACT_APP_API_HOST + "v2rayw.zip"}
+					<a href={process.env.REACT_APP_SUBURL + "/dl/v2rayw.zip"}>
+						{process.env.REACT_APP_SUBURL + "/dl/v2rayw.zip"}
 					</a>
 				</div>
 			</p>

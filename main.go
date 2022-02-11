@@ -97,11 +97,6 @@ func main() {
 						err := database.DeleteUsersDBs()
 						return err
 
-					case "import":
-						// go run ./ db import /root/home/db.json
-						err := database.ImportFromJsonFile(path)
-						return err
-
 					default:
 						fmt.Println(tag, path, c.String("path"))
 					}

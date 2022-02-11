@@ -32,7 +32,11 @@ const Login = () => {
 				}
 			})
 			.catch((err) => {
-				dispatch(alert({ show: true, content: "name or password 输入错误!" }));
+				if (err.response) {
+					dispatch(alert({ show: true, content: err.response.data.error }));
+				} else {
+					dispatch(alert({ show: true, content: "name or password 输入错误!" }));
+				}
 				console.log(err.toString());
 			});
 	};

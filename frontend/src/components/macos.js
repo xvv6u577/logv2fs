@@ -30,7 +30,7 @@ function Macos() {
 			</p>
 			<div className="inline h4">
 				<Badge bg="secondary" pill className="mx-1">
-					{process.env.REACT_APP_API_HOST + "suburl/" + loginState.jwt.Email}
+					{process.env.REACT_APP_SUBURL + "/static/" + loginState.jwt.Email}
 				</Badge>
 			</div>
 			<p>点按 OK。若添加成功，配置对话框左侧vmess servers有新项目产生。</p>
