@@ -1,8 +1,6 @@
 package routes
 
 import (
-	"os"
-
 	controller "github.com/caster8013/logv2rayfullstack/controllers"
 	"github.com/gin-contrib/static"
 
@@ -11,17 +9,18 @@ import (
 
 //UserRoutes function
 func AuthRoutes(incomingRoutes *gin.Engine) {
-	FRONTEND_PATH := os.Getenv("FRONTEND_PATH")
 
-	incomingRoutes.Use(static.Serve("/login", static.LocalFile(FRONTEND_PATH, false)))
-	incomingRoutes.Use(static.Serve("/home", static.LocalFile(FRONTEND_PATH, false)))
-	incomingRoutes.Use(static.Serve("/mypanel", static.LocalFile(FRONTEND_PATH, false)))
-	incomingRoutes.Use(static.Serve("/logout", static.LocalFile(FRONTEND_PATH, false)))
-	incomingRoutes.Use(static.Serve("/macos", static.LocalFile(FRONTEND_PATH, false)))
-	incomingRoutes.Use(static.Serve("/windows", static.LocalFile(FRONTEND_PATH, false)))
-	incomingRoutes.Use(static.Serve("/iphone", static.LocalFile(FRONTEND_PATH, false)))
-	incomingRoutes.Use(static.Serve("/android", static.LocalFile(FRONTEND_PATH, false)))
-	incomingRoutes.Use(static.Serve("/", static.LocalFile(FRONTEND_PATH, false)))
+	FRONTEND_PATH := "./frontend/build/"
+
+	incomingRoutes.Use(static.Serve("/login", static.LocalFile(FRONTEND_PATH, true)))
+	incomingRoutes.Use(static.Serve("/home", static.LocalFile(FRONTEND_PATH, true)))
+	incomingRoutes.Use(static.Serve("/mypanel", static.LocalFile(FRONTEND_PATH, true)))
+	incomingRoutes.Use(static.Serve("/logout", static.LocalFile(FRONTEND_PATH, true)))
+	incomingRoutes.Use(static.Serve("/macos", static.LocalFile(FRONTEND_PATH, true)))
+	incomingRoutes.Use(static.Serve("/windows", static.LocalFile(FRONTEND_PATH, true)))
+	incomingRoutes.Use(static.Serve("/iphone", static.LocalFile(FRONTEND_PATH, true)))
+	incomingRoutes.Use(static.Serve("/android", static.LocalFile(FRONTEND_PATH, true)))
+	incomingRoutes.Use(static.Serve("/", static.LocalFile(FRONTEND_PATH, true)))
 
 	// http://127.0.0.1:8079/v1/user/login
 	// body:
