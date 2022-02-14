@@ -166,6 +166,11 @@ func runServer() {
 	// router := gin.Default()
 
 	router := gin.New()
+
+	// Enables automatic redirection if the current route can’t be matched but a
+	// handler for the path with (without) the trailing slash exists.
+	router.RedirectTrailingSlash = true
+
 	router.Use(gin.Logger())
 	router.Use(recoverFromError)
 
@@ -173,7 +178,7 @@ func runServer() {
 	routers.UserRoutes(router)
 
 	router.NoRoute(func(c *gin.Context) {
-		c.JSON(http.StatusNotFound, gin.H{"final error": "no route found."})
+		c.JSON(http.StatusNotFound, gin.H{"error": "status: 404! no route found."})
 	})
 
 	router.Run(fmt.Sprintf("%s:%s", SERVER_ADDRESS, SERVER_PORT))

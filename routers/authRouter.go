@@ -7,7 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-//UserRoutes function
+// login, home, logout, routers for react frontend app
 func AuthRoutes(incomingRoutes *gin.Engine) {
 
 	FRONTEND_PATH := "./frontend/build/"

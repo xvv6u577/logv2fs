@@ -70,7 +70,7 @@ func VerifyPassword(userPassword string, providedPassword string) (bool, string)
 func SignUp() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
-		if BOOT_MODE != "wild" {
+		if "" == BOOT_MODE {
 			err := helper.CheckUserType(c, "admin")
 			if err != nil {
 				c.JSON(http.StatusBadRequest, gin.H{"sign up error": err.Error()})
@@ -267,7 +267,7 @@ func Login() gin.HandlerFunc {
 func EditUser() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
-		if BOOT_MODE != "wild" {
+		if "" == BOOT_MODE {
 			if err := helper.CheckUserType(c, "admin"); err != nil {
 				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 				return
@@ -342,7 +342,7 @@ func EditUser() gin.HandlerFunc {
 func GetUsers() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
-		if BOOT_MODE != "wild" {
+		if "" == BOOT_MODE {
 			if err := helper.CheckUserType(c, "admin"); err != nil {
 				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 				return
@@ -414,7 +414,7 @@ func GetUser() gin.HandlerFunc {
 func TakeItOfflineByUserName() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
-		if BOOT_MODE != "wild" {
+		if "" == BOOT_MODE {
 			if err := helper.CheckUserType(c, "admin"); err != nil {
 				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 				return
@@ -458,7 +458,7 @@ func TakeItOfflineByUserName() gin.HandlerFunc {
 
 func TakeItOnlineByUserName() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		if BOOT_MODE != "wild" {
+		if "" == BOOT_MODE {
 			if err := helper.CheckUserType(c, "admin"); err != nil {
 				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 				return
@@ -503,7 +503,7 @@ func TakeItOnlineByUserName() gin.HandlerFunc {
 func DeleteUserByUserName() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
-		if BOOT_MODE != "wild" {
+		if "" == BOOT_MODE {
 			if err := helper.CheckUserType(c, "admin"); err != nil {
 				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 				return
@@ -579,7 +579,7 @@ func GetTrafficByUser() gin.HandlerFunc {
 func GetAllUserTraffic() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
-		if BOOT_MODE != "wild" {
+		if "" == BOOT_MODE {
 			if err := helper.CheckUserType(c, "admin"); err != nil {
 				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 				return
@@ -605,7 +605,7 @@ func GetAllUserTraffic() gin.HandlerFunc {
 func GetAllUsers() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
-		if BOOT_MODE != "wild" {
+		if "" == BOOT_MODE {
 			err := helper.CheckUserType(c, "admin")
 			if err != nil {
 				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})

@@ -251,7 +251,7 @@ const Home = () => {
 									<div className="text-break lh-sm">
 										<span className="mx-2">
 											SubUrl:{" "}
-											{process.env.REACT_APP_SUBURL +
+											{process.env.REACT_APP_FILE_AND_SUB_URL +
 												"/static/" +
 												element.email}
 										</span>

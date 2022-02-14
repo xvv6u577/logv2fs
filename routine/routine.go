@@ -26,11 +26,13 @@ var CRON_INTERVAL_BY_HOUR = os.Getenv("CRON_INTERVAL_BY_HOUR")
 var CRON_INTERVAL_BY_DAY = os.Getenv("CRON_INTERVAL_BY_DAY")
 var CRON_INTERVAL_BY_MONTH = os.Getenv("CRON_INTERVAL_BY_MONTH")
 var CRON_INTERVAL_BY_YEAR = os.Getenv("CRON_INTERVAL_BY_YEAR")
+var NODE_TYPE = os.Getenv("NODE_TYPE")
 
 func Cron_loggingV2TrafficByUser(traffic Traffic) {
 	var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
 	defer cancel()
 
+	CURRENT_DOMAIN := os.Getenv("CURRENT_DOMAIN")
 	var current = time.Now()
 	// var current_year = current.Local().Format("2006")
 	// var current_month = current.Local().Format("200601")
@@ -56,6 +58,7 @@ func Cron_loggingV2TrafficByUser(traffic Traffic) {
 	userTrafficCollection.InsertOne(ctx, model.TrafficInDB{
 		Total:     traffic.Total,
 		CreatedAt: current,
+		Domain:    CURRENT_DOMAIN,
 	})
 
 	// 超额的话，删除用户。之后，Usedtraffic += Total
@@ -115,152 +118,155 @@ func Cron_loggingJobs(c *cron.Cron) {
 
 	})
 
-	c.AddFunc(CRON_INTERVAL_BY_DAY, func() {
-		var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
-		defer cancel()
+	if NODE_TYPE == "main" {
 
-		var current = time.Now()
-		var next = current.Add(2 * time.Minute)
-		var current_month = current.Local().Format("200601")
-		var next_day = next.Local().Format("20060102")
+		c.AddFunc(CRON_INTERVAL_BY_DAY, func() {
+			var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
+			defer cancel()
 
-		filter := bson.D{{}}
-		userCollection := database.OpenCollection(database.Client, "USERS")
-		cursor, err := userCollection.Find(ctx, filter)
-		if err != nil {
-			log.Panic("Panic: ", err)
-		}
+			var current = time.Now()
+			var next = current.Add(2 * time.Minute)
+			var current_month = current.Local().Format("200601")
+			var next_day = next.Local().Format("20060102")
 
-		for cursor.Next(ctx) {
-			var currentUser User
-			err := cursor.Decode(&currentUser)
+			filter := bson.D{{}}
+			userCollection := database.OpenCollection(database.Client, "USERS")
+			cursor, err := userCollection.Find(ctx, filter)
 			if err != nil {
 				log.Panic("Panic: ", err)
 			}
 
-			singleUserFilter := bson.D{primitive.E{Key: "email", Value: currentUser.Email}}
-			var update bson.D
-			if currentUser.UsedByCurrentDay.Amount == 0 {
+			for cursor.Next(ctx) {
+				var currentUser User
+				err := cursor.Decode(&currentUser)
+				if err != nil {
+					log.Panic("Panic: ", err)
+				}
 
-				update = bson.D{primitive.E{Key: "$set", Value: bson.D{
-					primitive.E{Key: "used_by_current_day", Value: primitive.D{
-						primitive.E{Key: "amount", Value: 0},
-						primitive.E{Key: "period", Value: next_day},
+				singleUserFilter := bson.D{primitive.E{Key: "email", Value: currentUser.Email}}
+				var update bson.D
+				if currentUser.UsedByCurrentDay.Amount == 0 {
+
+					update = bson.D{primitive.E{Key: "$set", Value: bson.D{
+						primitive.E{Key: "used_by_current_day", Value: primitive.D{
+							primitive.E{Key: "amount", Value: 0},
+							primitive.E{Key: "period", Value: next_day},
+						}},
+						primitive.E{Key: "updated_at", Value: current},
+					}}}
+
+				} else {
+
+					trafficByDay := currentUser.TrafficByDay
+					trafficByDay = append(trafficByDay, currentUser.UsedByCurrentDay)
+					update = bson.D{primitive.E{Key: "$set", Value: bson.D{
+						primitive.E{Key: "used_by_current_month", Value: primitive.D{
+							primitive.E{Key: "amount", Value: currentUser.UsedByCurrentMonth.Amount + currentUser.UsedByCurrentDay.Amount},
+							primitive.E{Key: "period", Value: current_month},
+						}},
+						primitive.E{Key: "used_by_current_day", Value: primitive.D{
+							primitive.E{Key: "amount", Value: 0},
+							primitive.E{Key: "period", Value: next_day},
+						}},
+						primitive.E{Key: "traffic_by_day", Value: trafficByDay},
+						primitive.E{Key: "updated_at", Value: current},
+					}}}
+				}
+
+				userCollection.FindOneAndUpdate(ctx, singleUserFilter, update)
+			}
+
+			cursor.Close(ctx)
+		})
+
+		c.AddFunc(CRON_INTERVAL_BY_MONTH, func() {
+
+			var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
+			defer cancel()
+
+			// 2022-01-01 00:01:00 +0800 CST
+			var current = time.Now()
+			// 2021-12-31 23:59:00 +0800 CST
+			var last = current.Add(-2 * time.Minute)
+			var last_year = last.Local().Format("2006")
+			var current_month = current.Local().Format("200601")
+
+			filter := bson.D{{}}
+			userCollection := database.OpenCollection(database.Client, "USERS")
+			cursor, err := userCollection.Find(ctx, filter)
+			if err != nil {
+				log.Panic("Panic: ", err)
+			}
+
+			for cursor.Next(ctx) {
+				var currentUser User
+				err := cursor.Decode(&currentUser)
+				if err != nil {
+					log.Panic("Panic: ", err)
+				}
+
+				singleUserFilter := bson.D{primitive.E{Key: "email", Value: currentUser.Email}}
+				trafficByMonth := currentUser.TrafficByMonth
+				trafficByMonth = append(trafficByMonth, currentUser.UsedByCurrentMonth)
+				update := bson.D{primitive.E{Key: "$set", Value: bson.D{
+					primitive.E{Key: "used_by_current_year", Value: primitive.D{
+						primitive.E{Key: "amount", Value: currentUser.UsedByCurrentYear.Amount + currentUser.UsedByCurrentMonth.Amount},
+						primitive.E{Key: "period", Value: last_year},
 					}},
-					primitive.E{Key: "updated_at", Value: current},
-				}}}
-
-			} else {
-
-				trafficByDay := currentUser.TrafficByDay
-				trafficByDay = append(trafficByDay, currentUser.UsedByCurrentDay)
-				update = bson.D{primitive.E{Key: "$set", Value: bson.D{
 					primitive.E{Key: "used_by_current_month", Value: primitive.D{
-						primitive.E{Key: "amount", Value: currentUser.UsedByCurrentMonth.Amount + currentUser.UsedByCurrentDay.Amount},
+						primitive.E{Key: "amount", Value: 0},
 						primitive.E{Key: "period", Value: current_month},
 					}},
-					primitive.E{Key: "used_by_current_day", Value: primitive.D{
-						primitive.E{Key: "amount", Value: 0},
-						primitive.E{Key: "period", Value: next_day},
-					}},
-					primitive.E{Key: "traffic_by_day", Value: trafficByDay},
-					primitive.E{Key: "updated_at", Value: current},
+					primitive.E{Key: "traffic_by_month", Value: trafficByMonth},
+					primitive.E{Key: "updated_at", Value: last},
 				}}}
+
+				userCollection.FindOneAndUpdate(ctx, singleUserFilter, update)
 			}
+			cursor.Close(ctx)
+		})
 
-			userCollection.FindOneAndUpdate(ctx, singleUserFilter, update)
-		}
+		c.AddFunc(CRON_INTERVAL_BY_YEAR, func() {
+			var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
+			defer cancel()
 
-		cursor.Close(ctx)
-	})
+			// 2022-01-01 00:01:30 +0800 CST
+			var current = time.Now()
+			// 2021-12-31 23:59:30 +0800 CST
+			var last = current.Add(-2 * time.Minute)
+			var current_year = current.Local().Format("2006")
 
-	c.AddFunc(CRON_INTERVAL_BY_MONTH, func() {
-
-		var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
-		defer cancel()
-
-		// 2022-01-01 00:01:00 +0800 CST
-		var current = time.Now()
-		// 2021-12-31 23:59:00 +0800 CST
-		var last = current.Add(-2 * time.Minute)
-		var last_year = last.Local().Format("2006")
-		var current_month = current.Local().Format("200601")
-
-		filter := bson.D{{}}
-		userCollection := database.OpenCollection(database.Client, "USERS")
-		cursor, err := userCollection.Find(ctx, filter)
-		if err != nil {
-			log.Panic("Panic: ", err)
-		}
-
-		for cursor.Next(ctx) {
-			var currentUser User
-			err := cursor.Decode(&currentUser)
+			filter := bson.D{{}}
+			userCollection := database.OpenCollection(database.Client, "USERS")
+			cursor, err := userCollection.Find(ctx, filter)
 			if err != nil {
 				log.Panic("Panic: ", err)
 			}
 
-			singleUserFilter := bson.D{primitive.E{Key: "email", Value: currentUser.Email}}
-			trafficByMonth := currentUser.TrafficByMonth
-			trafficByMonth = append(trafficByMonth, currentUser.UsedByCurrentMonth)
-			update := bson.D{primitive.E{Key: "$set", Value: bson.D{
-				primitive.E{Key: "used_by_current_year", Value: primitive.D{
-					primitive.E{Key: "amount", Value: currentUser.UsedByCurrentYear.Amount + currentUser.UsedByCurrentMonth.Amount},
-					primitive.E{Key: "period", Value: last_year},
-				}},
-				primitive.E{Key: "used_by_current_month", Value: primitive.D{
-					primitive.E{Key: "amount", Value: 0},
-					primitive.E{Key: "period", Value: current_month},
-				}},
-				primitive.E{Key: "traffic_by_month", Value: trafficByMonth},
-				primitive.E{Key: "updated_at", Value: last},
-			}}}
+			for cursor.Next(ctx) {
+				var currentUser User
+				err := cursor.Decode(&currentUser)
+				if err != nil {
+					log.Panic("Panic: ", err)
+				}
 
-			userCollection.FindOneAndUpdate(ctx, singleUserFilter, update)
-		}
-		cursor.Close(ctx)
-	})
+				singleUserFilter := bson.D{primitive.E{Key: "email", Value: currentUser.Email}}
+				trafficByYear := currentUser.TrafficByYear
+				trafficByYear = append(trafficByYear, currentUser.UsedByCurrentYear)
+				update := bson.D{primitive.E{Key: "$set", Value: bson.D{
+					primitive.E{Key: "used_by_current_year", Value: primitive.D{
+						primitive.E{Key: "amount", Value: 0},
+						primitive.E{Key: "period", Value: current_year},
+					}},
+					primitive.E{Key: "traffic_by_year", Value: trafficByYear},
+					primitive.E{Key: "updated_at", Value: last},
+				}}}
 
-	c.AddFunc(CRON_INTERVAL_BY_YEAR, func() {
-		var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
-		defer cancel()
-
-		// 2022-01-01 00:01:30 +0800 CST
-		var current = time.Now()
-		// 2021-12-31 23:59:30 +0800 CST
-		var last = current.Add(-2 * time.Minute)
-		var current_year = current.Local().Format("2006")
-
-		filter := bson.D{{}}
-		userCollection := database.OpenCollection(database.Client, "USERS")
-		cursor, err := userCollection.Find(ctx, filter)
-		if err != nil {
-			log.Panic("Panic: ", err)
-		}
-
-		for cursor.Next(ctx) {
-			var currentUser User
-			err := cursor.Decode(&currentUser)
-			if err != nil {
-				log.Panic("Panic: ", err)
+				userCollection.FindOneAndUpdate(ctx, singleUserFilter, update)
 			}
 
-			singleUserFilter := bson.D{primitive.E{Key: "email", Value: currentUser.Email}}
-			trafficByYear := currentUser.TrafficByYear
-			trafficByYear = append(trafficByYear, currentUser.UsedByCurrentYear)
-			update := bson.D{primitive.E{Key: "$set", Value: bson.D{
-				primitive.E{Key: "used_by_current_year", Value: primitive.D{
-					primitive.E{Key: "amount", Value: 0},
-					primitive.E{Key: "period", Value: current_year},
-				}},
-				primitive.E{Key: "traffic_by_year", Value: trafficByYear},
-				primitive.E{Key: "updated_at", Value: last},
-			}}}
-
-			userCollection.FindOneAndUpdate(ctx, singleUserFilter, update)
-		}
-
-		cursor.Close(ctx)
-	})
+			cursor.Close(ctx)
+		})
+	}
 
 }

@@ -3,7 +3,7 @@ const axios = require("axios").default;
 const jsonfile = require("jsonfile");
 
 axios
-	.get(process.env.MAIN_URL)
+	.get(process.env.MAIN_JSON_URL)
 	.then((res) => {
 		var users = [];
 		for (var prop in res.data) {

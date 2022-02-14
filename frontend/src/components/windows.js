@@ -33,7 +33,7 @@ function Windows() {
 			<h3 className="py-2">step 1: window 系统时间校准</h3>
 			<p>
 				请确保你的PC已联网! windows 的本地时间和标准时间相差必须在 90s
-				以内（时区无关），否则客户端运行会有问题。
+				以内(时区无关), 否则客户端运行会有问题。
 			</p>
 			<p>
 				右键点击右下角的“时间” &#x2192; 点击“调整日期时间” &#x2192;
@@ -43,18 +43,18 @@ function Windows() {
 			<p>
 				下载客户端:{" "}
 				<div className="inline h4">
-					<a href={process.env.REACT_APP_SUBURL + "/dl/v2rayw.zip"}>
-						{process.env.REACT_APP_SUBURL + "/dl/v2rayw.zip"}
+					<a href={process.env.REACT_APP_FILE_AND_SUB_URL + "/dl/v2rayw.zip"}>
+						{process.env.REACT_APP_FILE_AND_SUB_URL + "/dl/v2rayw.zip"}
 					</a>
 				</div>
 			</p>
 			<p>
-				解压v2rayw.zip。打开解压后文件夹，双击运行v2rayw.exe文件。windows右下角状态栏出现绿色W形状图标。
+				解压v2rayw.zip。打开解压后文件夹, 双击运行v2rayw.exe文件。windows右下角状态栏出现绿色W形状图标。
 			</p>
 			<h3 className="py-2">step 3: 添加配置</h3>
 			<p>
 				右击绿色W形状图标 &#x2192; 配置...,
-				在v2rayw配置面板中，依次填入下面参数:
+				在v2rayw配置面板中, 依次填入下面参数:
 			</p>
 			<p>
 				本地socks5端口:{" "}
@@ -70,7 +70,7 @@ function Windows() {
 					</Badge>{" "}
 				</div>
 			</p>
-			<p> 点按“添加”，填入服务器信息&#x2192; </p>
+			<p> 点按“添加”, 填入服务器信息&#x2192; </p>
 			<p>
 				{" "}
 				地址:
@@ -127,19 +127,19 @@ function Windows() {
 								/{user.path}
 							</Badge>{" "}
 						</div>
-						http头部: （留空）
+						http头部: (留空)
 					</p>
 				</li>
 				<li>
 					TLS标签:
 					<p>选中"启用传输层加密TLS"; </p>
-					<p> “域名服务器”，删除“server.cc”，留空白; </p>
+					<p> “域名服务器”, 删除“server.cc”, 留空白; </p>
 				</li>
-				<li>其它标签保持原配置，不用更改。</li>
+				<li>其它标签保持原配置, 不用更改。</li>
 			</ul>
-			<p>点按“保存”。v2rayw配置面板中，点按保存。</p>
+			<p>点按“保存”。v2rayw配置面板中, 点按保存。</p>
 			<h3 className="py-2">step 4: 设置系统代理</h3>
-			<p>windows系统设置中，搜索“proxy”。选中“使用代理服务器”</p>
+			<p>windows系统设置中, 搜索“proxy”。选中“使用代理服务器”</p>
 			<p>
 				地址:{" "}
 				<div className="inline h4">
@@ -163,10 +163,10 @@ function Windows() {
 			<p>右击绿色W形状图标 &#x2192; 选择“加载v2ray”</p>
 			<p>
 				配置完成!
-				打开edge/chrome浏览器，输入baidu.com，测试是否能正常联网；输入www.google.com，测试是否能正常联外网。
+				打开edge/chrome浏览器, 输入baidu.com, 测试是否能正常联网; 输入www.google.com, 测试是否能正常联外网。
 			</p>
 			<p>
-				（以上内容，遇到问题，请给我发信息，我们可以约时间通过zoom远程控制帮助你安装。）
+				(以上内容, 遇到问题, 请给我发信息, 我们可以约时间通过zoom远程控制帮助你安装。)
 			</p>
 		</Container>
 	);

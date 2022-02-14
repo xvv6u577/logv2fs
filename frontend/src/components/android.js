@@ -10,8 +10,8 @@ function Android() {
 			<p>
 				客户端下载:{" "}
 				<div className="inline h4">
-					<a href={process.env.REACT_APP_SUBURL +"/"+ "v2rayNG_1.2.6.apk"}>
-						{process.env.REACT_APP_SUBURL +"/"+ "v2rayNG_1.2.6.apk"}
+					<a href={process.env.REACT_APP_FILE_AND_SUB_URL +"/"+ "v2rayNG_1.2.6.apk"}>
+						{process.env.REACT_APP_FILE_AND_SUB_URL +"/"+ "v2rayNG_1.2.6.apk"}
 					</a>
 				</div>
 			</p>
@@ -32,7 +32,7 @@ function Android() {
 				地址(url):
 				<div className="inline h4">
 					<Badge bg="secondary" pill className="mx-1">
-						{process.env.REACT_APP_SUBURL + "/static/" + loginState.jwt.Email}
+						{process.env.REACT_APP_FILE_AND_SUB_URL + "/static/" + loginState.jwt.Email}
 					</Badge>
 				</div>
 			</p>

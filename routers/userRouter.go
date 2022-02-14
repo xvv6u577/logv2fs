@@ -13,7 +13,7 @@ import (
 func UserRoutes(incomingRoutes *gin.Engine) {
 
 	BOOT_MODE := os.Getenv("BOOT_MODE")
-	if BOOT_MODE != "wild" {
+	if "" == BOOT_MODE {
 		incomingRoutes.Use(middleware.Authentication())
 	}
 
