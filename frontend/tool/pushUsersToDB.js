@@ -7,7 +7,7 @@ const users = JSON.parse(require('fs').readFileSync('./tool/users.json', 'utf8')
 users.forEach((element) => {
 	console.log(element);
 	axios
-		.post(process.env.REACT_APP_API_HOST + "signup", {
+		.post("http://127.0.0.1:8079/v1/" + "signup", {
 			...element,
 		})
 		.then((res) => {

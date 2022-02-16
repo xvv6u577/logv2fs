@@ -8,7 +8,7 @@ const users = JSON.parse(
 
 users.forEach((element) => {
 	axios
-		.get(process.env.REACT_APP_API_HOST + "deluser/" + element.email)
+		.get("http://127.0.0.1:8079/v1/" + "deluser/" + element.email)
 		.then((res) => {
 			console.log(res.data);
 		})

@@ -110,6 +110,7 @@ async function run() {
 					}
 
 					trafficByHour.push({
+						domain: "w8.undervineyard.com",
 						created_at: date,
 						total: val.uplink + val.downlink,
 					});

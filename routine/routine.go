@@ -108,6 +108,7 @@ func Cron_loggingJobs(c *cron.Cron) {
 		if err != nil {
 			log.Panic("NSSClient.GetAllUserTraffic err: ", err.Error())
 		}
+
 		if len(allUserTraffic) != 0 {
 			for _, trafficPerUser := range allUserTraffic {
 				if trafficPerUser.Total != 0 {
