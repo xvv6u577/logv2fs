@@ -14,8 +14,8 @@ function Macos() {
 			<p>
 				客户端下载:{" "}
 				<div className="inline h4">
-					<a href={process.env.REACT_APP_API_HOST + "v2rayx.zip"}>
-						{process.env.REACT_APP_API_HOST + "v2rayx.zip"}
+					<a href={process.env.REACT_APP_FILE_AND_SUB_URL + "/dl/v2rayx.zip"}>
+						{process.env.REACT_APP_FILE_AND_SUB_URL + "/dl/v2rayx.zip"}
 					</a>
 				</div>
 			</p>
