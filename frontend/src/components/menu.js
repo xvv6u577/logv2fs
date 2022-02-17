@@ -17,11 +17,11 @@ const Menu = () => {
 				<Navbar.Brand href="/">Logv2ray Frontend</Navbar.Brand>
 				<Navbar.Toggle aria-controls="basic-navbar-nav" />
 				<Navbar.Collapse id="basic-navbar-nav">
-					{loginState.jwt.Role === "admin" && 
+					{loginState.jwt.Role === "admin" && (
 						<Nav>
 							<Nav.Link href="/home">User Management Panel</Nav.Link>
 						</Nav>
-					}
+					)}
 					<Nav>
 						<Nav.Link href="/mypanel">My Panel</Nav.Link>
 					</Nav>
@@ -39,15 +39,29 @@ const Menu = () => {
 					</Nav>
 				</Navbar.Collapse>
 				<Navbar.Collapse className="justify-content-end">
-					{loginState.jwt.Role === "admin" && <AddUser btnName="添加用户" />}
-					<Navbar.Text className="mx-2">
-						Signed in as: <b>{loginState.jwt.Email}</b>,
-					</Navbar.Text>
-					<Navbar.Text>
-						<Button variant="outline-secondary" onClick={handleLogout}>
-							logout
-						</Button>
-					</Navbar.Text>
+					{loginState.jwt.Role === "admin" && (
+						<Nav>
+							<Navbar.Text>
+								<AddUser btnName="添加用户" />
+							</Navbar.Text>
+						</Nav>
+					)}
+					<Nav>
+						<Navbar.Text className="mx-2">
+							Signed in as: <b>{loginState.jwt.Email}</b>,
+						</Navbar.Text>
+					</Nav>
+					<Nav>
+						<Navbar.Text>
+							<Button
+								variant="outline-secondary"
+								size="sm"
+								onClick={handleLogout}
+							>
+								logout
+							</Button>
+						</Navbar.Text>
+					</Nav>
 				</Navbar.Collapse>
 			</Container>
 		</Navbar>

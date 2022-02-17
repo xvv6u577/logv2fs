@@ -70,7 +70,7 @@ function AddUser({ btnName }) {
 
 	return (
 		<>
-			<Button variant="success" size="" onClick={handleShow}>
+			<Button variant="success" size="sm" onClick={handleShow}>
 				{btnName}
 			</Button>
 

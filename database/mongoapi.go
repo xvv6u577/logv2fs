@@ -48,7 +48,8 @@ func DeleteUsersDBs() error {
 		"xiaohe", "bsclks", "joy", "sarah", "guowanyue", "baofeng", "jonah", "yuxiaofang", "cuixiaoli", "wangyakun", "pty", "wupeng", "xiangwei", "changhua",
 		"weihongwei", "zhihu", "lujixiawu", "hepengfei", "mengchch", "21cpiaomu", "cuiyang", "bscdavid", "wangling", "21clsj", "anchagu", "bjbfl", "maylee",
 		"frankw", "pansir", "yizhu", "huohuo", "chunxia", "caster", "yutou", "camel", "rongfan", "cannan", "wuqiong", "huidi", "zhaorui", "yanyong",
-		"lijiaxin", "yongming", "jspotter", "haotian", "wrong", "sisi", "linbo", "bscalbert", "21caiqing", "shanshan", "bqgeorge", "7a2", "9b1", "bobhe", "lizheyu", "tianshu", "xiaoshen", "zhangyusheng",
+		"lijiaxin", "yongming", "jspotter", "haotian", "wrong", "sisi", "linbo", "bscalbert", "21caiqing", "shanshan", "bqgeorge", "7a2", "9b1", "bobhe",
+		"lizheyu", "tianshu", "xiaoshen", "zhangyusheng", "tantan",
 	}
 
 	for _, name := range users {
