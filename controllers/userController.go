@@ -31,7 +31,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-var Domains = map[string]string{"w8": "w8.undervineyard.com", "rm": "rm.undervineayrd.com"}
+var Domains = map[string]string{"w8": "w8.undervineyard.com", "rm": "rm.undervineyard.com"}
 var userCollection *mongo.Collection = database.OpenCollection(database.Client, "USERS")
 var validate = validator.New()
 var BOOT_MODE = os.Getenv("BOOT_MODE")

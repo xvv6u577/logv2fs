@@ -9,8 +9,6 @@ import {
 	Form,
 	Row,
 	Col,
-	OverlayTrigger,
-	Tooltip,
 	Accordion,
 } from "react-bootstrap";
 import { useSelector, useDispatch } from "react-redux";
@@ -19,6 +17,7 @@ import { doRerender } from "../store/rerender";
 import { formatBytes } from "../service/service";
 import axios from "axios";
 import { logout } from "../store/login";
+import TapToCopied from "./tapToCopied";
 
 const Home = () => {
 	const [users, setUsers] = useState([]);
@@ -145,17 +144,7 @@ const Home = () => {
 									}
 								>
 								</OverlayTrigger> */}
-									{/* <div
-										className="fw-bold info-hover"
-										onClick={() => {
-											navigator.clipboard.writeText(
-												process.env.REACT_APP_API_HOST +
-													"suburl/" +
-													element.email
-											);
-										}}
-									>
-									</div> */}
+
 									<span className="home-traffic-fs">{index + 1}</span>
 									{"."}
 									<b>{element.name}</b>
@@ -172,12 +161,11 @@ const Home = () => {
 									)}
 
 									<span className="home-traffic-fs">
-										今日流量: {formatBytes(element.used_by_current_day.amount)}
-										{"， "}
-										本月流量:{" "}
-										{formatBytes(element.used_by_current_month.amount)}
-										{"， "}
-										已用总流量: {formatBytes(element.used)}
+										今日: {formatBytes(element.used_by_current_day.amount)}
+										{", "}
+										本月: {formatBytes(element.used_by_current_month.amount)}
+										{", "}
+										已用: {formatBytes(element.used)}
 									</span>
 								</div>
 								<div className="d-flex justify-content-center align-items-center">
@@ -236,29 +224,26 @@ const Home = () => {
 							<Accordion.Body>
 								<div className="my-2">
 									<div className="">
-										<span className="mx-2">用户名: {element.email}</span>
-										{", "}
-										<span className="mx-2">
-											密码:{" "}
+										用户名: <TapToCopied>{element.email}</TapToCopied> 密码:{" "}
+										<TapToCopied>
 											{element.email.length < 6 ? "mypassword" : element.email}
-										</span>
+										</TapToCopied>
 									</div>
 									<div className="">
-										<span className="mx-2">path: {element.path}</span>
-										{", "}
-										<span className="mx-2">uuid: {element.uuid}</span>
+										path: <TapToCopied>{element.path}</TapToCopied> uuid:{" "}
+										<TapToCopied>{element.uuid}</TapToCopied>
 									</div>
 									<div className="text-break lh-sm">
-										<span className="mx-2">
-											SubUrl:{" "}
+										SubUrl:{" "}
+										<TapToCopied>
 											{process.env.REACT_APP_FILE_AND_SUB_URL +
 												"/static/" +
 												element.email}
-										</span>
+										</TapToCopied>
 									</div>
 								</div>
 								<div className="home-traffic-fs">
-									<h6 className="">每月流量</h6>
+									<h6 className="">Monthly: </h6>
 									{element.traffic_by_month &&
 										element.traffic_by_month
 											.sort((a, b) => b.period - a.period)
@@ -271,7 +256,7 @@ const Home = () => {
 											})}
 								</div>
 								<div className="home-traffic-fs">
-									<h6 className="pt-2">每日流量</h6>
+									<h6 className="pt-2">Daily: </h6>
 									{element.traffic_by_day &&
 										element.traffic_by_day
 											.sort((a, b) => b.period - a.period)

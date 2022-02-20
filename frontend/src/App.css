@@ -36,14 +36,14 @@
 	border-bottom: 1px solid rgba(204, 173, 173, 0.877);
 }
 
-.home-list ol.list-group.list-group-striped li:nth-of-type(odd){
-    background: rgba(52, 52, 52, 1);
+.home-list ol.list-group.list-group-striped li:nth-of-type(odd) {
+	background: rgba(52, 52, 52, 1);
 }
-.home-list ol.list-group.list-group-striped li:nth-of-type(even){
-    background: rgba(41, 44, 49, 1);
+.home-list ol.list-group.list-group-striped li:nth-of-type(even) {
+	background: rgba(41, 44, 49, 1);
 }
-.home-list ol.list-group.list-group-hover li:hover{
-    background: rgba(110, 116, 98, 0.2);
+.home-list ol.list-group.list-group-hover li:hover {
+	background: rgba(110, 116, 98, 0.2);
 }
 
 .home-traffic-fs {
@@ -51,13 +51,13 @@
 }
 
 .home-list .accordion-item {
-	background-color:rgb(66, 55, 62);
+	background-color: rgb(66, 55, 62);
 	border: none;
 }
 .home-list .accordion-item .accordion-header {
 	font-size: 14px;
 }
-.home-list .accordion-item .accordion-header button.accordion-button{
+.home-list .accordion-item .accordion-header button.accordion-button {
 	padding: 0;
 }
 .home-list .accordion-item .accordion-body {
@@ -65,9 +65,8 @@
 }
 
 .modal-content {
-	background-color: rgba(200, 200, 200,1) !important;
+	background-color: rgba(200, 200, 200, 1) !important;
 	color: rgba(51, 29, 29, 1) !important;
-	
 }
 
 .myToolTip > .tooltip-inner {
@@ -112,4 +111,17 @@
 	margin: 0px auto;
 	color: rgba(255, 255, 255, 0.4);
 	font-size: small;
+}
+
+.tap-to-copied {
+	padding-bottom: 5px;
+}
+
+.tap-to-copied-badge {
+	cursor: copy;
+}
+
+.tap-to-copied span.h5 {
+	border-bottom: 1px solid rgb(236, 238, 138);
+	padding: 3px;
 }

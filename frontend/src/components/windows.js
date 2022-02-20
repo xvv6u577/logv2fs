@@ -3,6 +3,7 @@ import { Container, Alert, Badge } from "react-bootstrap";
 import { useSelector, useDispatch } from "react-redux";
 import axios from "axios";
 import { alert, info, success } from "../store/message";
+import TapToCopied from "./tapToCopied";
 
 function Windows() {
 	const [user, updateUser] = useState({});
@@ -42,19 +43,18 @@ function Windows() {
 			<h3 className="py-2">step 2: 下载客户端</h3>
 			<p>
 				下载客户端:{" "}
-				<div className="inline h4">
-					<a href={process.env.REACT_APP_FILE_AND_SUB_URL + "/dl/v2rayw.zip"}>
-						{process.env.REACT_APP_FILE_AND_SUB_URL + "/dl/v2rayw.zip"}
-					</a>
-				</div>
+				<TapToCopied>
+					{process.env.REACT_APP_FILE_AND_SUB_URL + "/dl/v2rayw.zip"}
+				</TapToCopied>
 			</p>
 			<p>
-				解压v2rayw.zip。打开解压后文件夹, 双击运行v2rayw.exe文件。windows右下角状态栏出现绿色W形状图标。
+				解压v2rayw.zip。打开解压后文件夹,
+				双击运行v2rayw.exe文件。windows右下角状态栏出现绿色W形状图标。
 			</p>
 			<h3 className="py-2">step 3: 添加配置</h3>
 			<p>
-				右击绿色W形状图标 &#x2192; 配置...,
-				在v2rayw配置面板中, 依次填入下面参数:
+				右击绿色W形状图标 &#x2192; 配置..., 在v2rayw配置面板中,
+				依次填入下面参数:
 			</p>
 			<p>
 				本地socks5端口:{" "}
@@ -71,20 +71,11 @@ function Windows() {
 				</div>
 			</p>
 			<p> 点按“添加”, 填入服务器信息&#x2192; </p>
-			<p>
+			<div>
 				{" "}
 				地址:
-				<div className="inline h4">
-					<Badge bg="secondary" pill className="mx-1">
-						{user.nodeinuse && user.nodeinuse.w8}:443
-					</Badge>{" "}
-				</div>
-				用户ID:{" "}
-				<div className="inline h4">
-					<Badge bg="secondary" pill className="mx-1">
-						{user.uuid}
-					</Badge>{" "}
-				</div>
+				<TapToCopied>{user.nodeinuse && user.nodeinuse.w8}:443</TapToCopied>
+				用户ID: <TapToCopied>{user.uuid}</TapToCopied>
 				额外ID:{" "}
 				<div className="inline h4">
 					<Badge bg="secondary" pill className="mx-1">
@@ -115,7 +106,7 @@ function Windows() {
 						ws
 					</Badge>
 				</div>
-			</p>
+			</div>
 			<p>点按“传输设置”&#x2192;</p>
 			<ul>
 				<li>
@@ -162,11 +153,12 @@ function Windows() {
 			</p>
 			<p>右击绿色W形状图标 &#x2192; 选择“加载v2ray”</p>
 			<p>
-				配置完成!
-				打开edge/chrome浏览器, 输入baidu.com, 测试是否能正常联网; 输入www.google.com, 测试是否能正常联外网。
+				配置完成! 打开edge/chrome浏览器, 输入baidu.com, 测试是否能正常联网;
+				输入www.google.com, 测试是否能正常联外网。
 			</p>
 			<p>
-				(以上内容, 遇到问题, 请给我发信息, 我们可以约时间通过zoom远程控制帮助你安装。)
+				(以上内容, 遇到问题, 请给我发信息,
+				我们可以约时间通过zoom远程控制帮助你安装。)
 			</p>
 		</Container>
 	);

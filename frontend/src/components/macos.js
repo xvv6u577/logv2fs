@@ -1,5 +1,6 @@
 import { useSelector } from "react-redux";
-import { Container, Badge } from "react-bootstrap";
+import { Container, } from "react-bootstrap";
+import TapToCopied from "./tapToCopied";
 
 function Macos() {
 	const loginState = useSelector((state) => state.login);
@@ -13,11 +14,7 @@ function Macos() {
 			</h3>
 			<p>
 				客户端下载:{" "}
-				<div className="inline h4">
-					<a href={process.env.REACT_APP_FILE_AND_SUB_URL + "/dl/v2rayx.zip"}>
-						{process.env.REACT_APP_FILE_AND_SUB_URL + "/dl/v2rayx.zip"}
-					</a>
-				</div>
+				<TapToCopied>{process.env.REACT_APP_FILE_AND_SUB_URL + "/dl/v2rayx.zip"}</TapToCopied>
 			</p>
 			<p>
 				解压之后, 把 v2rayx 移到/Application 文件夹。四指捏合, 调出
@@ -28,11 +25,9 @@ function Macos() {
 				点按标题栏 App 图标, 依次选择 Configure... &#x2192; Import... &#x2192;
 				Import from other links... &#x2192; 输入
 			</p>
-			<div className="inline h4">
-				<Badge bg="secondary" pill className="mx-1">
-					{process.env.REACT_APP_FILE_AND_SUB_URL + "/static/" + loginState.jwt.Email}
-				</Badge>
-			</div>
+			<p>
+				<TapToCopied>{process.env.REACT_APP_FILE_AND_SUB_URL + "/static/" + loginState.jwt.Email}</TapToCopied>
+			</p>
 			<p>点按 OK。若添加成功, 配置对话框左侧vmess servers有新项目产生。</p>
 			<h3 className="py-2">step 3: 运行 v2ray 客户端</h3>
 			<p>

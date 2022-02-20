@@ -1,5 +1,6 @@
 import { Container, Badge } from "react-bootstrap";
 import { useSelector } from "react-redux";
+import TapToCopied from "./tapToCopied";
 
 function Ihpone() {
 	const loginState = useSelector((state) => state.login);
@@ -30,27 +31,19 @@ function Ihpone() {
 			</p>
 			<p>
 				apple ID:
-				<div className="inline h4">
-					<Badge bg="secondary" pill className="mx-1">
-						warley8013@gmail.com
-					</Badge>
-				</div>
+				<TapToCopied>warley8013@gmail.com</TapToCopied>
 			</p>
 			<p>
 				pwd:
-				<div className="inline h4">
-					<Badge bg="secondary" pill className="mx-1">
-						Google@521
-					</Badge>
-				</div>
+				<TapToCopied>Google@521</TapToCopied>
 			</p>
 			<p>打开app store, 查找 "shadowrocket" , 安装。</p>
 			提示:
 			<ul>
 				<li>上面提供的apple id已经购买shadowrocket, 登陆之后可以直接安装。</li>
 				<li>
-					apple ID
-					登陆的时候, 需要双重认证, 给我发信息提示, 我会发给你认证数字。
+					apple ID 登陆的时候, 需要双重认证, 给我发信息提示,
+					我会发给你认证数字。
 				</li>
 			</ul>
 			<h3 className="py-2">step 2、导入配置参数</h3>
@@ -68,16 +61,17 @@ function Ihpone() {
 			</p>
 			<p>
 				URL:{" "}
-				<div className="inline h4">
-					<Badge bg="secondary" pill className="mx-1">
-						{process.env.REACT_APP_FILE_AND_SUB_URL + "/static/" + loginState.jwt.Email}
-					</Badge>
-				</div>
+				<TapToCopied>
+					{process.env.REACT_APP_FILE_AND_SUB_URL +
+						"/static/" +
+						loginState.jwt.Email}
+				</TapToCopied>
 			</p>
 			<p>点按右上角“完成”。</p>
 			<h3 className="py-2">Step 3: 设置运行模式</h3>
 			<p>
-				回到主界面, 向右滑动新添加的选项uvp, 点按“更新”。项目下方会出现2个列表, 选中其中一个后, 左边会现黄色圆点。
+				回到主界面, 向右滑动新添加的选项uvp, 点按“更新”。项目下方会出现2个列表,
+				选中其中一个后, 左边会现黄色圆点。
 			</p>
 			<p>回到主界面, "全局路由"选择"配置"。</p>
 			<p>
