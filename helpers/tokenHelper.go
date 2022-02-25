@@ -128,5 +128,4 @@ func UpdateAllTokens(signedToken string, signedRefreshToken string, userId strin
 		return
 	}
 
-	return
 }

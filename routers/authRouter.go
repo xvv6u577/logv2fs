@@ -30,6 +30,7 @@ func AuthRoutes(incomingRoutes *gin.Engine) {
 	// }
 	incomingRoutes.POST("/v1/login", controller.Login())
 	incomingRoutes.GET("/static/:name", controller.GetSubscripionURL())
+	incomingRoutes.GET("/config/:name", controller.GenerateConfig())
 
 	// incomingRoutes.NoRoute(func(c *gin.Context) {
 	// 	c.JSON(http.StatusNotFound, gin.H{"error": "page not found."})

@@ -31,7 +31,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-var Domains = map[string]string{"w8": "w8.undervineyard.com", "rm": "rm.undervineyard.com"}
+// var Domains = map[string]string{"w8": "w8.undervineyard.com", "rm": "rm.undervineyard.com"}
 var userCollection *mongo.Collection = database.OpenCollection(database.Client, "USERS")
 var validate = validator.New()
 var BOOT_MODE = os.Getenv("BOOT_MODE")
@@ -66,11 +66,43 @@ func VerifyPassword(userPassword string, providedPassword string) (bool, string)
 	return check, msg
 }
 
+func GenerateSubscription(user User, Domains map[string]string) string {
+
+	var node Node
+	subscription := ""
+
+	for index, item := range Domains {
+
+		node = Node{
+			Domain:  item,
+			Path:    "/" + user.Path,
+			UUID:    user.UUID,
+			Remark:  index,
+			Version: "2",
+			Port:    "443",
+			Aid:     "64",
+			Net:     "ws",
+			Type:    "none",
+			Tls:     "tls",
+		}
+
+		jsonedNode, _ := json.Marshal(node)
+
+		if len(subscription) == 0 {
+			subscription = "vmess://" + b64.StdEncoding.EncodeToString(jsonedNode)
+		} else {
+			subscription = subscription + "\n" + "vmess://" + b64.StdEncoding.EncodeToString(jsonedNode)
+		}
+	}
+
+	return b64.StdEncoding.EncodeToString([]byte(subscription))
+}
+
 //CreateUser is the api used to tget a single user
 func SignUp() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
-		if "" == BOOT_MODE {
+		if BOOT_MODE == "" {
 			err := helper.CheckUserType(c, "admin")
 			if err != nil {
 				c.JSON(http.StatusBadRequest, gin.H{"sign up error": err.Error()})
@@ -108,6 +140,16 @@ func SignUp() gin.HandlerFunc {
 			return
 		}
 
+		var adminUser model.User
+		userId := c.GetString("uid")
+		log.Println("userId: ", userId)
+
+		err = userCollection.FindOne(ctx, bson.M{"user_id": userId}).Decode(&adminUser)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
 		if user.Name == "" {
 			user.Name = user.Email
 		}
@@ -127,34 +169,8 @@ func SignUp() gin.HandlerFunc {
 			user.UUID = uuidV4.String()
 		}
 
-		user.NodeInUse = &Domains
-
-		var node Node
-		subscription := ""
-		for index, item := range Domains {
-
-			node = Node{
-				Domain:  item,
-				Path:    "/" + user.Path,
-				UUID:    user.UUID,
-				Remark:  index,
-				Version: "2",
-				Port:    "443",
-				Aid:     "64",
-				Net:     "ws",
-				Type:    "none",
-				Tls:     "tls",
-			}
-
-			jsonedNode, _ := json.Marshal(node)
-
-			if len(subscription) == 0 {
-				subscription = "vmess://" + b64.StdEncoding.EncodeToString(jsonedNode)
-			} else {
-				subscription = subscription + "\n" + "vmess://" + b64.StdEncoding.EncodeToString(jsonedNode)
-			}
-		}
-		user.Suburl = b64.StdEncoding.EncodeToString([]byte(subscription))
+		user.NodeInUse = adminUser.NodeGlobal
+		user.Suburl = GenerateSubscription(user, *adminUser.NodeGlobal)
 
 		if user.Credittraffic == 0 {
 			credit, _ := strconv.ParseInt(CREDIT, 10, 64)
@@ -264,10 +280,78 @@ func Login() gin.HandlerFunc {
 	}
 }
 
+func GenerateConfig() gin.HandlerFunc {
+	return func(c *gin.Context) {
+
+		var name string
+		if c.Query("name") != "" {
+			name = c.Query("name")
+		} else {
+			name = c.Param("name")
+		}
+
+		user, err := database.GetUserByName(name)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{"email": user.Email, "uuid": user.UUID, "path": user.Path, "nodeinuse": user.NodeInUse})
+	}
+}
+
+func AddNode() gin.HandlerFunc {
+	return func(c *gin.Context) {
+
+		if BOOT_MODE == "" {
+			err := helper.CheckUserType(c, "admin")
+			if err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"sign up error": err.Error()})
+				return
+			}
+		}
+
+		var ctx, cancel = context.WithTimeout(context.Background(), 60*time.Second)
+		defer cancel()
+		var domains *map[string]string
+		var current = time.Now()
+
+		if err := c.BindJSON(&domains); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		allUsers, err := database.GetAllUsersInfo()
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		for _, user := range allUsers {
+			if user.Role == "admin" {
+				user.NodeGlobal = domains
+			}
+
+			user.NodeInUse = domains
+			user.Suburl = GenerateSubscription(*user, *domains)
+			user.UpdatedAt = current
+
+			_, err = userCollection.ReplaceOne(ctx, bson.M{"user_id": user.User_id}, user)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				return
+			}
+
+		}
+
+		c.JSON(http.StatusOK, gin.H{"message": "node added"})
+	}
+}
+
 func EditUser() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
-		if "" == BOOT_MODE {
+		if BOOT_MODE == "" {
 			if err := helper.CheckUserType(c, "admin"); err != nil {
 				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 				return
@@ -342,7 +426,7 @@ func EditUser() gin.HandlerFunc {
 func GetUsers() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
-		if "" == BOOT_MODE {
+		if BOOT_MODE == "" {
 			if err := helper.CheckUserType(c, "admin"); err != nil {
 				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 				return
@@ -414,7 +498,7 @@ func GetUser() gin.HandlerFunc {
 func TakeItOfflineByUserName() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
-		if "" == BOOT_MODE {
+		if BOOT_MODE == "" {
 			if err := helper.CheckUserType(c, "admin"); err != nil {
 				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 				return
@@ -458,7 +542,7 @@ func TakeItOfflineByUserName() gin.HandlerFunc {
 
 func TakeItOnlineByUserName() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		if "" == BOOT_MODE {
+		if BOOT_MODE == "" {
 			if err := helper.CheckUserType(c, "admin"); err != nil {
 				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 				return
@@ -503,7 +587,7 @@ func TakeItOnlineByUserName() gin.HandlerFunc {
 func DeleteUserByUserName() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
-		if "" == BOOT_MODE {
+		if BOOT_MODE == "" {
 			if err := helper.CheckUserType(c, "admin"); err != nil {
 				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 				return
@@ -579,7 +663,7 @@ func GetTrafficByUser() gin.HandlerFunc {
 func GetAllUserTraffic() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
-		if "" == BOOT_MODE {
+		if BOOT_MODE == "" {
 			if err := helper.CheckUserType(c, "admin"); err != nil {
 				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 				return
@@ -605,7 +689,7 @@ func GetAllUserTraffic() gin.HandlerFunc {
 func GetAllUsers() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
-		if "" == BOOT_MODE {
+		if BOOT_MODE == "" {
 			err := helper.CheckUserType(c, "admin")
 			if err != nil {
 				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -644,11 +728,6 @@ func GetUserByName() gin.HandlerFunc {
 func GetSubscripionURL() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		name := c.Param("name")
-
-		if err := helper.MatchUserTypeAndName(c, name); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
-		}
 
 		user, err := database.GetUserByName(name)
 		if err != nil {

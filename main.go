@@ -14,6 +14,7 @@ import (
 	routers "github.com/caster8013/logv2rayfullstack/routers"
 	"github.com/caster8013/logv2rayfullstack/routine"
 	"github.com/caster8013/logv2rayfullstack/v2ray"
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/robfig/cron"
 	"github.com/shomali11/parallelizer"
@@ -22,6 +23,8 @@ import (
 )
 
 type User = model.User
+
+var BOOT_MODE = os.Getenv("BOOT_MODE")
 
 var cronInstance *cron.Cron
 
@@ -171,6 +174,10 @@ func runServer() {
 	// handler for the path with (without) the trailing slash exists.
 	router.RedirectTrailingSlash = true
 
+	if BOOT_MODE == "" {
+		router.Use(cors.Default())
+		// router.Use(middleware.CORS())
+	}
 	router.Use(gin.Logger())
 	router.Use(recoverFromError)
 

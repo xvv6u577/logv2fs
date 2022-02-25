@@ -31,8 +31,10 @@ function AddUser({ btnName }) {
 		role: "normal",
 		uuid: ""
 	};
+	
 	const [{ email, password, name, path, role, uuid }, setState] =
 		useState(initialState);
+
 	const clearState = () => {
 		setState({ ...initialState });
 	};
@@ -74,7 +76,7 @@ function AddUser({ btnName }) {
 				{btnName}
 			</Button>
 
-			<Modal show={show} onHide={handleClose} size="lg" aria-labelledby="contained-modal-title-vcenter" centered >
+			<Modal show={show} onHide={handleClose} size="sm" aria-labelledby="contained-modal-title-vcenter" centered >
 				<Modal.Header closeButton>
 					<Modal.Title>Add User</Modal.Title>
 				</Modal.Header>

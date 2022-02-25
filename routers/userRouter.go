@@ -13,7 +13,7 @@ import (
 func UserRoutes(incomingRoutes *gin.Engine) {
 
 	BOOT_MODE := os.Getenv("BOOT_MODE")
-	if "" == BOOT_MODE {
+	if BOOT_MODE == "" {
 		incomingRoutes.Use(middleware.Authentication())
 	}
 
@@ -47,4 +47,6 @@ func UserRoutes(incomingRoutes *gin.Engine) {
 
 	incomingRoutes.GET("/v1/traffic/all", controller.GetAllUserTraffic())  // v2api
 	incomingRoutes.GET("/v1/traffic/:name", controller.GetTrafficByUser()) // v2api
+
+	incomingRoutes.PUT("/v1/addnode", controller.AddNode())
 }

@@ -2,6 +2,7 @@ import { useSelector, useDispatch } from "react-redux";
 import { Container, Navbar, Nav, Button } from "react-bootstrap";
 import { logout } from "../store/login";
 import AddUser from "./adduser";
+import AddNode from "./addNode";
 
 const Menu = () => {
 	const loginState = useSelector((state) => state.login);
@@ -40,11 +41,14 @@ const Menu = () => {
 				</Navbar.Collapse>
 				<Navbar.Collapse className="justify-content-end">
 					{loginState.jwt.Role === "admin" && (
-						<Nav>
-							<Navbar.Text>
-								<AddUser btnName="添加用户" />
-							</Navbar.Text>
-						</Nav>
+						<>
+							<Nav className="mx-2">
+									<AddNode btnName="添加节点" />
+							</Nav>
+							<Nav className="mx-2">
+									<AddUser btnName="添加用户" />
+							</Nav>
+						</>
 					)}
 					<Nav>
 						<Navbar.Text className="mx-2">
@@ -52,7 +56,6 @@ const Menu = () => {
 						</Navbar.Text>
 					</Nav>
 					<Nav>
-						<Navbar.Text>
 							<Button
 								variant="outline-secondary"
 								size="sm"
@@ -60,7 +63,6 @@ const Menu = () => {
 							>
 								logout
 							</Button>
-						</Navbar.Text>
 					</Nav>
 				</Navbar.Collapse>
 			</Container>

@@ -17,10 +17,11 @@ type User struct {
 	Name               string             `json:"name" bson:"name"`
 	Token              *string            `json:"token"`
 	Refresh_token      *string            `json:"refresh_token"`
-	User_id            string             `json:"user_id"`
+	User_id            string             `json:"user_id" bson:"user_id"`
 	Usedtraffic        int64              `json:"used" bson:"used"`
 	Credittraffic      int64              `json:"credit" bson:"credit"`
 	NodeInUse          *map[string]string `json:"nodeinuse" bson:"nodeinuse"`
+	NodeGlobal         *map[string]string `json:"nodeglobal,omitempty" bson:"nodeglobal"`
 	Suburl             string             `json:"suburl"`
 	CreatedAt          time.Time          `json:"created_at" bson:"created_at"`
 	UpdatedAt          time.Time          `json:"updated_at" bson:"updated_at"`
