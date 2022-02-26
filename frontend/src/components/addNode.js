@@ -53,8 +53,7 @@ const AddNode = ({ btnName }) => {
 			data: domains,
 		})
 			.then((response) => {
-				console.log(response);
-				dispatch(success({ show: true, content: "Domain added in success!" }));
+				dispatch(success({ show: true, content: response.data.message }));
 				dispatch(doRerender({rerender: !rerenderSignal.rerender}))
 			})
 			.catch((err) => {
@@ -75,7 +74,7 @@ const AddNode = ({ btnName }) => {
 			<Modal
 				show={show}
 				onHide={() => setShow(false)}
-				size="sm"
+				size="lg"
 				aria-labelledby="contained-modal-title-vcenter"
 				centered
 			>
