@@ -6,8 +6,8 @@ const TapToCopied = (props) => {
 	const target = useRef(null);
 
 	return (
-		<span className="tap-to-copied">
-			<span ref={target} className="h5">
+		<span className="tap-to-copied h6 me-3">
+			<span ref={target} className="small copied-text">
 				{props.children}
 			</span>
 			{" | "}

@@ -10,6 +10,7 @@ import {
 	Row,
 	Col,
 	Accordion,
+	Table,
 } from "react-bootstrap";
 import { useSelector, useDispatch } from "react-redux";
 import { alert, success } from "../store/message";
@@ -128,23 +129,6 @@ const Home = () => {
 								className="d-flex justify-content-between align-items-start"
 							>
 								<div className="ms-2 me-auto">
-									{/* <OverlayTrigger
-									key={index}
-									placement="right"
-									overlay={
-										<Tooltip id={`tooltip-${index}`} className="myToolTip">
-											domain:{" "}
-											<b>{Object.values(element.nodeinuse).toString()}</b>{" "}
-											<br />
-											uuid: <b>{element.uuid}</b>
-											<br />
-											path: <b>{element.path}</b>
-											<br />
-										</Tooltip>
-									}
-								>
-								</OverlayTrigger> */}
-
 									<span className="home-traffic-fs">{index + 1}</span>
 									{"."}
 									<b>{element.name}</b>
@@ -222,18 +206,26 @@ const Home = () => {
 								</div>
 							</ListGroup.Item>
 							<Accordion.Body>
-								<div className="my-2">
-									<div className="">
-										用户名: <TapToCopied>{element.email}</TapToCopied> 密码:{" "}
+								<div className="mb-3 px-5 h6 small">
+									<div className="my-1">
+										用户名: <TapToCopied>{element.email}</TapToCopied>
+									</div>
+									<div className="my-1">
+										密码:{" "}
 										<TapToCopied>
-											{element.email.length < 6 ? "mypassword" : element.email}
+											{" "}
+											{element.email.length < 6
+												? "mypassword"
+												: element.email}{" "}
 										</TapToCopied>
 									</div>
-									<div className="">
-										path: <TapToCopied>{element.path}</TapToCopied> uuid:{" "}
-										<TapToCopied>{element.uuid}</TapToCopied>
+									<div className="my-1">
+										path: <TapToCopied>{element.path}</TapToCopied>
 									</div>
-									<div className="text-break lh-sm">
+									<div className="my-1">
+										uuid: <TapToCopied>{element.uuid}</TapToCopied>
+									</div>
+									<div className="text-break my-1">
 										SubUrl:{" "}
 										<TapToCopied>
 											{process.env.REACT_APP_FILE_AND_SUB_URL +
@@ -244,30 +236,44 @@ const Home = () => {
 								</div>
 								<div className="home-traffic-fs">
 									<h6 className="">Monthly: </h6>
-									{element.traffic_by_month &&
-										element.traffic_by_month
-											.sort((a, b) => b.period - a.period)
-											.map((element) => {
-												return (
-													<Badge pill bg="dark" text="white">
-														{element.period} / {formatBytes(element.amount)}
-													</Badge>
-												);
-											})}
+									<Table hover bordered size="sm" variant="dark">
+										<tbody>
+											{element.traffic_by_month &&
+												element.traffic_by_month
+													.sort((a, b) => b.period - a.period)
+													.map((item, index) => {
+														return (
+															<tr key={item.id}>
+																<td>{index + 1}</td>
+																{Object.values(item).map((val, i) => (
+																	<td>{i > 0 ? formatBytes(val) : val}</td>
+																))}
+															</tr>
+														);
+													})}
+										</tbody>
+									</Table>
 								</div>
 								<div className="home-traffic-fs">
 									<h6 className="pt-2">Daily: </h6>
-									{element.traffic_by_day &&
-										element.traffic_by_day
-											.sort((a, b) => b.period - a.period)
-											// .slice(0, 90)
-											.map((element) => {
-												return (
-													<Badge pill bg="dark" text="white">
-														{element.period} / {formatBytes(element.amount)}
-													</Badge>
-												);
-											})}
+									<Table hover bordered size="sm" variant="dark">
+										<tbody>
+											{element.traffic_by_day &&
+												element.traffic_by_day
+													.sort((a, b) => b.period - a.period)
+													// .slice(0, 90)
+													.map((item, index) => {
+														return (
+															<tr key={item.id}>
+																<td>{index + 1}</td>
+																{Object.values(item).map((val, i) => (
+																	<td>{i > 0 ? formatBytes(val) : val}</td>
+																))}
+															</tr>
+														);
+													})}
+										</tbody>
+									</Table>
 								</div>
 							</Accordion.Body>
 						</Accordion.Item>

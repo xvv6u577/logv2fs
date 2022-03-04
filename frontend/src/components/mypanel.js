@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
-import { Container, Badge } from "react-bootstrap";
+import { Container, Table } from "react-bootstrap";
 import { alert } from "../store/message";
 import { useSelector, useDispatch } from "react-redux";
 import { formatBytes } from "../service/service";
 import axios from "axios";
+import TapToCopied from "./tapToCopied";
 
 function Mypanel() {
 	const [user, setUser] = useState({});
@@ -34,7 +35,7 @@ function Mypanel() {
 	}, [rerenderSignal, loginState.jwt.Email, loginState.token, dispatch]);
 
 	return (
-		<Container className="py-5">
+		<Container className="py-3">
 			<div className="row mypanel-row justify-content-evenly">
 				<div className="mypanel-card col">
 					<div className="h3">
@@ -62,37 +63,76 @@ function Mypanel() {
 				</div>
 			</div>
 
-			<div className="d-flex flex-column py-3">
-				<div className="py-3">
+			<div className="my-5 px-5 h6 small">
+				<div className="my-1">
+					用户名: <TapToCopied>{user.email}</TapToCopied>
+				</div>
+				<div className="my-1">
+					密码:{" "}
+					<TapToCopied>
+						{" "}
+						{user.email && user.email.length < 6 ? "mypassword" : user.email}{" "}
+					</TapToCopied>
+				</div>
+				<div className="my-1">
+					path: <TapToCopied>{user.path}</TapToCopied>
+				</div>
+				<div className="my-1">
+					uuid: <TapToCopied>{user.uuid}</TapToCopied>
+				</div>
+				<div className="text-break my-1">
+					SubUrl:{" "}
+					<TapToCopied>
+						{process.env.REACT_APP_FILE_AND_SUB_URL + "/static/" + user.email}
+					</TapToCopied>
+				</div>
+			</div>
+
+			<div className="d-flex flex-column">
+				<div className="pb-3">
 					<div className="h4 py-3">
 						每月流量<span className="h6">(月份/流量)</span>
 					</div>
-					{user.traffic_by_month &&
-						user.traffic_by_month
-							.sort((a, b) => b.period - a.period)
-							.map((element) => {
-								return (
-									<Badge pill bg="dark" text="white">
-										{element.period} / {formatBytes(element.amount)}
-									</Badge>
-								);
-							})}
+					<Table hover bordered size="sm" variant="dark">
+						<tbody>
+							{user.traffic_by_month &&
+								user.traffic_by_month
+									.sort((a, b) => b.period - a.period)
+									.map((item, index) => {
+										return (
+											<tr key={item.id}>
+												<td>{index + 1}</td>
+												{Object.values(item).map((val, i) => (
+													<td>{i > 0 ? formatBytes(val) : val}</td>
+												))}
+											</tr>
+										);
+									})}
+						</tbody>
+					</Table>
 				</div>
-				<div className="py-3">
-					<div className="h4 py-3">
+				<div className="">
+					<div className="h4 pb-3">
 						过去3个月每日流量<span className="h6">(日期/流量)</span>
 					</div>
-					{user.traffic_by_day &&
-						user.traffic_by_day
-							.sort((a, b) => b.period - a.period)
-							.slice(0, 90)
-							.map((element) => {
-								return (
-									<Badge pill bg="dark" text="white">
-										{element.period} / {formatBytes(element.amount)}
-									</Badge>
-								);
-							})}
+					<Table hover bordered size="sm" variant="dark">
+						<tbody>
+							{user.traffic_by_day &&
+								user.traffic_by_day
+									.sort((a, b) => b.period - a.period)
+									.slice(0, 90)
+									.map((item, index) => {
+										return (
+											<tr key={item.id}>
+												<td>{index + 1}</td>
+												{Object.values(item).map((val, i) => (
+													<td>{i > 0 ? formatBytes(val) : val}</td>
+												))}
+											</tr>
+										);
+									})}
+						</tbody>
+					</Table>
 				</div>
 			</div>
 		</Container>

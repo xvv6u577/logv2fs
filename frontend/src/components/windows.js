@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Container, Alert, Badge } from "react-bootstrap";
 import { useSelector, useDispatch } from "react-redux";
 import axios from "axios";
-import { alert, info, success } from "../store/message";
+import { alert } from "../store/message";
 import TapToCopied from "./tapToCopied";
 
 function Windows() {
