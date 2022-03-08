@@ -70,8 +70,7 @@ function Mypanel() {
 				<div className="my-1">
 					密码:{" "}
 					<TapToCopied>
-						{" "}
-						{user.email && user.email.length < 6 ? "mypassword" : user.email}{" "}
+						{user.email && user.email.length < 6 ? "mypassword" : user.email}
 					</TapToCopied>
 				</div>
 				<div className="my-1">

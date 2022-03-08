@@ -128,18 +128,18 @@ const Home = () => {
 								as="li"
 								className="d-flex justify-content-between align-items-start"
 							>
-								<div className="ms-2 me-auto">
+								<div className="ms-2 me-auto ">
 									<span className="home-traffic-fs">{index + 1}</span>
 									{"."}
-									<b>{element.name}</b>
-									<Badge bg="success" className="mx-1" pill>
+									<b className="home-traffic-fs">{element.name}</b>
+									<Badge bg="success" className="mx-1 home-traffic-fs" pill>
 										{element.role === "admin" ? "管理员" : "普通用户"}
 									</Badge>
-									<Badge bg="primary" className="mx-1" pill>
+									<Badge bg="primary" className="mx-1 home-traffic-fs" pill>
 										{element.status === "plain" ? "在线" : "已下线"}
 									</Badge>
 									{element.email === loginState.jwt.Email && (
-										<Badge bg="info" className="mx-1" pill>
+										<Badge bg="info" className="mx-1 home-traffic-fs" pill>
 											It's Me
 										</Badge>
 									)}
@@ -213,10 +213,7 @@ const Home = () => {
 									<div className="my-1">
 										密码:{" "}
 										<TapToCopied>
-											{" "}
-											{element.email.length < 6
-												? "mypassword"
-												: element.email}{" "}
+											{element.email.length < 6 ? "mypassword" : element.email}
 										</TapToCopied>
 									</div>
 									<div className="my-1">
