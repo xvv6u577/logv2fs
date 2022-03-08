@@ -10,7 +10,6 @@ import {
 	Row,
 	Col,
 	Accordion,
-	Table,
 } from "react-bootstrap";
 import { useSelector, useDispatch } from "react-redux";
 import { alert, success } from "../store/message";
@@ -19,6 +18,7 @@ import { formatBytes } from "../service/service";
 import axios from "axios";
 import { logout } from "../store/login";
 import TapToCopied from "./tapToCopied";
+import TrafficTable from "./trafficTable";
 
 const Home = () => {
 	const [users, setUsers] = useState([]);
@@ -233,44 +233,11 @@ const Home = () => {
 								</div>
 								<div className="home-traffic-fs">
 									<h6 className="">Monthly: </h6>
-									<Table hover bordered size="sm" variant="dark">
-										<tbody>
-											{element.traffic_by_month &&
-												element.traffic_by_month
-													.sort((a, b) => b.period - a.period)
-													.map((item, index) => {
-														return (
-															<tr key={item.id}>
-																<td>{index + 1}</td>
-																{Object.values(item).map((val, i) => (
-																	<td>{i > 0 ? formatBytes(val) : val}</td>
-																))}
-															</tr>
-														);
-													})}
-										</tbody>
-									</Table>
+									<TrafficTable data={element.traffic_by_month} />
 								</div>
 								<div className="home-traffic-fs">
 									<h6 className="pt-2">Daily: </h6>
-									<Table hover bordered size="sm" variant="dark">
-										<tbody>
-											{element.traffic_by_day &&
-												element.traffic_by_day
-													.sort((a, b) => b.period - a.period)
-													// .slice(0, 90)
-													.map((item, index) => {
-														return (
-															<tr key={item.id}>
-																<td>{index + 1}</td>
-																{Object.values(item).map((val, i) => (
-																	<td>{i > 0 ? formatBytes(val) : val}</td>
-																))}
-															</tr>
-														);
-													})}
-										</tbody>
-									</Table>
+									<TrafficTable data={element.traffic_by_day} />
 								</div>
 							</Accordion.Body>
 						</Accordion.Item>

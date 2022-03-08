@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
-import { Container, Table } from "react-bootstrap";
+import { Container } from "react-bootstrap";
 import { alert } from "../store/message";
 import { useSelector, useDispatch } from "react-redux";
 import { formatBytes } from "../service/service";
 import axios from "axios";
 import TapToCopied from "./tapToCopied";
+import TrafficTable from "./trafficTable";
 
 function Mypanel() {
 	const [user, setUser] = useState({});
@@ -32,7 +33,7 @@ function Mypanel() {
 			.catch((err) => {
 				dispatch(alert({ show: true, content: err.toString() }));
 			});
-	}, [rerenderSignal, loginState.jwt.Email, loginState.token, dispatch]);
+	}, [rerenderSignal, loginState.token, loginState.jwt.Email, dispatch]);
 
 	return (
 		<Container className="py-3">
@@ -89,49 +90,12 @@ function Mypanel() {
 
 			<div className="d-flex flex-column">
 				<div className="pb-3">
-					<div className="h4 py-3">
-						每月流量<span className="h6">(月份/流量)</span>
-					</div>
-					<Table hover bordered size="sm" variant="dark">
-						<tbody>
-							{user.traffic_by_month &&
-								user.traffic_by_month
-									.sort((a, b) => b.period - a.period)
-									.map((item, index) => {
-										return (
-											<tr key={item.id}>
-												<td>{index + 1}</td>
-												{Object.values(item).map((val, i) => (
-													<td>{i > 0 ? formatBytes(val) : val}</td>
-												))}
-											</tr>
-										);
-									})}
-						</tbody>
-					</Table>
+					<div className="h5 py-3">The Past 1 Year, Monthly Traffic:</div>
+					<TrafficTable data={user.traffic_by_month} limit={12} />
 				</div>
 				<div className="">
-					<div className="h4 pb-3">
-						过去3个月每日流量<span className="h6">(日期/流量)</span>
-					</div>
-					<Table hover bordered size="sm" variant="dark">
-						<tbody>
-							{user.traffic_by_day &&
-								user.traffic_by_day
-									.sort((a, b) => b.period - a.period)
-									.slice(0, 90)
-									.map((item, index) => {
-										return (
-											<tr key={item.id}>
-												<td>{index + 1}</td>
-												{Object.values(item).map((val, i) => (
-													<td>{i > 0 ? formatBytes(val) : val}</td>
-												))}
-											</tr>
-										);
-									})}
-						</tbody>
-					</Table>
+					<div className="h5 pb-3">The Past 3 Month, Daily Traffic:</div>
+					<TrafficTable data={user.traffic_by_day} limit={90} />
 				</div>
 			</div>
 		</Container>
