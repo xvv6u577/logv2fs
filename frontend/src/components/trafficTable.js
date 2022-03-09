@@ -1,13 +1,13 @@
 import { Table } from "react-bootstrap";
 import { formatBytes } from "../service/service";
 
-function TrafficTable({ data,limit }) {
+function TrafficTable({ data,limit,by }) {
 	return (
-		<Table striped bordered hover size="sm" variant="dark">
+		<Table striped bordered hover size="sm" variant="dark" className="mx-auto">
 			<thead>
 				<tr>
 					<th>#</th>
-					<th>月份</th>
+					<th>{by}</th>
 					<th>流量</th>
 				</tr>
 			</thead>

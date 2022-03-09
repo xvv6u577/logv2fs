@@ -26,6 +26,10 @@
 }
 
 .home-list ol li {
+	display: flex;
+	flex-direction: row;
+	align-items: flex-start;
+
 	background-color: transparent;
 	color: rgba(228, 208, 208, 0.8);
 	border-bottom: 1px solid rgba(204, 173, 173, 0.877);
@@ -121,9 +125,35 @@
 	padding: 3px;
 }
 
+/* .table {
+	width: 89% !important;
+} */
+
+.table td,
+.table th {
+	text-align: center;
+}
+
+.info-modal {
+	width: 70%;
+	margin-left: auto;
+	margin-right: auto;
+}
+
 @media screen and (min-width: 600px) {
 	.card {
 		width: 25rem;
 		height: calc(0.675 * 25rem);
+	}
+}
+
+@media screen and (max-width: 700px) {
+	.home-list ol li {
+		flex-direction: column;
+		justify-content: flex-start;
+	}
+
+	.info-modal {
+		width: 100%;
 	}
 }

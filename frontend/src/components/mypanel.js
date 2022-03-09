@@ -64,7 +64,7 @@ function Mypanel() {
 				</div>
 			</div>
 
-			<div className="my-5 px-5 h6 small">
+			<div className="info-modal my-5 px-5 h6 small">
 				<div className="my-1">
 					用户名: <TapToCopied>{user.email}</TapToCopied>
 				</div>
@@ -88,16 +88,16 @@ function Mypanel() {
 				</div>
 			</div>
 
-			<div className="d-flex flex-column">
-				<div className="pb-3">
-					<div className="h5 py-3">The Past 1 Year, Monthly Traffic:</div>
-					<TrafficTable data={user.traffic_by_month} limit={12} />
+			<row className="">
+				<div className="pb-3 d-flex flex-column">
+					<div className="h5 py-3 text-center">Monthly Traffic in the Past 1 Year</div>
+					<TrafficTable data={user.traffic_by_month} limit={12} by="月份" />
 				</div>
-				<div className="">
-					<div className="h5 pb-3">The Past 3 Month, Daily Traffic:</div>
-					<TrafficTable data={user.traffic_by_day} limit={90} />
+				<div className="d-flex flex-column">
+					<div className="h5 pb-3 text-center">Daily Traffic in the Past 3 Month</div>
+					<TrafficTable data={user.traffic_by_day} limit={90} by="日期" />
 				</div>
-			</div>
+			</row>
 		</Container>
 	);
 }

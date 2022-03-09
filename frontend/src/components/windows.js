@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Container, Alert, Badge } from "react-bootstrap";
+import { Container, Alert, Badge, Tabs, Tab } from "react-bootstrap";
 import { useSelector, useDispatch } from "react-redux";
 import axios from "axios";
 import { alert } from "../store/message";
@@ -71,64 +71,76 @@ function Windows() {
 				</div>
 			</p>
 			<p> 点按“添加”, 填入服务器信息&#x2192; </p>
-			<div>
-				{" "}
-				地址:
-				<TapToCopied>{user.nodeinuse && user.nodeinuse.w8}:443</TapToCopied>
-				用户ID: <TapToCopied>{user.uuid}</TapToCopied>
-				额外ID:{" "}
-				<div className="inline h4">
-					<Badge bg="secondary" pill className="mx-1">
-						64
-					</Badge>{" "}
-				</div>
-				等级:{" "}
-				<div className="inline h4">
-					<Badge bg="secondary" pill className="mx-1">
-						0
-					</Badge>{" "}
-				</div>
-				加密方式:{" "}
-				<div className="inline h4">
-					<Badge bg="secondary" pill className="mx-1">
-						auto
-					</Badge>
-				</div>
-				标签:{" "}
-				<div className="inline h4">
-					<Badge bg="secondary" pill className="mx-1">
-						w8
-					</Badge>{" "}
-				</div>
-				网络类型:{" "}
-				<div className="inline h4">
-					<Badge bg="secondary" pill className="mx-1">
-						ws
-					</Badge>
-				</div>
-			</div>
-			<p>点按“传输设置”&#x2192;</p>
-			<ul>
-				<li>
-					WebSocket标签:
-					<p>
-						路径:{" "}
-						<div className="inline h4">
-							<Badge bg="secondary" pill className="mx-1">
-								/{user.path}
-							</Badge>{" "}
-						</div>
-						http头部: (留空)
-					</p>
-				</li>
-				<li>
-					TLS标签:
-					<p>选中"启用传输层加密TLS"; </p>
-					<p> “域名服务器”, 删除“server.cc”, 留空白; </p>
-				</li>
-				<li>其它标签保持原配置, 不用更改。</li>
-			</ul>
-			<p>点按“保存”。v2rayw配置面板中, 点按保存。</p>
+			<Tabs
+				defaultActiveKey={user.nodeinuse && Object.values(user.nodeinuse)[0]}
+				id="uncontrolled-tab-example"
+				className="mb-3"
+			>
+				{user.nodeinuse &&
+					Object.keys(user.nodeinuse).map((key) => (
+						<Tab eventKey={key} title={user.nodeinuse[key]} className="bg-secondary rounded p-3">
+							<div>
+								{" "}
+								地址:
+								<TapToCopied>
+									{user.nodeinuse && user.nodeinuse[key]}:443
+								</TapToCopied>
+								用户ID: <TapToCopied>{user.uuid}</TapToCopied>
+								额外ID:{" "}
+								<div className="inline h4">
+									<Badge bg="secondary" pill className="mx-1">
+										64
+									</Badge>{" "}
+								</div>
+								等级:{" "}
+								<div className="inline h4">
+									<Badge bg="secondary" pill className="mx-1">
+										0
+									</Badge>{" "}
+								</div>
+								加密方式:{" "}
+								<div className="inline h4">
+									<Badge bg="secondary" pill className="mx-1">
+										auto
+									</Badge>
+								</div>
+								标签:{" "}
+								<div className="inline h4">
+									<Badge bg="secondary" pill className="mx-1">
+										w8
+									</Badge>{" "}
+								</div>
+								网络类型:{" "}
+								<div className="inline h4">
+									<Badge bg="secondary" pill className="mx-1">
+										ws
+									</Badge>
+								</div>
+							</div>
+							<p>点按“传输设置”&#x2192;</p>
+							<ul>
+								<li>
+									WebSocket标签:
+									<p>
+										路径:{" "}
+										<div className="inline h4">
+											<TapToCopied>{"/" + user.path}</TapToCopied>
+										</div>
+										http头部: (留空)
+									</p>
+								</li>
+								<li>
+									TLS标签:
+									<p>选中"启用传输层加密TLS"; </p>
+									<p> “域名服务器”, 删除“server.cc”, 留空白; </p>
+								</li>
+								<li>其它标签保持原配置, 不用更改。</li>
+							</ul>
+						</Tab>
+					))}
+			</Tabs>
+
+			<p className="mt-2">点按“保存”。v2rayw配置面板中, 点按保存。</p>
 			<h3 className="py-2">step 4: 设置系统代理</h3>
 			<p>windows系统设置中, 搜索“proxy”。选中“使用代理服务器”</p>
 			<p>

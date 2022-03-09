@@ -126,7 +126,7 @@ const Home = () => {
 						<Accordion.Item eventKey={index}>
 							<ListGroup.Item
 								as="li"
-								className="d-flex justify-content-between align-items-start"
+								className=""
 							>
 								<div className="ms-2 me-auto ">
 									<span className="home-traffic-fs">{index + 1}</span>
@@ -206,7 +206,7 @@ const Home = () => {
 								</div>
 							</ListGroup.Item>
 							<Accordion.Body>
-								<div className="mb-3 px-5 h6 small">
+								<div className="info-modal mb-3 px-5 h6 small">
 									<div className="my-1">
 										用户名: <TapToCopied>{element.email}</TapToCopied>
 									</div>
@@ -232,12 +232,12 @@ const Home = () => {
 									</div>
 								</div>
 								<div className="home-traffic-fs">
-									<h6 className="">Monthly: </h6>
-									<TrafficTable data={element.traffic_by_month} />
+									<h4 className=" text-center">Monthly Traffic </h4>
+									<TrafficTable data={element.traffic_by_month} by="月份"/>
 								</div>
 								<div className="home-traffic-fs">
-									<h6 className="pt-2">Daily: </h6>
-									<TrafficTable data={element.traffic_by_day} />
+									<h4 className="pt-2 text-center">Daily Traffic</h4>
+									<TrafficTable data={element.traffic_by_day} by="日期" />
 								</div>
 							</Accordion.Body>
 						</Accordion.Item>

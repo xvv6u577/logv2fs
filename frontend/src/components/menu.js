@@ -42,10 +42,10 @@ const Menu = () => {
 				<Navbar.Collapse className="justify-content-end">
 					{loginState.jwt.Role === "admin" && (
 						<>
-							<Nav className="mx-2">
+							<Nav className="m-1">
 									<AddNode btnName="添加节点" />
 							</Nav>
-							<Nav className="mx-2">
+							<Nav className="m-1">
 									<AddUser btnName="添加用户" />
 							</Nav>
 						</>
