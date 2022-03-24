@@ -31,8 +31,7 @@ function Macos() {
 			<p>点按 OK。若添加成功, 配置对话框左侧vmess servers有新项目产生。</p>
 			<h3 className="py-2">step 3: 运行 v2ray 客户端</h3>
 			<p>
-				点击App图标, 选择 Server... &#x2192; w8-hk-gcp 或
-				rm-la-twitter, 选择其中一个!
+				点击App图标, 选择 Server... &#x2192; w8, rm, sl 3个节点选择一个!
 			</p>
 			<p>点击App图标, 选择 Routing Rule &#x2192; bypasscn_private_apple。</p>
 			<p>点击App图标, 选择 “Global Mode”</p>

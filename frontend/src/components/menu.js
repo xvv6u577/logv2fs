@@ -52,7 +52,7 @@ const Menu = () => {
 					)}
 					<Nav>
 						<Navbar.Text className="mx-2">
-							Signed in as: <b>{loginState.jwt.Email}</b>,
+							Signed in as: <b>{loginState.jwt.Email}</b>
 						</Navbar.Text>
 					</Nav>
 					<Nav>
