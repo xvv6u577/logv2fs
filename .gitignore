@@ -8,6 +8,7 @@ frontend/package-lock.json
 frontend/tool/*.json
 frontend/tool/dbTest.js
 frontend/tool/test.js
+CA/*.pem
 
 # testing
 /frontend/coverage

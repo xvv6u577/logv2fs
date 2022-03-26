@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+package myproto;
+
+option go_package = "github.com/caster8013/logv2rayfullstack/proto";
+
+service manageV2rayUserBygRPC {
+  rpc AddUser (GRPCRequest) returns (GRPCReply) {}
+  rpc DeleteUser (GRPCRequest) returns (GRPCReply) {}
+}
+
+// The request message containing the user's name.
+message GRPCRequest {
+  string uuid = 1;
+  string path = 2;
+  string name = 3;
+}
+
+// The response message containing the greetings
+message GRPCReply {
+  string succesOrNot = 1;
+}

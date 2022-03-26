@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/caster8013/logv2rayfullstack/database"
+	"github.com/caster8013/logv2rayfullstack/grpctools"
 	"github.com/caster8013/logv2rayfullstack/model"
 	routers "github.com/caster8013/logv2rayfullstack/routers"
 	"github.com/caster8013/logv2rayfullstack/routine"
@@ -60,6 +61,7 @@ func main() {
 
 					group.Add(V2rayProcess)
 					group.Add(runServer)
+					group.Add(RunGRPCServer)
 
 					err := group.Wait()
 
@@ -124,6 +126,17 @@ func main() {
 		log.Fatal(err)
 	}
 
+}
+
+func RunGRPCServer() {
+
+	CURRENT_DOMAIN := os.Getenv("CURRENT_DOMAIN")
+
+	if CURRENT_DOMAIN == "sl.undervineyard.com" {
+		grpctools.GrpcServer("0.0.0.0:80")
+	} else {
+		grpctools.GrpcServer("0.0.0.0:50551")
+	}
 }
 
 func V2rayProcess() {
