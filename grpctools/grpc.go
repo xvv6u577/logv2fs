@@ -131,7 +131,7 @@ func GrpcClientToAddUser(domain string, port string, user User) error {
 
 	conn, err := grpc.Dial(fmt.Sprintf("%s:%s", domain, port), grpc.WithTransportCredentials(tlsCredential))
 	if err != nil {
-		log.Fatalf("did not connect: %v", err)
+		log.Panicf("did not connect: %v", err)
 		return err
 	}
 	defer conn.Close()
@@ -139,11 +139,11 @@ func GrpcClientToAddUser(domain string, port string, user User) error {
 	client := pb.NewManageV2RayUserBygRPCClient(conn)
 
 	// Contact the server and print out its response.
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 	r, err := client.AddUser(ctx, &pb.GRPCRequest{Uuid: user.UUID, Path: user.Path, Name: user.Email})
 	if err != nil {
-		log.Fatalf("could not add user: %v", err)
+		log.Panicf("could not add user: %v", err)
 		return err
 	}
 
@@ -158,7 +158,7 @@ func GrpcClientToDeleteUser(domain string, port string, user User) error {
 
 	conn, err := grpc.Dial(fmt.Sprintf("%s:%s", domain, port), grpc.WithTransportCredentials(tlsCredential))
 	if err != nil {
-		log.Fatalf("did not connect: %v", err)
+		log.Panicf("did not connect: %v", err)
 		return err
 	}
 	defer conn.Close()
@@ -166,15 +166,16 @@ func GrpcClientToDeleteUser(domain string, port string, user User) error {
 	client := pb.NewManageV2RayUserBygRPCClient(conn)
 
 	// Contact the server and print out its response.
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 	r, err := client.DeleteUser(ctx, &pb.GRPCRequest{Uuid: user.UUID, Path: user.Path, Name: user.Email})
 	if err != nil {
-		log.Fatalf("could not delete user: %v", err)
+		log.Panicf("could not delete user: %v", err)
 		return err
 	}
 
 	log.Printf("Info: %s", r.GetSuccesOrNot())
+
 	return nil
 }
 
@@ -184,19 +185,19 @@ func getTlsCredential() credentials.TransportCredentials {
 	// read ca's cert
 	caCert, err := ioutil.ReadFile("CA/ca-cert.pem")
 	if err != nil {
-		log.Fatal(caCert)
+		log.Panic(caCert)
 	}
 
 	// create cert pool and append ca's cert
 	certPool := x509.NewCertPool()
 	if ok := certPool.AppendCertsFromPEM(caCert); !ok {
-		log.Fatal(err)
+		log.Panic(err)
 	}
 
 	//read client cert
 	clientCert, err := tls.LoadX509KeyPair("CA/client-cert.pem", "CA/client-key.pem")
 	if err != nil {
-		log.Fatal(err)
+		log.Panic(err)
 	}
 
 	config := &tls.Config{
