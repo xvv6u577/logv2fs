@@ -33,7 +33,7 @@ func DBinstance() *mongo.Client {
 	}
 
 	// fmt.Println("MongoDB successfully connected and pinged.")
-	log.Panicln("MongoDB successfully connected and pinged.")
+	log.Println("MongoDB successfully connected and pinged.")
 
 	return client
 }
