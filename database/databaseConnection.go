@@ -2,7 +2,6 @@ package database
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"os"
 	"time"
@@ -33,7 +32,8 @@ func DBinstance() *mongo.Client {
 		log.Panic(err)
 	}
 
-	fmt.Println("MongoDB successfully connected and pinged.")
+	// fmt.Println("MongoDB successfully connected and pinged.")
+	log.Panicln("MongoDB successfully connected and pinged.")
 
 	return client
 }

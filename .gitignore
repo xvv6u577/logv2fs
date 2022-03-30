@@ -2,13 +2,6 @@
 
 # dependencies
 frontend/node_modules
-frontend/download
-frontend/.env
-frontend/package-lock.json
-frontend/tool/*.json
-frontend/tool/dbTest.js
-frontend/tool/test.js
-CA/*.pem
 
 # testing
 /frontend/coverage
@@ -18,6 +11,15 @@ frontend/build
 pre-setup
 
 # misc
+frontend/download
+frontend/.env
+frontend/package-lock.json
+frontend/tool/*.json
+frontend/tool/dbTest.js
+frontend/tool/test.js
+CA/*.pem
+
+log_file.log
 .DS_Store
 .env
 .env.local

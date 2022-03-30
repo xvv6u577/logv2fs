@@ -37,6 +37,12 @@ func init() {
 
 func main() {
 
+	logFile, err := os.OpenFile("./log_file.log", os.O_CREATE|os.O_APPEND|os.O_RDWR, 0644)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	log.SetOutput(logFile)
+
 	app := &cli.App{
 		Name:  "logv2rayfullstack",
 		Usage: "A simple CLI program to manage logv2ray backend",
@@ -121,7 +127,7 @@ func main() {
 		},
 	}
 
-	err := app.Run(os.Args)
+	err = app.Run(os.Args)
 	if err != nil {
 		log.Fatal(err)
 	}

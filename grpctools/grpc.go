@@ -57,7 +57,7 @@ func (s *server) AddUser(ctx context.Context, in *pb.GRPCRequest) (*pb.GRPCReply
 		return &pb.GRPCReply{SuccesOrNot: msg}, err
 	}
 
-	return &pb.GRPCReply{SuccesOrNot: "uuid: " + in.GetUuid() + ", path: " + in.GetPath() + ". Added!"}, nil
+	return &pb.GRPCReply{SuccesOrNot: "email: " + in.GetName() + "uuid: " + in.GetUuid() + ", path: " + in.GetPath() + ". Added!"}, nil
 }
 
 func (s *server) DeleteUser(ctx context.Context, in *pb.GRPCRequest) (*pb.GRPCReply, error) {
@@ -77,7 +77,7 @@ func (s *server) DeleteUser(ctx context.Context, in *pb.GRPCRequest) (*pb.GRPCRe
 		return &pb.GRPCReply{SuccesOrNot: msg}, err
 	}
 
-	return &pb.GRPCReply{SuccesOrNot: "uuid: " + in.GetUuid() + ", path: " + in.GetPath() + ". Deleted!"}, nil
+	return &pb.GRPCReply{SuccesOrNot: "email: " + in.GetName() + "uuid: " + in.GetUuid() + ", path: " + in.GetPath() + ". Deleted!"}, nil
 }
 
 func GrpcServer(addr string) {
