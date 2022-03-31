@@ -38,7 +38,8 @@ type server struct {
 // SayHello implements helloworld.GreeterServer
 func (s *server) AddUser(ctx context.Context, in *pb.GRPCRequest) (*pb.GRPCReply, error) {
 
-	log.Printf("Received: %v", in.GetUuid()+" "+in.GetPath())
+	log.Printf("Server AddUser. Received: %v", in.GetName()+", "+in.GetUuid()+", "+in.GetPath())
+
 	user := User{
 		UUID: in.GetUuid(),
 		Path: in.GetPath(),
@@ -57,12 +58,13 @@ func (s *server) AddUser(ctx context.Context, in *pb.GRPCRequest) (*pb.GRPCReply
 		return &pb.GRPCReply{SuccesOrNot: msg}, err
 	}
 
-	return &pb.GRPCReply{SuccesOrNot: "email: " + in.GetName() + "uuid: " + in.GetUuid() + ", path: " + in.GetPath() + ". Added!"}, nil
+	log.Println("email: " + in.GetName() + ", uuid: " + in.GetUuid() + ", path: " + in.GetPath() + ". Added in success!")
+	return &pb.GRPCReply{SuccesOrNot: "email: " + in.GetName() + ", uuid: " + in.GetUuid() + ", path: " + in.GetPath() + ". Added in success!"}, nil
 }
 
 func (s *server) DeleteUser(ctx context.Context, in *pb.GRPCRequest) (*pb.GRPCReply, error) {
 
-	log.Printf("Received: %v", in.GetUuid()+" "+in.GetPath()+" "+in.GetName())
+	log.Printf("Server DeleteUser. Received: %v", in.GetName()+", "+in.GetUuid()+", "+in.GetPath())
 
 	cmdConn, err := grpc.Dial(fmt.Sprintf("%s:%s", V2_API_ADDRESS, V2_API_PORT), grpc.WithInsecure())
 	if err != nil {
@@ -77,7 +79,8 @@ func (s *server) DeleteUser(ctx context.Context, in *pb.GRPCRequest) (*pb.GRPCRe
 		return &pb.GRPCReply{SuccesOrNot: msg}, err
 	}
 
-	return &pb.GRPCReply{SuccesOrNot: "email: " + in.GetName() + "uuid: " + in.GetUuid() + ", path: " + in.GetPath() + ". Deleted!"}, nil
+	log.Println("email: " + in.GetName() + ", uuid: " + in.GetUuid() + ", path: " + in.GetPath() + ". Deleted in success!")
+	return &pb.GRPCReply{SuccesOrNot: "email: " + in.GetName() + ", uuid: " + in.GetUuid() + ", path: " + in.GetPath() + ". Deleted in success!"}, nil
 }
 
 func GrpcServer(addr string) {
@@ -143,11 +146,11 @@ func GrpcClientToAddUser(domain string, port string, user User) error {
 	defer cancel()
 	r, err := client.AddUser(ctx, &pb.GRPCRequest{Uuid: user.UUID, Path: user.Path, Name: user.Email})
 	if err != nil {
-		log.Panicf("%v. Could not add user: %v", domain, err)
+		log.Panicf("%v could not add user %v: %v", user.Email, domain, err)
 		return err
 	}
 
-	log.Printf("Info: %s", r.GetSuccesOrNot())
+	log.Printf("Info: %s, %s", domain, r.GetSuccesOrNot())
 	return nil
 }
 
@@ -170,11 +173,11 @@ func GrpcClientToDeleteUser(domain string, port string, user User) error {
 	defer cancel()
 	r, err := client.DeleteUser(ctx, &pb.GRPCRequest{Uuid: user.UUID, Path: user.Path, Name: user.Email})
 	if err != nil {
-		log.Panicf("%v. Could not delete user: %v", domain, err)
+		log.Panicf("%v could not delete user %v: %v", user.Email, domain, err)
 		return err
 	}
 
-	log.Printf("Info: %s", r.GetSuccesOrNot())
+	log.Printf("Info: %s, %s", domain, r.GetSuccesOrNot())
 
 	return nil
 }

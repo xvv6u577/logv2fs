@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"sync"
 
 	"net/http"
 	"time"
@@ -212,6 +213,23 @@ func SignUp() gin.HandlerFunc {
 		user.Token = &token
 		user.Refresh_token = &refreshToken
 
+		var wg sync.WaitGroup
+		domainsLen := len(*user.NodeInUse)
+		wg.Add(domainsLen)
+
+		for _, node := range *user.NodeInUse {
+
+			go func(domain string) {
+				defer wg.Done()
+				if domain == "sl.undervineyard.com" {
+					grpctools.GrpcClientToAddUser(domain, "80", user)
+				} else {
+					grpctools.GrpcClientToAddUser(domain, "50051", user)
+				}
+			}(node)
+
+		}
+
 		_, err = userCollection.InsertOne(ctx, user)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -224,15 +242,7 @@ func SignUp() gin.HandlerFunc {
 			return
 		}
 
-		for _, item := range *user.NodeInUse {
-
-			if item == "sl.undervineyard.com" {
-				grpctools.GrpcClientToAddUser(item, "80", user)
-			} else {
-				grpctools.GrpcClientToAddUser(item, "50051", user)
-			}
-
-		}
+		wg.Wait()
 
 		fmt.Println(user.Email, "created at v2ray and database.")
 
@@ -514,13 +524,20 @@ func TakeItOfflineByUserName() gin.HandlerFunc {
 			return
 		}
 
-		for _, item := range *user.NodeInUse {
+		var wg sync.WaitGroup
+		domainsLen := len(*user.NodeInUse)
+		wg.Add(domainsLen)
 
-			if item == "sl.undervineyard.com" {
-				grpctools.GrpcClientToDeleteUser(item, "80", user)
-			} else {
-				grpctools.GrpcClientToDeleteUser(item, "50051", user)
-			}
+		for _, node := range *user.NodeInUse {
+
+			go func(item string) {
+				defer wg.Done()
+				if item == "sl.undervineyard.com" {
+					grpctools.GrpcClientToDeleteUser(item, "80", user)
+				} else {
+					grpctools.GrpcClientToDeleteUser(item, "50051", user)
+				}
+			}(node)
 
 		}
 
@@ -530,6 +547,8 @@ func TakeItOfflineByUserName() gin.HandlerFunc {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
 			return
 		}
+
+		wg.Wait()
 
 		c.JSON(http.StatusOK, gin.H{"message": "User " + user.Name + " is offline!"})
 	}
@@ -553,13 +572,20 @@ func TakeItOnlineByUserName() gin.HandlerFunc {
 			return
 		}
 
-		for _, item := range *user.NodeInUse {
+		var wg sync.WaitGroup
+		domainsLen := len(*user.NodeInUse)
+		wg.Add(domainsLen)
 
-			if item == "sl.undervineyard.com" {
-				grpctools.GrpcClientToAddUser(item, "80", user)
-			} else {
-				grpctools.GrpcClientToAddUser(item, "50051", user)
-			}
+		for _, node := range *user.NodeInUse {
+
+			go func(item string) {
+				defer wg.Done()
+				if item == "sl.undervineyard.com" {
+					grpctools.GrpcClientToAddUser(item, "80", user)
+				} else {
+					grpctools.GrpcClientToAddUser(item, "50051", user)
+				}
+			}(node)
 
 		}
 
@@ -569,6 +595,8 @@ func TakeItOnlineByUserName() gin.HandlerFunc {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
 			return
 		}
+
+		wg.Wait()
 
 		c.JSON(http.StatusOK, gin.H{"message": "User " + user.Name + " is online!"})
 	}
@@ -595,15 +623,23 @@ func DeleteUserByUserName() gin.HandlerFunc {
 
 		if user.Status == "plain" {
 
-			for _, item := range *user.NodeInUse {
+			var wg sync.WaitGroup
+			domainsLen := len(*user.NodeInUse)
+			wg.Add(domainsLen)
 
-				if item == "sl.undervineyard.com" {
-					grpctools.GrpcClientToDeleteUser(item, "80", user)
-				} else {
-					grpctools.GrpcClientToDeleteUser(item, "50051", user)
-				}
+			for _, node := range *user.NodeInUse {
+
+				go func(item string) {
+					defer wg.Done()
+					if item == "sl.undervineyard.com" {
+						grpctools.GrpcClientToDeleteUser(item, "80", user)
+					} else {
+						grpctools.GrpcClientToDeleteUser(item, "50051", user)
+					}
+				}(node)
 
 			}
+			wg.Wait()
 
 		}
 
