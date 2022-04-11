@@ -176,6 +176,9 @@ func SignUp() gin.HandlerFunc {
 		}
 
 		user.NodeInUse = adminUser.NodeGlobal
+		if user.Role == "admin" {
+			user.NodeGlobal = adminUser.NodeGlobal
+		}
 		user.Suburl = GenerateSubscription(user, *adminUser.NodeGlobal)
 
 		if user.Credittraffic == 0 {
