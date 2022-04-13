@@ -122,126 +122,138 @@ const Home = () => {
 				numbered
 			>
 				<Accordion>
-					{users.map((element, index) => (
-						<Accordion.Item eventKey={index}>
-							<ListGroup.Item
-								as="li"
-								className=""
-							>
-								<div className="ms-2 me-auto ">
-									<span className="home-traffic-fs">{index + 1}</span>
-									{"."}
-									<b className="home-traffic-fs">{element.name}</b>
-									<Badge bg="success" className="mx-1 home-traffic-fs" pill>
-										{element.role === "admin" ? "管理员" : "普通用户"}
-									</Badge>
-									<Badge bg="primary" className="mx-1 home-traffic-fs" pill>
-										{element.status === "plain" ? "在线" : "已下线"}
-									</Badge>
-									{element.email === loginState.jwt.Email && (
-										<Badge bg="info" className="mx-1 home-traffic-fs" pill>
-											It's Me
+					{users
+						.reduce((acc, ele) => {
+							if (ele.role === "admin") {
+								return [ele, ...acc];
+							}
+							return [...acc, ele];
+						}, [])
+						.sort((a, b) => {
+							if (a.role === "admin" | b.role === "admin") {
+								return 0
+							}
+							return b.used_by_current_month.amount - a.used_by_current_month.amount;
+						})
+						.map((element, index) => (
+							<Accordion.Item eventKey={index}>
+								<ListGroup.Item as="li" className="">
+									<div className="ms-2 me-auto ">
+										<span className="home-traffic-fs">{index + 1}</span>
+										{"."}
+										<b className="home-traffic-fs">{element.name}</b>
+										<Badge bg="success" className="mx-1 home-traffic-fs" pill>
+											{element.role === "admin" ? "管理员" : "普通用户"}
 										</Badge>
-									)}
+										<Badge bg="primary" className="mx-1 home-traffic-fs" pill>
+											{element.status === "plain" ? "在线" : "已下线"}
+										</Badge>
+										{element.email === loginState.jwt.Email && (
+											<Badge bg="info" className="mx-1 home-traffic-fs" pill>
+												It's Me
+											</Badge>
+										)}
 
-									<span className="home-traffic-fs">
-										今日: {formatBytes(element.used_by_current_day.amount)}
-										{", "}
-										本月: {formatBytes(element.used_by_current_month.amount)}
-										{", "}
-										已用: {formatBytes(element.used)}
-									</span>
-								</div>
-								<div className="d-flex justify-content-center align-items-center">
-									<EditUser
-										btnName="Edit"
-										editUserFunc={() =>
-											dispatch(
-												doRerender({ rerender: !rerenderSignal.rerender })
-											)
-										}
-										user={element}
-									/>
-									{element.status === "plain" ? (
-										<Button
-											onClick={() => handleOffline(element.email)}
-											variant="success mx-1"
-											size="sm"
-										>
-											Disable
-										</Button>
-									) : (
-										<Button
-											onClick={() => handleOffline(element.email)}
-											variant="success mx-1"
-											size="sm"
-											disabled
-										>
-											Disable
-										</Button>
-									)}
-									{element.status === "plain" ? (
-										<Button
-											onClick={() => handleOnline(element.email)}
-											variant="success mx-1"
-											size="sm"
-											disabled
-										>
-											Enable
-										</Button>
-									) : (
-										<Button
-											onClick={() => handleOnline(element.email)}
-											variant="success mx-1"
-											size="sm"
-										>
-											Enable
-										</Button>
-									)}
-									<ConfirmDelUser
-										btnName="Delete"
-										deleteUserFunc={() => handleDeleteUser(element.email)}
-									/>
-									<Accordion.Header></Accordion.Header>
-								</div>
-							</ListGroup.Item>
-							<Accordion.Body>
-								<div className="info-modal mb-3 px-5 h6 small">
-									<div className="my-1">
-										用户名: <TapToCopied>{element.email}</TapToCopied>
+										<span className="home-traffic-fs">
+											今日: {formatBytes(element.used_by_current_day.amount)}
+											{", "}
+											本月: {formatBytes(element.used_by_current_month.amount)}
+											{", "}
+											已用: {formatBytes(element.used)}
+										</span>
 									</div>
-									<div className="my-1">
-										密码:{" "}
-										<TapToCopied>
-											{element.email.length < 6 ? "mypassword" : element.email}
-										</TapToCopied>
+									<div className="d-flex justify-content-center align-items-center">
+										<EditUser
+											btnName="Edit"
+											editUserFunc={() =>
+												dispatch(
+													doRerender({ rerender: !rerenderSignal.rerender })
+												)
+											}
+											user={element}
+										/>
+										{element.status === "plain" ? (
+											<Button
+												onClick={() => handleOffline(element.email)}
+												variant="success mx-1"
+												size="sm"
+											>
+												Disable
+											</Button>
+										) : (
+											<Button
+												onClick={() => handleOffline(element.email)}
+												variant="success mx-1"
+												size="sm"
+												disabled
+											>
+												Disable
+											</Button>
+										)}
+										{element.status === "plain" ? (
+											<Button
+												onClick={() => handleOnline(element.email)}
+												variant="success mx-1"
+												size="sm"
+												disabled
+											>
+												Enable
+											</Button>
+										) : (
+											<Button
+												onClick={() => handleOnline(element.email)}
+												variant="success mx-1"
+												size="sm"
+											>
+												Enable
+											</Button>
+										)}
+										<ConfirmDelUser
+											btnName="Delete"
+											deleteUserFunc={() => handleDeleteUser(element.email)}
+										/>
+										<Accordion.Header></Accordion.Header>
 									</div>
-									<div className="my-1">
-										path: <TapToCopied>{element.path}</TapToCopied>
+								</ListGroup.Item>
+								<Accordion.Body>
+									<div className="info-modal mb-3 px-5 h6 small">
+										<div className="my-1">
+											用户名: <TapToCopied>{element.email}</TapToCopied>
+										</div>
+										<div className="my-1">
+											密码:{" "}
+											<TapToCopied>
+												{element.email.length < 6
+													? "mypassword"
+													: element.email}
+											</TapToCopied>
+										</div>
+										<div className="my-1">
+											path: <TapToCopied>{element.path}</TapToCopied>
+										</div>
+										<div className="my-1">
+											uuid: <TapToCopied>{element.uuid}</TapToCopied>
+										</div>
+										<div className="text-break my-1">
+											SubUrl:{" "}
+											<TapToCopied>
+												{process.env.REACT_APP_FILE_AND_SUB_URL +
+													"/static/" +
+													element.email}
+											</TapToCopied>
+										</div>
 									</div>
-									<div className="my-1">
-										uuid: <TapToCopied>{element.uuid}</TapToCopied>
+									<div className="home-traffic-fs">
+										<h4 className=" text-center">Monthly Traffic </h4>
+										<TrafficTable data={element.traffic_by_month} by="月份" />
 									</div>
-									<div className="text-break my-1">
-										SubUrl:{" "}
-										<TapToCopied>
-											{process.env.REACT_APP_FILE_AND_SUB_URL +
-												"/static/" +
-												element.email}
-										</TapToCopied>
+									<div className="home-traffic-fs">
+										<h4 className="pt-2 text-center">Daily Traffic</h4>
+										<TrafficTable data={element.traffic_by_day} by="日期" />
 									</div>
-								</div>
-								<div className="home-traffic-fs">
-									<h4 className=" text-center">Monthly Traffic </h4>
-									<TrafficTable data={element.traffic_by_month} by="月份"/>
-								</div>
-								<div className="home-traffic-fs">
-									<h4 className="pt-2 text-center">Daily Traffic</h4>
-									<TrafficTable data={element.traffic_by_day} by="日期" />
-								</div>
-							</Accordion.Body>
-						</Accordion.Item>
-					))}
+								</Accordion.Body>
+							</Accordion.Item>
+						))}
 				</Accordion>
 			</ListGroup>
 		</Container>
