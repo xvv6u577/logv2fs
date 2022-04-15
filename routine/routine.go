@@ -94,29 +94,33 @@ func Cron_loggingV2TrafficByUser(traffic Traffic) {
 
 }
 
+func Log_basicAction() error {
+	cmdConn, err := grpc.Dial(fmt.Sprintf("%s:%s", V2_API_ADDRESS, V2_API_PORT), grpc.WithInsecure())
+	if err != nil {
+		return err
+	}
+
+	NSSClient := v2ray.NewStatsServiceClient(cmdConn)
+	allUserTraffic, err := NSSClient.GetAllUserTraffic(true)
+	if err != nil {
+		return err
+	}
+
+	if len(allUserTraffic) != 0 {
+		for _, trafficPerUser := range allUserTraffic {
+			if trafficPerUser.Total != 0 {
+				Cron_loggingV2TrafficByUser(trafficPerUser)
+			}
+		}
+	}
+
+	return nil
+}
+
 func Cron_loggingJobs(c *cron.Cron) {
 
 	c.AddFunc(CRON_INTERVAL_BY_HOUR, func() {
-
-		cmdConn, err := grpc.Dial(fmt.Sprintf("%s:%s", V2_API_ADDRESS, V2_API_PORT), grpc.WithInsecure())
-		if err != nil {
-			log.Panic("Panic: ", err)
-		}
-
-		NSSClient := v2ray.NewStatsServiceClient(cmdConn)
-		allUserTraffic, err := NSSClient.GetAllUserTraffic(true)
-		if err != nil {
-			log.Panic("NSSClient.GetAllUserTraffic err: ", err.Error())
-		}
-
-		if len(allUserTraffic) != 0 {
-			for _, trafficPerUser := range allUserTraffic {
-				if trafficPerUser.Total != 0 {
-					Cron_loggingV2TrafficByUser(trafficPerUser)
-				}
-			}
-		}
-
+		Log_basicAction()
 	})
 
 	if NODE_TYPE == "main" {

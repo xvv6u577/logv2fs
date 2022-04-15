@@ -123,12 +123,14 @@ const Home = () => {
 			>
 				<Accordion>
 					{users
+					// put admin at the top of the list
 						.reduce((acc, ele) => {
 							if (ele.role === "admin") {
 								return [ele, ...acc];
 							}
 							return [...acc, ele];
 						}, [])
+						// sort the normal users by used_by_current_month.amount
 						.sort((a, b) => {
 							if (a.role === "admin" | b.role === "admin") {
 								return 0

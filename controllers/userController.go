@@ -20,6 +20,7 @@ import (
 	"google.golang.org/grpc"
 
 	"github.com/caster8013/logv2rayfullstack/database"
+	"github.com/caster8013/logv2rayfullstack/routine"
 	"github.com/caster8013/logv2rayfullstack/v2ray"
 
 	helper "github.com/caster8013/logv2rayfullstack/helpers"
@@ -112,6 +113,7 @@ func SignUp() gin.HandlerFunc {
 			err := helper.CheckUserType(c, "admin")
 			if err != nil {
 				c.JSON(http.StatusBadRequest, gin.H{"sign up error": err.Error()})
+				log.Printf("%s", err.Error())
 				return
 			}
 		}
@@ -125,24 +127,27 @@ func SignUp() gin.HandlerFunc {
 
 		if err := c.BindJSON(&user); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			log.Printf("error: %v", err)
 			return
 		}
 
 		validationErr := validate.Struct(user)
 		if validationErr != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": validationErr.Error()})
+			log.Printf("error: %v", validationErr)
 			return
 		}
 
 		count, err := userCollection.CountDocuments(ctx, bson.M{"email": user.Email})
 		if err != nil {
-			log.Panic(err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "error occured while checking for the email"})
+			log.Printf("error occured while checking for the email: %s", err.Error())
 			return
 		}
 
 		if count > 0 {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "this email already exists"})
+			log.Printf("this email already exists")
 			return
 		}
 
@@ -153,6 +158,7 @@ func SignUp() gin.HandlerFunc {
 		err = userCollection.FindOne(ctx, bson.M{"user_id": userId}).Decode(&adminUser)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			log.Printf("error: %v", err)
 			return
 		}
 
@@ -236,12 +242,14 @@ func SignUp() gin.HandlerFunc {
 		_, err = userCollection.InsertOne(ctx, user)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			log.Printf("error occured while inserting user: %v", err)
 			return
 		}
 
 		err = database.Client.Database("logV2rayTrafficDB").CreateCollection(ctx, user.Email)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			log.Printf("error occured while creating collection for user %s", user.Email)
 			return
 		}
 
@@ -264,18 +272,21 @@ func Login() gin.HandlerFunc {
 
 		if err := c.BindJSON(&user); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			log.Printf("error: %v", err)
 			return
 		}
 
 		err := userCollection.FindOne(ctx, bson.M{"email": user.Email}).Decode(&foundUser)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			log.Printf("error: %v", err)
 			return
 		}
 
 		passwordIsValid, msg := VerifyPassword(user.Password, foundUser.Password)
 		if !passwordIsValid {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
+			log.Printf("password is not valid: %s", msg)
 			return
 		}
 
@@ -286,6 +297,7 @@ func Login() gin.HandlerFunc {
 
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			log.Printf("error: %v", err)
 			return
 		}
 
@@ -306,6 +318,7 @@ func GenerateConfig() gin.HandlerFunc {
 		user, err := database.GetUserByName(name)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			log.Printf("error: %v", err)
 			return
 		}
 
@@ -320,6 +333,7 @@ func AddNode() gin.HandlerFunc {
 			err := helper.CheckUserType(c, "admin")
 			if err != nil {
 				c.JSON(http.StatusBadRequest, gin.H{"sign up error": err.Error()})
+				log.Printf("%s", err.Error())
 				return
 			}
 		}
@@ -331,12 +345,14 @@ func AddNode() gin.HandlerFunc {
 
 		if err := c.BindJSON(&domains); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			log.Printf("error: %v", err)
 			return
 		}
 
 		allUsers, err := database.GetAllUsersInfo()
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			log.Printf("error: %v", err)
 			return
 		}
 
@@ -352,6 +368,7 @@ func AddNode() gin.HandlerFunc {
 			_, err = userCollection.ReplaceOne(ctx, bson.M{"user_id": user.User_id}, user)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				log.Printf("error: %v", err)
 				return
 			}
 
@@ -367,6 +384,7 @@ func EditUser() gin.HandlerFunc {
 		if BOOT_MODE == "" {
 			if err := helper.CheckUserType(c, "admin"); err != nil {
 				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+				log.Printf("%s", err.Error())
 				return
 			}
 		}
@@ -378,12 +396,14 @@ func EditUser() gin.HandlerFunc {
 
 		if err := c.BindJSON(&user); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			log.Printf("error: %v", err)
 			return
 		}
 
 		err := userCollection.FindOne(ctx, bson.M{"email": user.Email}).Decode(&foundUser)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "email is incorrect"})
+			log.Printf("email is incorrect")
 			return
 		}
 
@@ -412,6 +432,7 @@ func EditUser() gin.HandlerFunc {
 
 		if len(newFoundUser) == 0 {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "no new value in post data."})
+			log.Printf("no new value in post data.")
 			return
 		}
 
@@ -423,12 +444,14 @@ func EditUser() gin.HandlerFunc {
 		).Decode(&replacedDocument)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			log.Printf("error: %v", err)
 			return
 		}
 
 		err = userCollection.FindOne(ctx, bson.M{"email": user.Email}).Decode(&foundUser)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			log.Printf("error: %v", err)
 			return
 		}
 
@@ -442,6 +465,7 @@ func GetUsers() gin.HandlerFunc {
 		if BOOT_MODE == "" {
 			if err := helper.CheckUserType(c, "admin"); err != nil {
 				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+				log.Printf("%s", err.Error())
 				return
 			}
 		}
@@ -474,10 +498,14 @@ func GetUsers() gin.HandlerFunc {
 		defer cancel()
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "error occured while listing user items"})
+			log.Printf("error occured while listing user items: %v", err)
+			return
 		}
 		var allusers []bson.M
 		if err = result.All(ctx, &allusers); err != nil {
-			log.Fatal(err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "error occured while listing user items"})
+			log.Printf("error occured while listing user items: %v", err)
+			return
 		}
 		c.JSON(http.StatusOK, allusers[0])
 
@@ -495,12 +523,14 @@ func GetUser() gin.HandlerFunc {
 
 		if err := helper.MatchUserTypeAndUid(c, userId); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			log.Printf("%s", err.Error())
 			return
 		}
 
 		err := userCollection.FindOne(ctx, bson.M{"user_id": userId}).Decode(&user)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			log.Printf("error occured while listing user items")
 			return
 		}
 
@@ -514,6 +544,7 @@ func TakeItOfflineByUserName() gin.HandlerFunc {
 		if BOOT_MODE == "" {
 			if err := helper.CheckUserType(c, "admin"); err != nil {
 				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+				log.Printf("%s", err.Error())
 				return
 			}
 		}
@@ -524,6 +555,7 @@ func TakeItOfflineByUserName() gin.HandlerFunc {
 		if err != nil {
 			msg := "database get user failed."
 			c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
+			log.Printf("%s", msg)
 			return
 		}
 
@@ -548,6 +580,7 @@ func TakeItOfflineByUserName() gin.HandlerFunc {
 		if err != nil {
 			msg := "database user info update failed."
 			c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
+			log.Printf("%s", msg)
 			return
 		}
 
@@ -562,6 +595,7 @@ func TakeItOnlineByUserName() gin.HandlerFunc {
 		if BOOT_MODE == "" {
 			if err := helper.CheckUserType(c, "admin"); err != nil {
 				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+				log.Printf("%s", err.Error())
 				return
 			}
 		}
@@ -572,6 +606,7 @@ func TakeItOnlineByUserName() gin.HandlerFunc {
 		if err != nil {
 			msg := "database get user failed."
 			c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
+			log.Printf("%s", msg)
 			return
 		}
 
@@ -596,6 +631,7 @@ func TakeItOnlineByUserName() gin.HandlerFunc {
 		if err != nil {
 			msg := "database user info update failed."
 			c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
+			log.Printf("%s", msg)
 			return
 		}
 
@@ -611,6 +647,7 @@ func DeleteUserByUserName() gin.HandlerFunc {
 		if BOOT_MODE == "" {
 			if err := helper.CheckUserType(c, "admin"); err != nil {
 				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+				log.Printf("%s", err.Error())
 				return
 			}
 		}
@@ -621,6 +658,7 @@ func DeleteUserByUserName() gin.HandlerFunc {
 		if err != nil {
 			msg := "database get user failed."
 			c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
+			log.Printf("%s", msg)
 			return
 		}
 
@@ -649,6 +687,7 @@ func DeleteUserByUserName() gin.HandlerFunc {
 		err = database.DeleteUserByName(name)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			log.Printf("DeleteUserByUserName: %s", err.Error())
 			return
 		}
 
@@ -662,23 +701,30 @@ func GetTrafficByUser() gin.HandlerFunc {
 
 		if err := helper.MatchUserTypeAndName(c, name); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			log.Printf("%s", err.Error())
 			return
 		}
 
 		cmdConn, err := grpc.Dial(fmt.Sprintf("%s:%s", V2_API_ADDRESS, V2_API_PORT), grpc.WithInsecure())
 		if err != nil {
-			log.Panic(err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			log.Printf("grpc dial error: %v", err)
+			return
 		}
 
 		NSSClient := v2ray.NewStatsServiceClient(cmdConn)
 		uplink, err := NSSClient.GetUserUplink(name)
 		if err != nil {
-			log.Panic(err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			log.Printf("GetUserUplink failed: %v", err)
+			return
 		}
 
 		downlink, err := NSSClient.GetUserDownlink(name)
 		if err != nil {
-			log.Panic(err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			log.Printf("Get user %s downlink failed.", name)
+			return
 		}
 
 		c.JSON(http.StatusOK, gin.H{"uplink": uplink, "downlink": downlink})
@@ -691,20 +737,25 @@ func GetAllUserTraffic() gin.HandlerFunc {
 		if BOOT_MODE == "" {
 			if err := helper.CheckUserType(c, "admin"); err != nil {
 				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+				log.Printf("%s", err.Error())
 				return
 			}
 		}
 
 		cmdConn, err := grpc.Dial(fmt.Sprintf("%s:%s", V2_API_ADDRESS, V2_API_PORT), grpc.WithInsecure())
 		if err != nil {
-			log.Panic("Panic: ", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			log.Printf("%s", err.Error())
+			return
 		}
 
 		NSSClient := v2ray.NewStatsServiceClient(cmdConn)
 
 		allTraffic, err := NSSClient.GetAllUserTraffic(false)
 		if err != nil {
-			log.Panic(err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			log.Printf("GetAllUserTraffic failed: %s", err.Error())
+			return
 		}
 
 		c.JSON(http.StatusOK, allTraffic)
@@ -718,6 +769,7 @@ func GetAllUsers() gin.HandlerFunc {
 			err := helper.CheckUserType(c, "admin")
 			if err != nil {
 				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+				log.Printf("%s", err.Error())
 				return
 			}
 		}
@@ -738,12 +790,15 @@ func GetUserByName() gin.HandlerFunc {
 
 		if err := helper.MatchUserTypeAndName(c, name); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			log.Printf("GetUserByName: %s", err.Error())
 			return
 		}
 
 		user, err := database.GetUserByName(name)
 		if err != nil {
-			log.Panic("Panic: ", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			log.Printf("Get user by name failed: %s", err.Error())
+			return
 		}
 
 		c.JSON(http.StatusOK, user)
@@ -757,9 +812,30 @@ func GetSubscripionURL() gin.HandlerFunc {
 		user, err := database.GetUserByName(name)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			log.Printf("GetUserByName failed: %s", err.Error())
 			return
 		}
 
 		c.String(http.StatusOK, user.Suburl)
+	}
+}
+
+func WriteToDB() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if BOOT_MODE == "" {
+			err := helper.CheckUserType(c, "admin")
+			if err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+				return
+			}
+		}
+		err := routine.Log_basicAction()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			log.Printf("Write to DB failed: %s", err.Error())
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{"message": "Write to DB successfully!"})
 	}
 }

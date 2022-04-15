@@ -76,6 +76,7 @@ func ValidateToken(signedToken string) (claims *SignedDetails, msg string) {
 
 	if err != nil {
 		msg = err.Error()
+		log.Printf("Error: %s", msg)
 		return
 	}
 

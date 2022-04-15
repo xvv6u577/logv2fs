@@ -2,6 +2,7 @@ package helper
 
 import (
 	"errors"
+	"log"
 
 	"github.com/gin-gonic/gin"
 )
@@ -12,6 +13,7 @@ func CheckUserType(c *gin.Context, role string) (err error) {
 	err = nil
 	if userType != role {
 		err = errors.New("unauthorized to access this resource")
+		log.Printf("unauthorized to access this resource")
 		return err
 	}
 
@@ -26,6 +28,7 @@ func MatchUserTypeAndUid(c *gin.Context, userId string) (err error) {
 
 	if userType == "normal" && uid != userId {
 		err = errors.New("unauthorized to access this resource")
+		log.Printf("unauthorized to access this resource")
 		return err
 	}
 	err = CheckUserType(c, userType)
@@ -40,6 +43,7 @@ func MatchUserTypeAndName(c *gin.Context, userEmail string) (err error) {
 
 	if userType == "normal" && email != userEmail {
 		err = errors.New("unauthorized to access this resource")
+		log.Printf("unauthorized to access this resource")
 		return err
 	}
 	err = CheckUserType(c, userType)

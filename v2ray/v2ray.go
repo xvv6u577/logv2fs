@@ -3,6 +3,7 @@ package v2ray
 import (
 	"context"
 	"fmt"
+	"log"
 	"regexp"
 	"strconv"
 	"strings"
@@ -56,9 +57,10 @@ func (s *StatsServiceClient) GetUserTraffic(name string, reset bool) (uint64, er
 	res, err := s.GetStats(context.Background(), req)
 	if err != nil {
 		if status, ok := status.FromError(err); ok && strings.HasSuffix(status.Message(), fmt.Sprintf("%s not found.", name)) {
+			log.Printf("%s not found", name)
 			return 0, nil
 		}
-
+		log.Printf("%s", err)
 		return 0, err
 	}
 
@@ -80,6 +82,7 @@ func (s *StatsServiceClient) GetAllUserTraffic(reset bool) ([]Traffic, error) {
 
 	response, err := s.QueryStats(context.Background(), request)
 	if err != nil {
+		log.Printf("%s", err)
 		return nil, err
 	}
 

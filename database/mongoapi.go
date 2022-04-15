@@ -66,6 +66,7 @@ func DeleteUserByName(email string) error {
 	filter := bson.D{primitive.E{Key: "email", Value: email}}
 	_, error := OpenCollection(Client, "USERS").DeleteOne(ctx, filter)
 	if error != nil {
+		log.Printf("error occured while deleting user %s", email)
 		return error
 	}
 
@@ -80,23 +81,24 @@ func CreateUserByName(user *User) error {
 
 	validationErr := validate.Struct(user)
 	if validationErr != nil {
-		// c.JSON(http.StatusBadRequest, gin.H{"error": validationErr.Error()})
+		log.Printf("error occured while validating user %s", user.Email)
 		return validationErr
 	}
 
 	count, err := OpenCollection(Client, "USERS").CountDocuments(ctx, bson.M{"email": user.Email})
 	if err != nil {
-		log.Panic(err)
-		// c.JSON(http.StatusInternalServerError, gin.H{"error": "error occured while checking for the email"})
+		log.Panicf("error occured while counting user %s", user.Email)
 		return err
 	}
 
 	if count > 0 {
+		log.Printf("user %s already exists", user.Email)
 		return errors.New("this email already exists")
 	}
 
 	_, err = OpenCollection(Client, "USERS").InsertOne(ctx, user)
 	if err != nil {
+		log.Panicf("error occured while inserting user %s", user.Email)
 		return err
 	}
 
@@ -113,6 +115,7 @@ func UpdateUserStatusByName(name string, status string) error {
 
 	_, err := OpenCollection(Client, "USERS").UpdateOne(ctx, filter, update)
 	if err != nil {
+		log.Printf("error occured while updating user %s", name)
 		return err
 	}
 
@@ -135,6 +138,7 @@ func GetUserByName(name string) (User, error) {
 
 	err := OpenCollection(Client, "USERS").FindOne(ctx, filter).Decode(&user)
 	if err != nil {
+		log.Printf("error occured while finding user %s", name)
 		return user, err
 	}
 
@@ -149,6 +153,7 @@ func FilterUsers(filter interface{}) ([]*User, error) {
 
 	cursor, err := OpenCollection(Client, "USERS").Find(ctx, filter)
 	if err != nil {
+		log.Printf("error occured while finding users")
 		return users, err
 	}
 

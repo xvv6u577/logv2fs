@@ -48,6 +48,7 @@ func (s *server) AddUser(ctx context.Context, in *pb.GRPCRequest) (*pb.GRPCReply
 	cmdConn, err := grpc.Dial(fmt.Sprintf("%s:%s", V2_API_ADDRESS, V2_API_PORT), grpc.WithInsecure())
 	if err != nil {
 		msg := "v2ray connection failed."
+		log.Panicf("%v", msg)
 		return &pb.GRPCReply{SuccesOrNot: msg}, err
 	}
 
@@ -55,6 +56,7 @@ func (s *server) AddUser(ctx context.Context, in *pb.GRPCRequest) (*pb.GRPCReply
 	err = NHSClient.AddUser(user)
 	if err != nil {
 		msg := "v2ray take user back online failed."
+		log.Panicf("%v", msg)
 		return &pb.GRPCReply{SuccesOrNot: msg}, err
 	}
 
@@ -69,6 +71,7 @@ func (s *server) DeleteUser(ctx context.Context, in *pb.GRPCRequest) (*pb.GRPCRe
 	cmdConn, err := grpc.Dial(fmt.Sprintf("%s:%s", V2_API_ADDRESS, V2_API_PORT), grpc.WithInsecure())
 	if err != nil {
 		msg := "v2ray connection failed."
+		log.Panicf("%v", msg)
 		return &pb.GRPCReply{SuccesOrNot: msg}, err
 	}
 
@@ -76,6 +79,7 @@ func (s *server) DeleteUser(ctx context.Context, in *pb.GRPCRequest) (*pb.GRPCRe
 	err = NHSClient.DelUser(in.GetName())
 	if err != nil {
 		msg := "v2ray take user back online failed."
+		log.Panicf("%v", msg)
 		return &pb.GRPCReply{SuccesOrNot: msg}, err
 	}
 
