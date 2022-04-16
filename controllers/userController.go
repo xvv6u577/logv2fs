@@ -836,6 +836,7 @@ func WriteToDB() gin.HandlerFunc {
 			return
 		}
 
+		log.Println("Write to DB by hand!")
 		c.JSON(http.StatusOK, gin.H{"message": "Write to DB successfully!"})
 	}
 }

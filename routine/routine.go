@@ -121,6 +121,7 @@ func Cron_loggingJobs(c *cron.Cron) {
 
 	c.AddFunc(CRON_INTERVAL_BY_HOUR, func() {
 		Log_basicAction()
+		log.Printf("Written by hour")
 	})
 
 	if NODE_TYPE == "main" {
@@ -182,6 +183,8 @@ func Cron_loggingJobs(c *cron.Cron) {
 			}
 
 			cursor.Close(ctx)
+
+			log.Printf("Written by day")
 		})
 
 		c.AddFunc(CRON_INTERVAL_BY_MONTH, func() {
@@ -229,6 +232,8 @@ func Cron_loggingJobs(c *cron.Cron) {
 				userCollection.FindOneAndUpdate(ctx, singleUserFilter, update)
 			}
 			cursor.Close(ctx)
+
+			log.Printf("Written by month")
 		})
 
 		c.AddFunc(CRON_INTERVAL_BY_YEAR, func() {
@@ -271,6 +276,8 @@ func Cron_loggingJobs(c *cron.Cron) {
 			}
 
 			cursor.Close(ctx)
+
+			log.Printf("Written by year")
 		})
 	}
 
