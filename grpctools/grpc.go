@@ -41,8 +41,9 @@ func (s *server) AddUser(ctx context.Context, in *pb.GRPCRequest) (*pb.GRPCReply
 	log.Printf("Server AddUser. Received: %v", in.GetName()+", "+in.GetUuid()+", "+in.GetPath())
 
 	user := User{
-		UUID: in.GetUuid(),
-		Path: in.GetPath(),
+		Email: in.GetName(),
+		UUID:  in.GetUuid(),
+		Path:  in.GetPath(),
 	}
 
 	cmdConn, err := grpc.Dial(fmt.Sprintf("%s:%s", V2_API_ADDRESS, V2_API_PORT), grpc.WithInsecure())
