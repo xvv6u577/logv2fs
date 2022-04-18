@@ -67,10 +67,10 @@ const Menu = () => {
 								</Button>
 							</Nav>
 							<Nav className="m-1">
-									<AddNode btnName="添加节点" />
+									<AddNode btnName="AddNode" />
 							</Nav>
-							<Nav className="m-1">
-									<AddUser btnName="添加用户" />
+							<Nav className="">
+									<AddUser btnName="AddUser" />
 							</Nav>
 						</>
 					)}

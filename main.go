@@ -25,7 +25,11 @@ import (
 
 type User = model.User
 
-var BOOT_MODE = os.Getenv("BOOT_MODE")
+var (
+	BOOT_MODE      = os.Getenv("BOOT_MODE")
+	NODE_TYPE      = os.Getenv("NODE_TYPE")
+	CURRENT_DOMAIN = os.Getenv("CURRENT_DOMAIN")
+)
 
 var cronInstance *cron.Cron
 
@@ -135,9 +139,6 @@ func main() {
 }
 
 func RunGRPCServer() {
-
-	CURRENT_DOMAIN := os.Getenv("CURRENT_DOMAIN")
-
 	if CURRENT_DOMAIN == "sl.undervineyard.com" {
 		grpctools.GrpcServer("0.0.0.0:80")
 	} else {

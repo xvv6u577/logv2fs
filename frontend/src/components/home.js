@@ -123,7 +123,7 @@ const Home = () => {
 			>
 				<Accordion>
 					{users
-					// put admin at the top of the list
+						// put admin at the top of the list
 						.reduce((acc, ele) => {
 							if (ele.role === "admin") {
 								return [ele, ...acc];
@@ -132,37 +132,55 @@ const Home = () => {
 						}, [])
 						// sort the normal users by used_by_current_month.amount
 						.sort((a, b) => {
-							if (a.role === "admin" | b.role === "admin") {
-								return 0
+							if ((a.role === "admin") | (b.role === "admin")) {
+								return 0;
 							}
-							return b.used_by_current_month.amount - a.used_by_current_month.amount;
+							return (
+								b.used_by_current_month.amount - a.used_by_current_month.amount
+							);
 						})
 						.map((element, index) => (
 							<Accordion.Item eventKey={index}>
-								<ListGroup.Item as="li" className="">
-									<div className="ms-2 me-auto ">
-										<span className="home-traffic-fs">{index + 1}</span>
-										{"."}
-										<b className="home-traffic-fs">{element.name}</b>
-										<Badge bg="success" className="mx-1 home-traffic-fs" pill>
-											{element.role === "admin" ? "管理员" : "普通用户"}
-										</Badge>
-										<Badge bg="primary" className="mx-1 home-traffic-fs" pill>
-											{element.status === "plain" ? "在线" : "已下线"}
-										</Badge>
-										{element.email === loginState.jwt.Email && (
-											<Badge bg="info" className="mx-1 home-traffic-fs" pill>
-												It's Me
-											</Badge>
-										)}
+								<ListGroup.Item as="li" className="d-flex align-items-center">
+									<div className="me-auto ">
+										<div className="home-traffic-fs">
+											<span className="badge rounded-pill bg-secondary">
+												{index + 1}
+											</span>{" "}
+											<b className="">{element.name}</b>
+											{element.status === "plain" ? (
+												<span className="badge rounded-pill bg-success mx-1">
+													online
+												</span>
+											) : (
+												<span className="badge rounded-pill bg-danger mx-1">
+													offline
+												</span>
+											)}
+											{element.role === "admin" ? (
+												<span className="badge rounded-pill bg-dark mx-1">
+													admin
+												</span>
+											) : (
+												<span className="badge rounded-pill bg-primary mx-1">
+													user
+												</span>
+											)}
+											{element.email === loginState.jwt.Email && (
+												<span className="badge rounded-pill bg-info text-dark">
+													Me
+												</span>
+											)}
+										</div>
 
-										<span className="home-traffic-fs">
-											今日: {formatBytes(element.used_by_current_day.amount)}
+										<div className="home-traffic-fs">
+											Today: {formatBytes(element.used_by_current_day.amount)}
 											{", "}
-											本月: {formatBytes(element.used_by_current_month.amount)}
+											This month:{" "}
+											{formatBytes(element.used_by_current_month.amount)}
 											{", "}
-											已用: {formatBytes(element.used)}
-										</span>
+											Used: {formatBytes(element.used)}
+										</div>
 									</div>
 									<div className="d-flex justify-content-center align-items-center">
 										<EditUser
