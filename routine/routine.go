@@ -34,8 +34,8 @@ func Cron_loggingV2TrafficByUser(traffic Traffic) {
 
 	CURRENT_DOMAIN := os.Getenv("CURRENT_DOMAIN")
 	var current = time.Now()
-	// var current_year = current.Local().Format("2006")
-	// var current_month = current.Local().Format("200601")
+	var current_year = current.Local().Format("2006")
+	var current_month = current.Local().Format("200601")
 	var current_day = current.Local().Format("20060102")
 
 	// write traffic record to DB
@@ -49,12 +49,6 @@ func Cron_loggingV2TrafficByUser(traffic Traffic) {
 		log.Panic("Panic: ", err)
 	}
 
-	cmdConn, err := grpc.Dial(fmt.Sprintf("%s:%s", V2_API_ADDRESS, V2_API_PORT), grpc.WithInsecure())
-	if err != nil {
-		log.Panic("Panic: ", err)
-	}
-	NHSClient := v2ray.NewHandlerServiceClient(cmdConn, user.Path)
-
 	userTrafficCollection.InsertOne(ctx, model.TrafficInDB{
 		Total:     traffic.Total,
 		CreatedAt: current,
@@ -67,12 +61,26 @@ func Cron_loggingV2TrafficByUser(traffic Traffic) {
 		var update bson.D
 
 		if traffic.Total+int64(user.Usedtraffic) > int64(user.Credittraffic) {
+
+			cmdConn, err := grpc.Dial(fmt.Sprintf("%s:%s", V2_API_ADDRESS, V2_API_PORT), grpc.WithInsecure())
+			if err != nil {
+				log.Panic("Panic: ", err)
+			}
+			NHSClient := v2ray.NewHandlerServiceClient(cmdConn, user.Path)
 			NHSClient.DelUser(user.Email)
 
 			update = bson.D{primitive.E{Key: "$set", Value: bson.D{
 				primitive.E{Key: "used_by_current_day", Value: primitive.D{
 					primitive.E{Key: "amount", Value: traffic.Total + int64(user.UsedByCurrentDay.Amount)},
 					primitive.E{Key: "period", Value: current_day},
+				}},
+				primitive.E{Key: "used_by_current_month", Value: primitive.D{
+					primitive.E{Key: "amount", Value: traffic.Total + int64(user.UsedByCurrentMonth.Amount)},
+					primitive.E{Key: "period", Value: current_month},
+				}},
+				primitive.E{Key: "used_by_current_year", Value: primitive.D{
+					primitive.E{Key: "amount", Value: traffic.Total + int64(user.UsedByCurrentYear.Amount)},
+					primitive.E{Key: "period", Value: current_year},
 				}},
 				primitive.E{Key: "used", Value: traffic.Total + int64(user.Usedtraffic)},
 				primitive.E{Key: "updated_at", Value: current},
@@ -83,6 +91,14 @@ func Cron_loggingV2TrafficByUser(traffic Traffic) {
 				primitive.E{Key: "used_by_current_day", Value: primitive.D{
 					primitive.E{Key: "amount", Value: traffic.Total + int64(user.UsedByCurrentDay.Amount)},
 					primitive.E{Key: "period", Value: current_day},
+				}},
+				primitive.E{Key: "used_by_current_month", Value: primitive.D{
+					primitive.E{Key: "amount", Value: traffic.Total + int64(user.UsedByCurrentMonth.Amount)},
+					primitive.E{Key: "period", Value: current_month},
+				}},
+				primitive.E{Key: "used_by_current_year", Value: primitive.D{
+					primitive.E{Key: "amount", Value: traffic.Total + int64(user.UsedByCurrentYear.Amount)},
+					primitive.E{Key: "period", Value: current_year},
 				}},
 				primitive.E{Key: "used", Value: traffic.Total + int64(user.Usedtraffic)},
 				primitive.E{Key: "updated_at", Value: current},
@@ -132,7 +148,7 @@ func Cron_loggingJobs(c *cron.Cron) {
 
 			var current = time.Now()
 			var next = current.Add(2 * time.Minute)
-			var current_month = current.Local().Format("200601")
+			// var current_month = current.Local().Format("200601")
 			var next_day = next.Local().Format("20060102")
 
 			filter := bson.D{{}}
@@ -166,10 +182,10 @@ func Cron_loggingJobs(c *cron.Cron) {
 					trafficByDay := currentUser.TrafficByDay
 					trafficByDay = append(trafficByDay, currentUser.UsedByCurrentDay)
 					update = bson.D{primitive.E{Key: "$set", Value: bson.D{
-						primitive.E{Key: "used_by_current_month", Value: primitive.D{
-							primitive.E{Key: "amount", Value: currentUser.UsedByCurrentMonth.Amount + currentUser.UsedByCurrentDay.Amount},
-							primitive.E{Key: "period", Value: current_month},
-						}},
+						// primitive.E{Key: "used_by_current_month", Value: primitive.D{
+						// 	primitive.E{Key: "amount", Value: currentUser.UsedByCurrentMonth.Amount + currentUser.UsedByCurrentDay.Amount},
+						// 	primitive.E{Key: "period", Value: current_month},
+						// }},
 						primitive.E{Key: "used_by_current_day", Value: primitive.D{
 							primitive.E{Key: "amount", Value: 0},
 							primitive.E{Key: "period", Value: next_day},
@@ -196,7 +212,7 @@ func Cron_loggingJobs(c *cron.Cron) {
 			var current = time.Now()
 			// 2021-12-31 23:59:00 +0800 CST
 			var last = current.Add(-2 * time.Minute)
-			var last_year = last.Local().Format("2006")
+			// var last_year = last.Local().Format("2006")
 			var current_month = current.Local().Format("200601")
 
 			filter := bson.D{{}}
@@ -217,10 +233,10 @@ func Cron_loggingJobs(c *cron.Cron) {
 				trafficByMonth := currentUser.TrafficByMonth
 				trafficByMonth = append(trafficByMonth, currentUser.UsedByCurrentMonth)
 				update := bson.D{primitive.E{Key: "$set", Value: bson.D{
-					primitive.E{Key: "used_by_current_year", Value: primitive.D{
-						primitive.E{Key: "amount", Value: currentUser.UsedByCurrentYear.Amount + currentUser.UsedByCurrentMonth.Amount},
-						primitive.E{Key: "period", Value: last_year},
-					}},
+					// primitive.E{Key: "used_by_current_year", Value: primitive.D{
+					// 	primitive.E{Key: "amount", Value: currentUser.UsedByCurrentYear.Amount + currentUser.UsedByCurrentMonth.Amount},
+					// 	primitive.E{Key: "period", Value: last_year},
+					// }},
 					primitive.E{Key: "used_by_current_month", Value: primitive.D{
 						primitive.E{Key: "amount", Value: 0},
 						primitive.E{Key: "period", Value: current_month},
