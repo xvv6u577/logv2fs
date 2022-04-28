@@ -20,7 +20,7 @@ function Mypanel() {
 				dispatch(alert({ show: false }));
 			}, 5000);
 		}
-	}, [message, dispatch]);
+	}, [message]);
 
 	useEffect(() => {
 		axios
@@ -33,7 +33,7 @@ function Mypanel() {
 			.catch((err) => {
 				dispatch(alert({ show: true, content: err.toString() }));
 			});
-	}, [rerenderSignal, loginState.token, loginState.jwt.Email, dispatch]);
+	}, [rerenderSignal, loginState]);
 
 	return (
 		<Container className="py-3">
@@ -44,7 +44,7 @@ function Mypanel() {
 							formatBytes(user.used_by_current_day.amount)}
 					</div>
 					<p>
-						今日已用流量 (
+						Traffic Used Today (
 						{user.used_by_current_day && user.used_by_current_day.period})
 					</p>
 				</div>
@@ -54,26 +54,26 @@ function Mypanel() {
 							formatBytes(user.used_by_current_month.amount)}
 					</div>
 					<p>
-						本月已用流量 (
+					Traffic Used This Month (
 						{user.used_by_current_month && user.used_by_current_month.period})
 					</p>
 				</div>
 				<div className="mypanel-card col">
 					<div className="h3">{user && formatBytes(user.used)}</div>
-					<p>已用总流量</p>
+					<p>Traffic Used In Total</p>
 				</div>
 			</div>
 
 			<div className="info-modal my-5 px-5 h6 small">
 				<div className="my-1">
-					用户名: <TapToCopied>{user.email}</TapToCopied>
+					Username: <TapToCopied>{user.email}</TapToCopied>
 				</div>
-				<div className="my-1">
+				{/* <div className="my-1">
 					密码:{" "}
 					<TapToCopied>
 						{user.email && user.email.length < 6 ? "mypassword" : user.email}
 					</TapToCopied>
-				</div>
+				</div> */}
 				<div className="my-1">
 					path: <TapToCopied>{user.path}</TapToCopied>
 				</div>
