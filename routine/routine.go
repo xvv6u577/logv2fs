@@ -13,6 +13,7 @@ import (
 	"github.com/robfig/cron"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo/options"
 	"google.golang.org/grpc"
 )
 
@@ -33,10 +34,10 @@ func Cron_loggingV2TrafficByUser(traffic Traffic) {
 	defer cancel()
 
 	CURRENT_DOMAIN := os.Getenv("CURRENT_DOMAIN")
-	var current = time.Now()
-	var current_year = current.Local().Format("2006")
-	var current_month = current.Local().Format("200601")
-	var current_day = current.Local().Format("20060102")
+	var current = time.Now().Local()
+	var current_year = current.Format("2006")
+	var current_month = current.Format("200601")
+	var current_day = current.Format("20060102")
 
 	// write traffic record to DB
 	userTrafficCollection := database.OpenCollection(database.Client, traffic.Name)
@@ -59,6 +60,29 @@ func Cron_loggingV2TrafficByUser(traffic Traffic) {
 	if user.Status == "plain" {
 
 		var update bson.D
+		upsert := true
+		after := options.After
+		opt := options.FindOneAndUpdateOptions{
+			ReturnDocument: &after,
+			Upsert:         &upsert,
+		}
+
+		user, _ := database.GetUserByName(traffic.Name)
+
+		if user.UsedByCurrentDay.UsedByDomain == nil {
+			user.UsedByCurrentDay.UsedByDomain = make(map[string]int64)
+		}
+		user.UsedByCurrentDay.UsedByDomain[CURRENT_DOMAIN] += traffic.Total
+
+		if user.UsedByCurrentMonth.UsedByDomain == nil {
+			user.UsedByCurrentMonth.UsedByDomain = make(map[string]int64)
+		}
+		user.UsedByCurrentMonth.UsedByDomain[CURRENT_DOMAIN] += traffic.Total
+
+		if user.UsedByCurrentYear.UsedByDomain == nil {
+			user.UsedByCurrentYear.UsedByDomain = make(map[string]int64)
+		}
+		user.UsedByCurrentYear.UsedByDomain[CURRENT_DOMAIN] += traffic.Total
 
 		if traffic.Total+int64(user.Usedtraffic) > int64(user.Credittraffic) {
 
@@ -73,14 +97,17 @@ func Cron_loggingV2TrafficByUser(traffic Traffic) {
 				primitive.E{Key: "used_by_current_day", Value: primitive.D{
 					primitive.E{Key: "amount", Value: traffic.Total + int64(user.UsedByCurrentDay.Amount)},
 					primitive.E{Key: "period", Value: current_day},
+					primitive.E{Key: "used_by_domain", Value: user.UsedByCurrentDay.UsedByDomain},
 				}},
 				primitive.E{Key: "used_by_current_month", Value: primitive.D{
 					primitive.E{Key: "amount", Value: traffic.Total + int64(user.UsedByCurrentMonth.Amount)},
 					primitive.E{Key: "period", Value: current_month},
+					primitive.E{Key: "used_by_domain", Value: user.UsedByCurrentMonth.UsedByDomain},
 				}},
 				primitive.E{Key: "used_by_current_year", Value: primitive.D{
 					primitive.E{Key: "amount", Value: traffic.Total + int64(user.UsedByCurrentYear.Amount)},
 					primitive.E{Key: "period", Value: current_year},
+					primitive.E{Key: "used_by_domain", Value: user.UsedByCurrentYear.UsedByDomain},
 				}},
 				primitive.E{Key: "used", Value: traffic.Total + int64(user.Usedtraffic)},
 				primitive.E{Key: "updated_at", Value: current},
@@ -91,21 +118,27 @@ func Cron_loggingV2TrafficByUser(traffic Traffic) {
 				primitive.E{Key: "used_by_current_day", Value: primitive.D{
 					primitive.E{Key: "amount", Value: traffic.Total + int64(user.UsedByCurrentDay.Amount)},
 					primitive.E{Key: "period", Value: current_day},
+					primitive.E{Key: "used_by_domain", Value: user.UsedByCurrentDay.UsedByDomain},
 				}},
 				primitive.E{Key: "used_by_current_month", Value: primitive.D{
 					primitive.E{Key: "amount", Value: traffic.Total + int64(user.UsedByCurrentMonth.Amount)},
 					primitive.E{Key: "period", Value: current_month},
+					primitive.E{Key: "used_by_domain", Value: user.UsedByCurrentMonth.UsedByDomain},
 				}},
 				primitive.E{Key: "used_by_current_year", Value: primitive.D{
 					primitive.E{Key: "amount", Value: traffic.Total + int64(user.UsedByCurrentYear.Amount)},
 					primitive.E{Key: "period", Value: current_year},
+					primitive.E{Key: "used_by_domain", Value: user.UsedByCurrentYear.UsedByDomain},
 				}},
 				primitive.E{Key: "used", Value: traffic.Total + int64(user.Usedtraffic)},
 				primitive.E{Key: "updated_at", Value: current},
 			}}}
 		}
 
-		userCollection.FindOneAndUpdate(ctx, filter, update)
+		result := userCollection.FindOneAndUpdate(ctx, filter, update, &opt)
+		if result.Err() != nil {
+			log.Printf("Error: %v", result.Err())
+		}
 	}
 
 }
@@ -140,7 +173,7 @@ func Cron_loggingJobs(c *cron.Cron) {
 		log.Printf("Written by hour")
 	})
 
-	if NODE_TYPE == "main" {
+	if NODE_TYPE == "main" || NODE_TYPE == "local" {
 
 		c.AddFunc(CRON_INTERVAL_BY_DAY, func() {
 			var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
@@ -167,12 +200,14 @@ func Cron_loggingJobs(c *cron.Cron) {
 
 				singleUserFilter := bson.D{primitive.E{Key: "email", Value: currentUser.Email}}
 				var update bson.D
+				var usedByDomain = make(map[string]int64)
 				if currentUser.UsedByCurrentDay.Amount == 0 {
 
 					update = bson.D{primitive.E{Key: "$set", Value: bson.D{
 						primitive.E{Key: "used_by_current_day", Value: primitive.D{
 							primitive.E{Key: "amount", Value: 0},
 							primitive.E{Key: "period", Value: next_day},
+							primitive.E{Key: "used_by_domain", Value: usedByDomain},
 						}},
 						primitive.E{Key: "updated_at", Value: current},
 					}}}
@@ -182,13 +217,10 @@ func Cron_loggingJobs(c *cron.Cron) {
 					trafficByDay := currentUser.TrafficByDay
 					trafficByDay = append(trafficByDay, currentUser.UsedByCurrentDay)
 					update = bson.D{primitive.E{Key: "$set", Value: bson.D{
-						// primitive.E{Key: "used_by_current_month", Value: primitive.D{
-						// 	primitive.E{Key: "amount", Value: currentUser.UsedByCurrentMonth.Amount + currentUser.UsedByCurrentDay.Amount},
-						// 	primitive.E{Key: "period", Value: current_month},
-						// }},
 						primitive.E{Key: "used_by_current_day", Value: primitive.D{
 							primitive.E{Key: "amount", Value: 0},
 							primitive.E{Key: "period", Value: next_day},
+							primitive.E{Key: "used_by_domain", Value: usedByDomain},
 						}},
 						primitive.E{Key: "traffic_by_day", Value: trafficByDay},
 						primitive.E{Key: "updated_at", Value: current},
@@ -232,14 +264,12 @@ func Cron_loggingJobs(c *cron.Cron) {
 				singleUserFilter := bson.D{primitive.E{Key: "email", Value: currentUser.Email}}
 				trafficByMonth := currentUser.TrafficByMonth
 				trafficByMonth = append(trafficByMonth, currentUser.UsedByCurrentMonth)
+				var usedByDomain = make(map[string]int64)
 				update := bson.D{primitive.E{Key: "$set", Value: bson.D{
-					// primitive.E{Key: "used_by_current_year", Value: primitive.D{
-					// 	primitive.E{Key: "amount", Value: currentUser.UsedByCurrentYear.Amount + currentUser.UsedByCurrentMonth.Amount},
-					// 	primitive.E{Key: "period", Value: last_year},
-					// }},
 					primitive.E{Key: "used_by_current_month", Value: primitive.D{
 						primitive.E{Key: "amount", Value: 0},
 						primitive.E{Key: "period", Value: current_month},
+						primitive.E{Key: "used_by_domain", Value: usedByDomain},
 					}},
 					primitive.E{Key: "traffic_by_month", Value: trafficByMonth},
 					primitive.E{Key: "updated_at", Value: last},
@@ -279,10 +309,12 @@ func Cron_loggingJobs(c *cron.Cron) {
 				singleUserFilter := bson.D{primitive.E{Key: "email", Value: currentUser.Email}}
 				trafficByYear := currentUser.TrafficByYear
 				trafficByYear = append(trafficByYear, currentUser.UsedByCurrentYear)
+				var usedByDomain = make(map[string]int64)
 				update := bson.D{primitive.E{Key: "$set", Value: bson.D{
 					primitive.E{Key: "used_by_current_year", Value: primitive.D{
 						primitive.E{Key: "amount", Value: 0},
 						primitive.E{Key: "period", Value: current_year},
+						primitive.E{Key: "used_by_domain", Value: usedByDomain},
 					}},
 					primitive.E{Key: "traffic_by_year", Value: trafficByYear},
 					primitive.E{Key: "updated_at", Value: last},

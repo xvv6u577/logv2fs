@@ -3,6 +3,7 @@ package database
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log"
 	"time"
 
@@ -28,7 +29,7 @@ func AddDBUserProperty() error {
 	return err
 }
 
-func EmptyUsersInfoInDB() error {
+func DelUsersInfo() error {
 	var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
 	defer cancel()
 
@@ -38,22 +39,17 @@ func EmptyUsersInfoInDB() error {
 	return error
 }
 
-func DeleteUsersDBs() error {
+func DelUsersTable() error {
 	var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
 	defer cancel()
 
-	users := []string{
-		"yalin", "zhouyijun", "robmakelin", "jet", "xiaolan", "zikai", "zhu", "jiangbo", "chenyuanyuan", "wangning",
-		"zhangxiaoxu", "liangying", "deliang", "jeff", "johnathonbai", "yumei", "7g", "jojo", "daibin", "deena", "xuyang", "alphaemma",
-		"xiaohe", "bsclks", "joy", "sarah", "guowanyue", "baofeng", "jonah", "yuxiaofang", "cuixiaoli", "wangyakun", "pty", "wupeng", "xiangwei", "changhua",
-		"weihongwei", "zhihu", "lujixiawu", "hepengfei", "mengchch", "21cpiaomu", "cuiyang", "bscdavid", "wangling", "21clsj", "anchagu", "bjbfl", "maylee",
-		"frankw", "pansir", "yizhu", "huohuo", "chunxia", "caster", "yutou", "camel", "rongfan", "cannan", "wuqiong", "huidi", "zhaorui", "yanyong",
-		"lijiaxin", "yongming", "jspotter", "haotian", "wrong", "sisi", "linbo", "bscalbert", "21caiqing", "shanshan", "bqgeorge", "7a2", "9b1", "bobhe",
-		"lizheyu", "tianshu", "xiaoshen", "zhangyusheng", "tantan",
+	users, err := GetAllUsersInfo()
+	if err != nil {
+		fmt.Printf("Error: %v\n", err)
 	}
 
-	for _, name := range users {
-		OpenCollection(Client, name).Drop(ctx)
+	for _, ele := range users {
+		OpenCollection(Client, ele.Email).Drop(ctx)
 	}
 
 	return nil

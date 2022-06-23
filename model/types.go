@@ -34,8 +34,9 @@ type User struct {
 }
 
 type TrafficAtPeriod struct {
-	Period string `json:"period" bson:"period"`
-	Amount int64  `json:"amount" bson:"amount"`
+	Period       string           `json:"period" bson:"period"`
+	Amount       int64            `json:"amount" bson:"amount"`
+	UsedByDomain map[string]int64 `json:"used_by_domain" bson:"used_by_domain"`
 }
 
 type Traffic struct {
