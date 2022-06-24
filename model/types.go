@@ -63,3 +63,7 @@ type Node struct {
 	Host    string `default:"none" json:"host"`
 	Tls     string `default:"tls" json:"tls"`
 }
+
+func (u *User) ProduceSuburl() string {
+	return "https://" + u.Email + ".ray.io"
+}

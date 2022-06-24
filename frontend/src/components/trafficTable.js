@@ -8,7 +8,8 @@ function TrafficTable({ data,limit,by }) {
 				<tr>
 					<th>#</th>
 					<th>{by}</th>
-					<th>流量</th>
+					<th>Data Used</th>
+					<th>By Domain</th>
 				</tr>
 			</thead>
 			<tbody>
@@ -20,20 +21,27 @@ function TrafficTable({ data,limit,by }) {
 								return (
 									<tr key={item.id}>
 										<td>{index + 1}</td>
-										{Object.values(item).map((val, i) => (
-											<td>{i > 0 ? formatBytes(val) : val}</td>
-										))}
+										<td>{item.period}</td>
+										<td>{formatBytes(item.amount)}</td>
+										<td>{item.used_by_domain && Object.entries(item.used_by_domain).map(([key, value]) => {
+											return <span className="d-block" key={key}>{key}:{formatBytes(value)}</span>
+										})}
+										</td>
 									</tr>
 								);
 							})
 					: data && data
 							.sort((a, b) => b.period - a.period)
-							.map((traffic, index) => {
+							.map((item, index) => {
 								return (
 									<tr key={index}>
 										<td>{index + 1}</td>
-										<td>{traffic.period}</td>
-										<td>{formatBytes(traffic.amount)}</td>
+										<td>{item.period}</td>
+										<td>{formatBytes(item.amount)}</td>
+										<td>{item.amount && Object.entries(item.used_by_domain).map(([key, value]) => {
+											return <span className="d-block" key={key}>{key}:{formatBytes(value)}</span>
+										})}
+										</td>
 									</tr>
 								);
 							})}
