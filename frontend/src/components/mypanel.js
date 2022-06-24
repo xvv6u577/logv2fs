@@ -20,7 +20,7 @@ function Mypanel() {
 				dispatch(alert({ show: false }));
 			}, 5000);
 		}
-	}, [message]);
+	}, [message, dispatch]);
 
 	useEffect(() => {
 		axios
@@ -33,7 +33,7 @@ function Mypanel() {
 			.catch((err) => {
 				dispatch(alert({ show: true, content: err.toString() }));
 			});
-	}, [rerenderSignal, loginState]);
+	}, [rerenderSignal, loginState, dispatch]);
 
 	return (
 		<Container className="py-3">
