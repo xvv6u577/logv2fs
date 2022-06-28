@@ -1,7 +1,11 @@
 package model
 
 import (
+	"encoding/json"
+	"strings"
 	"time"
+
+	b64 "encoding/base64"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -20,8 +24,8 @@ type User struct {
 	User_id            string             `json:"user_id" bson:"user_id"`
 	Usedtraffic        int64              `json:"used" bson:"used"`
 	Credittraffic      int64              `json:"credit" bson:"credit"`
-	NodeInUse          *map[string]string `json:"nodeinuse" bson:"nodeinuse"`
-	NodeGlobal         *map[string]string `json:"nodeglobal,omitempty" bson:"nodeglobal"`
+	NodeInUseStatus    map[string]bool    `json:"node_in_use_status" bson:"node_in_use_status"`
+	NodeGlobalList     map[string]string  `json:"node_global_list" bson:"node_global_list"`
 	Suburl             string             `json:"suburl"`
 	CreatedAt          time.Time          `json:"created_at" bson:"created_at"`
 	UpdatedAt          time.Time          `json:"updated_at" bson:"updated_at"`
@@ -64,6 +68,52 @@ type Node struct {
 	Tls     string `default:"tls" json:"tls"`
 }
 
-func (u *User) ProduceSuburl() string {
-	return "https://" + u.Email + ".ray.io"
+func (u *User) ProduceSuburl() {
+	var node Node
+	subscription := ""
+
+	for index, item := range u.NodeInUseStatus {
+		if item {
+			node = Node{
+				Domain:  index,
+				Path:    "/" + u.Path,
+				UUID:    u.UUID,
+				Remark:  strings.Split(index, ".")[0],
+				Version: "2",
+				Port:    "443",
+				Aid:     "64",
+				Net:     "ws",
+				Type:    "none",
+				Tls:     "tls",
+			}
+
+			jsonedNode, _ := json.Marshal(node)
+
+			if len(subscription) == 0 {
+				subscription = "vmess://" + b64.StdEncoding.EncodeToString(jsonedNode)
+			} else {
+				subscription = subscription + "\n" + "vmess://" + b64.StdEncoding.EncodeToString(jsonedNode)
+			}
+		}
+	}
+
+	u.Suburl = b64.StdEncoding.EncodeToString([]byte(subscription))
+}
+
+func (u *User) DeleteNodeInUse(domain string) {
+	u.NodeInUseStatus[domain] = false
+	u.ProduceSuburl()
+}
+
+func (u *User) AddNodeInUse(domain string) {
+	u.NodeInUseStatus[domain] = true
+	u.ProduceSuburl()
+}
+
+func (u *User) ProduceNodeInUse(nodes map[string]string) {
+	u.NodeInUseStatus = map[string]bool{}
+	for _, item := range nodes {
+		u.NodeInUseStatus[item] = true
+	}
+	u.ProduceSuburl()
 }

@@ -50,4 +50,6 @@ func UserRoutes(incomingRoutes *gin.Engine) {
 	incomingRoutes.GET("/v1/traffic/:name", controller.GetTrafficByUser()) // v2api
 
 	incomingRoutes.PUT("/v1/addnode", controller.AddNode())
+	incomingRoutes.GET("/v1/disablenode", controller.DisableNode())
+	incomingRoutes.GET("/v1/enablenode", controller.EnableNode())
 }

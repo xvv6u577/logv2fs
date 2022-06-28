@@ -72,18 +72,18 @@ function Windows() {
 			</p>
 			<p> 点按“添加”, 填入服务器信息&#x2192; </p>
 			<Tabs
-				defaultActiveKey={user.nodeinuse && Object.values(user.nodeinuse)[0]}
+				defaultActiveKey={user.node_in_use_status && Object.keys(user.node_in_use_status)[0]}
 				id="uncontrolled-tab-example"
 				className="mb-3"
 			>
-				{user.nodeinuse &&
-					Object.keys(user.nodeinuse).map((key) => (
-						<Tab eventKey={key} title={user.nodeinuse[key]} className="bg-secondary rounded p-3">
+				{user.node_in_use_status &&
+					Object.keys(user.node_in_use_status).map((key) => (
+						<Tab eventKey={key} title={key} className="bg-secondary rounded p-3">
 							<div>
 								{" "}
 								地址:
 								<TapToCopied>
-									{user.nodeinuse && user.nodeinuse[key]}:443
+									{user.node_in_use_status && user.node_in_use_status[key]}:443
 								</TapToCopied>
 								用户ID: <TapToCopied>{user.uuid}</TapToCopied>
 								额外ID:{" "}

@@ -109,31 +109,52 @@ func main() {
 
 					switch tag {
 
-					case "test":
+					case "updateNodeInUseStatus":
 						var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
 						defer cancel()
 
-						userTrafficCollection := database.OpenCollection(database.Client, "casterasadmin")
+						var current = time.Now().Local()
 
-						userTrafficFilter := bson.D{{}}
-						cur, err := userTrafficCollection.Find(ctx, userTrafficFilter)
+						var adminUser User
+						userCollection := database.OpenCollection(database.Client, "USERS")
+						err := userCollection.FindOne(ctx, bson.M{"email": "casterasadmin"}).Decode(&adminUser)
 						if err != nil {
 							fmt.Printf("Error: %v\n", err)
 						}
-						defer cur.Close(ctx)
 
-						var total int64
-						for cur.Next(ctx) {
-							var t model.TrafficInDB
-							err := cur.Decode(&t)
+						if adminUser.NodeGlobalList == nil {
+							adminUser.NodeGlobalList = make(map[string]string)
+						}
+
+						allUsers, err := database.GetAllUsersInfo()
+						if err != nil {
+							fmt.Printf("Error: %v\n", err)
+						}
+
+						for _, user := range allUsers {
+							if user.Role == "admin" {
+								user.NodeGlobalList = adminUser.NodeGlobalList
+							}
+
+							user.ProduceNodeInUse(adminUser.NodeGlobalList)
+							user.UpdatedAt = current
+
+							_, err = userCollection.ReplaceOne(ctx, bson.M{"user_id": user.User_id}, user)
 							if err != nil {
 								fmt.Printf("Error: %v\n", err)
 							}
-							if t.CreatedAt.Format("2006") == "2022" && t.Domain == "rm.undervineyard.com" {
-								total += t.Total
-							}
+
 						}
-						fmt.Printf("Total for 2022, sl.undervineyard: %v\n", total)
+
+						return nil
+
+					case "dbtest":
+
+						user, err := database.GetUserByName("casterasadmin")
+						if err != nil {
+							fmt.Printf("Error: %v\n", err)
+						}
+						fmt.Println(user)
 
 						return nil
 
@@ -359,7 +380,7 @@ func runServer() {
 		}
 
 		for _, user := range allUsersInDB {
-			if user.Status == "plain" {
+			if user.Status == "plain" && user.NodeInUseStatus[CURRENT_DOMAIN] {
 				NHSClient := v2ray.NewHandlerServiceClient(cmdConn, user.Path)
 				NHSClient.AddUser(*user)
 			}

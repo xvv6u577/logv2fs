@@ -78,6 +78,44 @@ const Home = () => {
 			});
 	};
 
+	const handleDisableNode = ({email, node}) => {
+		axios
+			.get(process.env.REACT_APP_API_HOST + "disablenode", {
+				params: { email, node },
+				headers: { token: loginState.token },
+			})
+			.then((response) => {
+				dispatch(doRerender({ rerender: !rerenderSignal.rerender }));
+				dispatch(success({ show: true, content: response.data.message }));
+			})
+			.catch((err) => {
+				if (err.response) {
+					dispatch(alert({ show: true, content: err.response.data.error }));
+				} else {
+					dispatch(alert({ show: true, content: err.toString() }));
+				}
+			});
+	}
+
+	const handleEnableNode = ({email, node}) => {
+		axios
+			.get(process.env.REACT_APP_API_HOST + "enablenode", {
+				params: { email, node },
+				headers: { token: loginState.token },
+			})
+			.then((response) => {
+				dispatch(doRerender({ rerender: !rerenderSignal.rerender }));
+				dispatch(success({ show: true, content: response.data.message }));
+			})
+			.catch((err) => {
+				if (err.response) {
+					dispatch(alert({ show: true, content: err.response.data.error }));
+				} else {
+					dispatch(alert({ show: true, content: err.toString() }));
+				}
+			});
+	}
+
 	useEffect(() => {
 		if (message.show === true) {
 			setTimeout(() => {
@@ -261,6 +299,22 @@ const Home = () => {
 													"/static/" +
 													element.email}
 											</TapToCopied>
+										</div>
+										<div className="my-1">
+											{element && Object.entries(element.node_in_use_status).map(([key, value]) => (
+												<span className="d-block my-1">
+													{key}:{" "}
+													{value ? (
+														<Button variant="success mx-1" size="sm" onClick={()=>handleDisableNode({email: element.email, node: key})}>
+															Disable
+														</Button>
+													) : (
+														<Button variant="success mx-1" size="sm" onClick={()=>handleEnableNode({email: element.email, node: key})}>
+															Enable
+														</Button>
+													)}
+												</span>
+											))}
 										</div>
 									</div>
 									<div className="home-traffic-fs">

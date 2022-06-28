@@ -11,9 +11,6 @@ import (
 	"net/http"
 	"time"
 
-	b64 "encoding/base64"
-	"encoding/json"
-
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 	uuid "github.com/nu7hatch/gouuid"
@@ -72,38 +69,6 @@ func VerifyPassword(userPassword string, providedPassword string) (bool, string)
 	}
 
 	return check, msg
-}
-
-func GenerateSubscription(user User, Domains map[string]string) string {
-
-	var node Node
-	subscription := ""
-
-	for index, item := range Domains {
-
-		node = Node{
-			Domain:  item,
-			Path:    "/" + user.Path,
-			UUID:    user.UUID,
-			Remark:  index,
-			Version: "2",
-			Port:    "443",
-			Aid:     "64",
-			Net:     "ws",
-			Type:    "none",
-			Tls:     "tls",
-		}
-
-		jsonedNode, _ := json.Marshal(node)
-
-		if len(subscription) == 0 {
-			subscription = "vmess://" + b64.StdEncoding.EncodeToString(jsonedNode)
-		} else {
-			subscription = subscription + "\n" + "vmess://" + b64.StdEncoding.EncodeToString(jsonedNode)
-		}
-	}
-
-	return b64.StdEncoding.EncodeToString([]byte(subscription))
 }
 
 //CreateUser is the api used to tget a single user
@@ -182,11 +147,10 @@ func SignUp() gin.HandlerFunc {
 			user.UUID = uuidV4.String()
 		}
 
-		user.NodeInUse = adminUser.NodeGlobal
+		user.ProduceNodeInUse(adminUser.NodeGlobalList)
 		if user.Role == "admin" {
-			user.NodeGlobal = adminUser.NodeGlobal
+			user.NodeGlobalList = adminUser.NodeGlobalList
 		}
-		user.Suburl = GenerateSubscription(user, *adminUser.NodeGlobal)
 
 		if user.Credittraffic == 0 {
 			credit, _ := strconv.ParseInt(CREDIT, 10, 64)
@@ -246,18 +210,20 @@ func SignUp() gin.HandlerFunc {
 
 		} else {
 
-			domainsLen := len(*user.NodeInUse)
+			domainsLen := len(user.NodeInUseStatus)
 			wg.Add(domainsLen)
-			for _, node := range *user.NodeInUse {
+			for node, available := range user.NodeInUseStatus {
 
-				go func(domain string) {
-					defer wg.Done()
-					if domain == "sl.undervineyard.com" {
-						grpctools.GrpcClientToAddUser(domain, "80", user)
-					} else {
-						grpctools.GrpcClientToAddUser(domain, "50051", user)
-					}
-				}(node)
+				if available {
+					go func(domain string) {
+						defer wg.Done()
+						if domain == "sl.undervineyard.com" {
+							grpctools.GrpcClientToAddUser(domain, "80", user)
+						} else {
+							grpctools.GrpcClientToAddUser(domain, "50051", user)
+						}
+					}(node)
+				}
 
 			}
 		}
@@ -345,7 +311,7 @@ func GenerateConfig() gin.HandlerFunc {
 			return
 		}
 
-		c.JSON(http.StatusOK, gin.H{"email": user.Email, "uuid": user.UUID, "path": user.Path, "nodeinuse": user.NodeInUse})
+		c.JSON(http.StatusOK, gin.H{"email": user.Email, "uuid": user.UUID, "path": user.Path, "nodeinuse": user.NodeInUseStatus})
 	}
 }
 
@@ -363,7 +329,7 @@ func AddNode() gin.HandlerFunc {
 
 		var ctx, cancel = context.WithTimeout(context.Background(), 60*time.Second)
 		defer cancel()
-		var domains *map[string]string
+		var domains map[string]string
 		var current = time.Now()
 
 		if err := c.BindJSON(&domains); err != nil {
@@ -381,11 +347,10 @@ func AddNode() gin.HandlerFunc {
 
 		for _, user := range allUsers {
 			if user.Role == "admin" {
-				user.NodeGlobal = domains
+				user.NodeGlobalList = domains
 			}
 
-			user.NodeInUse = domains
-			user.Suburl = GenerateSubscription(*user, *domains)
+			user.ProduceNodeInUse(domains)
 			user.UpdatedAt = current
 
 			_, err = userCollection.ReplaceOne(ctx, bson.M{"user_id": user.User_id}, user)
@@ -605,18 +570,20 @@ func TakeItOfflineByUserName() gin.HandlerFunc {
 
 		} else {
 
-			domainsLen := len(*user.NodeInUse)
+			domainsLen := len(user.NodeInUseStatus)
 			wg.Add(domainsLen)
-			for _, node := range *user.NodeInUse {
+			for node, available := range user.NodeInUseStatus {
 
-				go func(domain string) {
-					defer wg.Done()
-					if domain == "sl.undervineyard.com" {
-						grpctools.GrpcClientToDeleteUser(domain, "80", user)
-					} else {
-						grpctools.GrpcClientToDeleteUser(domain, "50051", user)
-					}
-				}(node)
+				if available {
+					go func(domain string) {
+						defer wg.Done()
+						if domain == "sl.undervineyard.com" {
+							grpctools.GrpcClientToDeleteUser(domain, "80", user)
+						} else {
+							grpctools.GrpcClientToDeleteUser(domain, "50051", user)
+						}
+					}(node)
+				}
 
 			}
 		}
@@ -678,18 +645,20 @@ func TakeItOnlineByUserName() gin.HandlerFunc {
 
 		} else {
 
-			domainsLen := len(*user.NodeInUse)
+			domainsLen := len(user.NodeInUseStatus)
 			wg.Add(domainsLen)
-			for _, node := range *user.NodeInUse {
+			for node, available := range user.NodeInUseStatus {
 
-				go func(domain string) {
-					defer wg.Done()
-					if domain == "sl.undervineyard.com" {
-						grpctools.GrpcClientToAddUser(domain, "80", user)
-					} else {
-						grpctools.GrpcClientToAddUser(domain, "50051", user)
-					}
-				}(node)
+				if available {
+					go func(domain string) {
+						defer wg.Done()
+						if domain == "sl.undervineyard.com" {
+							grpctools.GrpcClientToAddUser(domain, "80", user)
+						} else {
+							grpctools.GrpcClientToAddUser(domain, "50051", user)
+						}
+					}(node)
+				}
 
 			}
 		}
@@ -741,18 +710,20 @@ func DeleteUserByUserName() gin.HandlerFunc {
 				}("0.0.0.0")
 			} else {
 
-				domainsLen := len(*user.NodeInUse)
+				domainsLen := len(user.NodeInUseStatus)
 				wg.Add(domainsLen)
-				for _, node := range *user.NodeInUse {
+				for node, available := range user.NodeInUseStatus {
 
-					go func(domain string) {
-						defer wg.Done()
-						if domain == "sl.undervineyard.com" {
-							grpctools.GrpcClientToDeleteUser(domain, "80", user)
-						} else {
-							grpctools.GrpcClientToDeleteUser(domain, "50051", user)
-						}
-					}(node)
+					if available {
+						go func(domain string) {
+							defer wg.Done()
+							if domain == "sl.undervineyard.com" {
+								grpctools.GrpcClientToDeleteUser(domain, "80", user)
+							} else {
+								grpctools.GrpcClientToDeleteUser(domain, "50051", user)
+							}
+						}(node)
+					}
 
 				}
 			}
@@ -914,5 +885,137 @@ func WriteToDB() gin.HandlerFunc {
 
 		log.Println("Write to DB by hand!")
 		c.JSON(http.StatusOK, gin.H{"message": "Write to DB successfully!"})
+	}
+}
+
+func DisableNode() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if BOOT_MODE == "" {
+			err := helper.CheckUserType(c, "admin")
+			if err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+				return
+			}
+		}
+
+		var ctx, cancel = context.WithTimeout(context.Background(), 60*time.Second)
+		defer cancel()
+		email := c.Request.URL.Query().Get("email")
+		node := c.Request.URL.Query().Get("node")
+
+		user, err := database.GetUserByName(email)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			log.Printf("Get user by name failed: %s", err.Error())
+			return
+		}
+
+		user.DeleteNodeInUse(node)
+
+		if NODE_TYPE == "local" {
+
+			if node == "localhost" {
+				cmdConn, err := grpc.Dial(fmt.Sprintf("%s:%s", V2_API_ADDRESS, V2_API_PORT), grpc.WithInsecure())
+				if err != nil {
+					msg := "v2ray connection failed."
+					log.Panicf("%v", msg)
+					c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
+					return
+				}
+
+				NHSClient := v2ray.NewHandlerServiceClient(cmdConn, user.Path)
+				err = NHSClient.DelUser(email)
+				if err != nil {
+					msg := "v2ray take user back online failed."
+					log.Panicf("%v", msg)
+					c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
+					return
+				}
+			} else {
+				msg := "You're at local node, you can't disable user at remote node."
+				log.Printf("%v", msg)
+				c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
+				return
+			}
+
+		} else {
+			if node == "sl.undervineyard.com" {
+				grpctools.GrpcClientToDeleteUser(node, "80", user)
+			} else {
+				grpctools.GrpcClientToDeleteUser(node, "50051", user)
+			}
+		}
+
+		upsert := false
+		userCollection.FindOneAndReplace(ctx, bson.M{"_id": user.ID}, user, &options.FindOneAndReplaceOptions{Upsert: &upsert})
+
+		log.Println("Disable node by hand!")
+		c.JSON(http.StatusOK, gin.H{"message": "Disable node successfully!"})
+	}
+}
+
+func EnableNode() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if BOOT_MODE == "" {
+			err := helper.CheckUserType(c, "admin")
+			if err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+				return
+			}
+		}
+		var ctx, cancel = context.WithTimeout(context.Background(), 60*time.Second)
+		defer cancel()
+
+		email := c.Request.URL.Query().Get("email")
+		node := c.Request.URL.Query().Get("node")
+
+		user, err := database.GetUserByName(email)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			log.Printf("Get user by name failed: %s", err.Error())
+			return
+		}
+
+		user.AddNodeInUse(node)
+
+		if NODE_TYPE == "local" {
+
+			if node == "localhost" {
+				cmdConn, err := grpc.Dial(fmt.Sprintf("%s:%s", V2_API_ADDRESS, V2_API_PORT), grpc.WithInsecure())
+				if err != nil {
+					msg := "v2ray connection failed."
+					log.Printf("%v", msg)
+					c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
+					return
+				}
+
+				NHSClient := v2ray.NewHandlerServiceClient(cmdConn, user.Path)
+				err = NHSClient.AddUser(user)
+				if err != nil {
+					msg := "v2ray add user failed."
+					log.Printf("%v", msg)
+					c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
+					return
+				}
+			} else {
+				msg := "You're at local node, you can't enable user at remote node."
+				log.Printf("%v", msg)
+				c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
+				return
+			}
+
+		} else {
+			if node == "sl.undervineyard.com" {
+				grpctools.GrpcClientToAddUser(node, "80", user)
+			} else {
+				grpctools.GrpcClientToAddUser(node, "50051", user)
+			}
+		}
+
+		upsert := false
+		userCollection.FindOneAndReplace(ctx, bson.M{"_id": user.ID}, user, &options.FindOneAndReplaceOptions{Upsert: &upsert})
+
+		log.Println("Enable node by hand!")
+		c.JSON(http.StatusOK, gin.H{"message": "Enable node successfully!"})
 	}
 }

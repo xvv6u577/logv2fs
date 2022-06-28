@@ -36,7 +36,7 @@ const AddNode = ({ btnName }) => {
 				headers: { token: loginState.token },
 			})
 			.then((response) => {
-				setDomains(response.data.nodeinuse);
+				setDomains(response.data.node_global_list);
 			})
 			.catch((err) => {
 				dispatch(alert({ show: true, content: err.toString() }));
@@ -83,14 +83,13 @@ const AddNode = ({ btnName }) => {
 				</Modal.Header>
 				<Modal.Body>
 					<ListGroup>
-						{Object.keys(domains).map((key) => (
+						{Object.entries(domains).map(([key, value]) => (
 							<ListGroup.Item
 								className="d-inline-flex flex-row justify-content-between"
-								eventKey={domains[key]}
+								eventKey={value}
 							>
 								<span className="">
-									{" "}
-									{key} {":"} {domains[key]}{" "}
+									{key}: {value}
 								</span>
 								<i
 									className="bi bi-x-lg"
