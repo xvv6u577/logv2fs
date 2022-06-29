@@ -12,6 +12,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 type User = model.User
@@ -35,8 +36,12 @@ func DelUsersInfo() error {
 
 	filter := bson.M{}
 	_, error := OpenCollection(Client, "USERS").DeleteMany(ctx, filter)
+	if error != nil {
+		fmt.Printf("%v\n", error)
+		return error
+	}
 
-	return error
+	return nil
 }
 
 func DelUsersTable() error {
@@ -46,6 +51,7 @@ func DelUsersTable() error {
 	users, err := GetAllUsersInfo()
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
+		return err
 	}
 
 	for _, ele := range users {
@@ -68,7 +74,7 @@ func DeleteUserByName(email string) error {
 
 	Client.Database("logV2rayTrafficDB").Collection(email).Drop(ctx)
 
-	return error
+	return nil
 }
 
 func CreateUserByName(user *User) error {
@@ -83,7 +89,7 @@ func CreateUserByName(user *User) error {
 
 	count, err := OpenCollection(Client, "USERS").CountDocuments(ctx, bson.M{"email": user.Email})
 	if err != nil {
-		log.Panicf("error occured while counting user %s", user.Email)
+		log.Printf("error occured while counting user %v", user.Email)
 		return err
 	}
 
@@ -94,7 +100,7 @@ func CreateUserByName(user *User) error {
 
 	_, err = OpenCollection(Client, "USERS").InsertOne(ctx, user)
 	if err != nil {
-		log.Panicf("error occured while inserting user %s", user.Email)
+		log.Printf("error occured while inserting user %v", user.Email)
 		return err
 	}
 
@@ -119,35 +125,20 @@ func UpdateUserStatusByName(name string, status string) error {
 }
 
 func GetAllUsersInfo() ([]*User, error) {
-	filter := bson.D{{}}
-	return FilterUsers(filter)
-}
-
-func GetUserByName(name string) (User, error) {
-	var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
-	defer cancel()
-
-	var user User
-	filter := bson.D{
-		primitive.E{Key: "email", Value: name},
-	}
-
-	err := OpenCollection(Client, "USERS").FindOne(ctx, filter).Decode(&user)
-	if err != nil {
-		log.Printf("error occured while finding user %s", name)
-		return user, err
-	}
-
-	return user, nil
-}
-
-func FilterUsers(filter interface{}) ([]*User, error) {
 	var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
 	defer cancel()
 
 	var users []*User
+	var filter = bson.D{{}}
+	var projections = bson.D{
+		{Key: "_id", Value: 0},
+		{Key: "token", Value: 0},
+		{Key: "password", Value: 0},
+		{Key: "refresh_token", Value: 0},
+		{Key: "user_id", Value: 0},
+	}
 
-	cursor, err := OpenCollection(Client, "USERS").Find(ctx, filter)
+	cursor, err := OpenCollection(Client, "USERS").Find(ctx, filter, options.Find().SetProjection(projections))
 	if err != nil {
 		log.Printf("error occured while finding users")
 		return users, err
@@ -166,8 +157,6 @@ func FilterUsers(filter interface{}) ([]*User, error) {
 	if err := cursor.Err(); err != nil {
 		return users, err
 	}
-
-	// once exhausted, close the cursor
 	cursor.Close(ctx)
 
 	if len(users) == 0 {
@@ -175,5 +164,23 @@ func FilterUsers(filter interface{}) ([]*User, error) {
 	}
 
 	return users, nil
+}
 
+func GetUserByName(name string, projections bson.D) (User, error) {
+	var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
+	defer cancel()
+
+	var user User
+	filter := bson.D{
+		primitive.E{Key: "email", Value: name},
+	}
+	opts := options.FindOne().SetProjection(projections)
+
+	err := OpenCollection(Client, "USERS").FindOne(ctx, filter, opts).Decode(&user)
+	if err != nil {
+		log.Printf("error occured while finding user %s", name)
+		return user, err
+	}
+
+	return user, nil
 }

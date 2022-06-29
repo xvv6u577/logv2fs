@@ -60,6 +60,7 @@ func Cron_loggingV2TrafficByUser(traffic Traffic) {
 	if user.Status == "plain" {
 
 		var update bson.D
+		var projections = bson.D{}
 		upsert := true
 		after := options.After
 		opt := options.FindOneAndUpdateOptions{
@@ -67,7 +68,7 @@ func Cron_loggingV2TrafficByUser(traffic Traffic) {
 			Upsert:         &upsert,
 		}
 
-		user, _ := database.GetUserByName(traffic.Name)
+		user, _ := database.GetUserByName(traffic.Name, projections)
 
 		if user.UsedByCurrentDay.UsedByDomain == nil {
 			user.UsedByCurrentDay.UsedByDomain = make(map[string]int64)

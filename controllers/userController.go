@@ -256,23 +256,23 @@ func Login() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var ctx, cancel = context.WithTimeout(context.Background(), 60*time.Second)
 		defer cancel()
-		var user model.User
+		var boundUser model.User
 		var foundUser model.User
 
-		if err := c.BindJSON(&user); err != nil {
+		if err := c.BindJSON(&boundUser); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			log.Printf("error: %v", err)
 			return
 		}
 
-		err := userCollection.FindOne(ctx, bson.M{"email": user.Email}).Decode(&foundUser)
+		err := userCollection.FindOne(ctx, bson.M{"email": boundUser.Email}).Decode(&foundUser)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			log.Printf("error: %v", err)
 			return
 		}
 
-		passwordIsValid, msg := VerifyPassword(user.Password, foundUser.Password)
+		passwordIsValid, msg := VerifyPassword(boundUser.Password, foundUser.Password)
 		if !passwordIsValid {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
 			log.Printf("password is not valid: %s", msg)
@@ -282,15 +282,19 @@ func Login() gin.HandlerFunc {
 		token, refreshToken, _ := helper.GenerateAllTokens(foundUser.Email, foundUser.UUID, foundUser.Path, foundUser.Role, foundUser.User_id)
 
 		helper.UpdateAllTokens(token, refreshToken, foundUser.User_id)
-		err = userCollection.FindOne(ctx, bson.M{"user_id": foundUser.User_id}).Decode(&foundUser)
+		var projections = bson.D{
+			{Key: "_id", Value: 0},
+			{Key: "token", Value: 1},
+		}
 
+		user, err := database.GetUserByName(boundUser.Email, projections)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			log.Printf("error: %v", err)
 			return
 		}
 
-		c.JSON(http.StatusOK, foundUser)
+		c.JSON(http.StatusOK, user)
 	}
 }
 
@@ -304,7 +308,8 @@ func GenerateConfig() gin.HandlerFunc {
 			name = c.Param("name")
 		}
 
-		user, err := database.GetUserByName(name)
+		var projections = bson.D{}
+		user, err := database.GetUserByName(name, projections)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			log.Printf("error: %v", err)
@@ -447,61 +452,8 @@ func EditUser() gin.HandlerFunc {
 	}
 }
 
-func GetUsers() gin.HandlerFunc {
-	return func(c *gin.Context) {
-
-		if BOOT_MODE == "" {
-			if err := helper.CheckUserType(c, "admin"); err != nil {
-				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-				log.Printf("%s", err.Error())
-				return
-			}
-		}
-		var ctx, cancel = context.WithTimeout(context.Background(), 60*time.Second)
-
-		// recordPerPage := 10
-		recordPerPage, err := strconv.Atoi(c.Query("recordPerPage"))
-		if err != nil || recordPerPage < 1 {
-			recordPerPage = 10
-		}
-
-		page, err1 := strconv.Atoi(c.Query("page"))
-		if err1 != nil || page < 1 {
-			page = 1
-		}
-
-		// startIndex := (page - 1) * recordPerPage
-		startIndex, _ := strconv.Atoi(c.Query("startIndex"))
-
-		matchStage := bson.D{{Key: "$match", Value: bson.D{{}}}}
-		groupStage := bson.D{{Key: "$group", Value: bson.D{{Key: "_id", Value: bson.D{{Key: "_id", Value: "null"}}}, {Key: "total_count", Value: bson.D{{Key: "$sum", Value: 1}}}, {Key: "data", Value: bson.D{{Key: "$push", Value: "$$ROOT"}}}}}}
-		projectStage := bson.D{
-			{Key: "$project", Value: bson.D{
-				{Key: "_id", Value: 0},
-				{Key: "total_count", Value: 1},
-				{Key: "user_items", Value: bson.D{{Key: "$slice", Value: []interface{}{"$data", startIndex, recordPerPage}}}},
-			}}}
-
-		result, err := userCollection.Aggregate(ctx, mongo.Pipeline{matchStage, groupStage, projectStage})
-		defer cancel()
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "error occured while listing user items"})
-			log.Printf("error occured while listing user items: %v", err)
-			return
-		}
-		var allusers []bson.M
-		if err = result.All(ctx, &allusers); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "error occured while listing user items"})
-			log.Printf("error occured while listing user items: %v", err)
-			return
-		}
-		c.JSON(http.StatusOK, allusers[0])
-
-	}
-}
-
 //GetUser is the api used to get a single user
-func GetUser() gin.HandlerFunc {
+func GetUserByID() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var ctx, cancel = context.WithTimeout(context.Background(), 60*time.Second)
 		defer cancel()
@@ -539,7 +491,8 @@ func TakeItOfflineByUserName() gin.HandlerFunc {
 
 		name := c.Param("name")
 
-		user, err := database.GetUserByName(name)
+		var projections = bson.D{}
+		user, err := database.GetUserByName(name, projections)
 		if err != nil {
 			msg := "database get user failed."
 			c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
@@ -613,8 +566,9 @@ func TakeItOnlineByUserName() gin.HandlerFunc {
 		}
 
 		name := c.Param("name")
+		var projections = bson.D{}
 
-		user, err := database.GetUserByName(name)
+		user, err := database.GetUserByName(name, projections)
 		if err != nil {
 			msg := "database get user failed."
 			c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
@@ -689,8 +643,9 @@ func DeleteUserByUserName() gin.HandlerFunc {
 		}
 
 		name := c.Param("name")
+		var projections = bson.D{}
 
-		user, err := database.GetUserByName(name)
+		user, err := database.GetUserByName(name, projections)
 		if err != nil {
 			msg := "database get user failed."
 			c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
@@ -821,7 +776,12 @@ func GetAllUsers() gin.HandlerFunc {
 			}
 		}
 
-		allUsers, _ := database.GetAllUsersInfo()
+		allUsers, err := database.GetAllUsersInfo()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			log.Printf("GetAllUsers failed: %s", err.Error())
+			return
+		}
 		if len(allUsers) == 0 {
 			c.JSON(http.StatusOK, []User{})
 			return
@@ -841,7 +801,20 @@ func GetUserByName() gin.HandlerFunc {
 			return
 		}
 
-		user, err := database.GetUserByName(name)
+		var projections = bson.D{
+			{Key: "used_by_current_day", Value: 1},
+			{Key: "used_by_current_month", Value: 1},
+			{Key: "traffic_by_month", Value: 1},
+			{Key: "traffic_by_day", Value: 1},
+			{Key: "used", Value: 1},
+			{Key: "email", Value: 1},
+			{Key: "path", Value: 1},
+			{Key: "uuid", Value: 1},
+			{Key: "name", Value: 1},
+			{Key: "node_global_list", Value: 1},
+			{Key: "_id", Value: 0},
+		}
+		user, err := database.GetUserByName(name, projections)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			log.Printf("Get user by name failed: %s", err.Error())
@@ -856,7 +829,8 @@ func GetSubscripionURL() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		name := c.Param("name")
 
-		user, err := database.GetUserByName(name)
+		var projections = bson.D{}
+		user, err := database.GetUserByName(name, projections)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			log.Printf("GetUserByName failed: %s", err.Error())
@@ -903,7 +877,8 @@ func DisableNode() gin.HandlerFunc {
 		email := c.Request.URL.Query().Get("email")
 		node := c.Request.URL.Query().Get("node")
 
-		user, err := database.GetUserByName(email)
+		var projections = bson.D{}
+		user, err := database.GetUserByName(email, projections)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			log.Printf("Get user by name failed: %s", err.Error())
@@ -969,7 +944,8 @@ func EnableNode() gin.HandlerFunc {
 		email := c.Request.URL.Query().Get("email")
 		node := c.Request.URL.Query().Get("node")
 
-		user, err := database.GetUserByName(email)
+		var projections = bson.D{}
+		user, err := database.GetUserByName(email, projections)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			log.Printf("Get user by name failed: %s", err.Error())

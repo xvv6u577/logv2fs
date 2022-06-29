@@ -109,6 +109,21 @@ func main() {
 
 					switch tag {
 
+					case "test":
+
+						var projections = bson.D{
+							{Key: "uuid", Value: 1},
+							{Key: "name", Value: 1},
+							{Key: "suburl", Value: 1},
+						}
+						user, err := database.GetUserByName("casterasadmin", projections)
+						if err != nil {
+							fmt.Printf("Error: %v\n", err)
+						}
+						fmt.Printf("%v\n", user)
+
+						return nil
+
 					case "updateNodeInUseStatus":
 						var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
 						defer cancel()
@@ -145,16 +160,6 @@ func main() {
 							}
 
 						}
-
-						return nil
-
-					case "dbtest":
-
-						user, err := database.GetUserByName("casterasadmin")
-						if err != nil {
-							fmt.Printf("Error: %v\n", err)
-						}
-						fmt.Println(user)
 
 						return nil
 

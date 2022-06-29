@@ -78,7 +78,7 @@ const Home = () => {
 			});
 	};
 
-	const handleDisableNode = ({email, node}) => {
+	const handleDisableNode = ({ email, node }) => {
 		axios
 			.get(process.env.REACT_APP_API_HOST + "disablenode", {
 				params: { email, node },
@@ -95,9 +95,9 @@ const Home = () => {
 					dispatch(alert({ show: true, content: err.toString() }));
 				}
 			});
-	}
+	};
 
-	const handleEnableNode = ({email, node}) => {
+	const handleEnableNode = ({ email, node }) => {
 		axios
 			.get(process.env.REACT_APP_API_HOST + "enablenode", {
 				params: { email, node },
@@ -114,7 +114,7 @@ const Home = () => {
 					dispatch(alert({ show: true, content: err.toString() }));
 				}
 			});
-	}
+	};
 
 	useEffect(() => {
 		if (message.show === true) {
@@ -233,29 +233,10 @@ const Home = () => {
 										{element.status === "plain" ? (
 											<Button
 												onClick={() => handleOffline(element.email)}
-												variant="success mx-1"
+												variant="secondary mx-1"
 												size="sm"
 											>
 												Disable
-											</Button>
-										) : (
-											<Button
-												onClick={() => handleOffline(element.email)}
-												variant="success mx-1"
-												size="sm"
-												disabled
-											>
-												Disable
-											</Button>
-										)}
-										{element.status === "plain" ? (
-											<Button
-												onClick={() => handleOnline(element.email)}
-												variant="success mx-1"
-												size="sm"
-												disabled
-											>
-												Enable
 											</Button>
 										) : (
 											<Button
@@ -278,14 +259,14 @@ const Home = () => {
 										<div className="my-1">
 											用户名: <TapToCopied>{element.email}</TapToCopied>
 										</div>
-										<div className="my-1">
+										{/* <div className="my-1">
 											密码:{" "}
 											<TapToCopied>
 												{element.email.length < 6
 													? "mypassword"
 													: element.email}
 											</TapToCopied>
-										</div>
+										</div> */}
 										<div className="my-1">
 											path: <TapToCopied>{element.path}</TapToCopied>
 										</div>
@@ -301,20 +282,41 @@ const Home = () => {
 											</TapToCopied>
 										</div>
 										<div className="my-1">
-											{element && Object.entries(element.node_in_use_status).map(([key, value]) => (
-												<span className="d-block my-1">
-													{key}:{" "}
-													{value ? (
-														<Button variant="success mx-1" size="sm" onClick={()=>handleDisableNode({email: element.email, node: key})}>
-															Disable
-														</Button>
-													) : (
-														<Button variant="success mx-1" size="sm" onClick={()=>handleEnableNode({email: element.email, node: key})}>
-															Enable
-														</Button>
-													)}
-												</span>
-											))}
+											{element &&
+												Object.entries(element.node_in_use_status).map(
+													([key, value]) => (
+														<span className="d-block my-1">
+															{key}:{" "}
+															{value ? (
+																<Button
+																	variant="secondary mx-1"
+																	size="sm"
+																	onClick={() =>
+																		handleDisableNode({
+																			email: element.email,
+																			node: key,
+																		})
+																	}
+																>
+																	Disable
+																</Button>
+															) : (
+																<Button
+																	variant="success mx-1"
+																	size="sm"
+																	onClick={() =>
+																		handleEnableNode({
+																			email: element.email,
+																			node: key,
+																		})
+																	}
+																>
+																	Enable
+																</Button>
+															)}
+														</span>
+													)
+												)}
 										</div>
 									</div>
 									<div className="home-traffic-fs">
