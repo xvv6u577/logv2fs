@@ -48,7 +48,10 @@ func DelUsersTable() error {
 	var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
 	defer cancel()
 
-	users, err := GetAllUsersInfo()
+	var projections = bson.D{
+		{Key: "email", Value: 1},
+	}
+	users, err := GetPartialInfosForAllUsers(projections)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
 		return err
@@ -124,19 +127,54 @@ func UpdateUserStatusByName(name string, status string) error {
 	return nil
 }
 
-func GetAllUsersInfo() ([]*User, error) {
+func GetPartialInfosForAllUsers(projections bson.D) ([]*User, error) {
 	var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
 	defer cancel()
 
 	var users []*User
 	var filter = bson.D{{}}
-	var projections = bson.D{
-		{Key: "_id", Value: 0},
-		{Key: "token", Value: 0},
-		{Key: "password", Value: 0},
-		{Key: "refresh_token", Value: 0},
-		{Key: "user_id", Value: 0},
+	// var projections = bson.D{
+	// 	{Key: "_id", Value: 0},
+	// 	{Key: "token", Value: 0},
+	// 	{Key: "password", Value: 0},
+	// 	{Key: "refresh_token", Value: 0},
+	// }
+
+	cursor, err := OpenCollection(Client, "USERS").Find(ctx, filter, options.Find().SetProjection(projections))
+	if err != nil {
+		log.Printf("error occured while finding users")
+		return users, err
 	}
+
+	for cursor.Next(ctx) {
+		var t User
+		err := cursor.Decode(&t)
+		if err != nil {
+			return users, err
+		}
+
+		users = append(users, &t)
+	}
+
+	if err := cursor.Err(); err != nil {
+		return users, err
+	}
+	cursor.Close(ctx)
+
+	if len(users) == 0 {
+		return users, mongo.ErrNoDocuments
+	}
+
+	return users, nil
+}
+
+func GetFullInfosForAllUsers_ForInternalUse() ([]*User, error) {
+	var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
+	defer cancel()
+
+	var users []*User
+	var filter = bson.D{{}}
+	var projections = bson.D{}
 
 	cursor, err := OpenCollection(Client, "USERS").Find(ctx, filter, options.Find().SetProjection(projections))
 	if err != nil {

@@ -343,7 +343,7 @@ func AddNode() gin.HandlerFunc {
 			return
 		}
 
-		allUsers, err := database.GetAllUsersInfo()
+		allUsers, err := database.GetFullInfosForAllUsers_ForInternalUse()
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			log.Printf("error: %v", err)
@@ -358,7 +358,7 @@ func AddNode() gin.HandlerFunc {
 			user.ProduceNodeInUse(domains)
 			user.UpdatedAt = current
 
-			_, err = userCollection.ReplaceOne(ctx, bson.M{"user_id": user.User_id}, user)
+			_, err := userCollection.ReplaceOne(ctx, bson.M{"user_id": user.User_id}, user)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 				log.Printf("error: %v", err)
@@ -776,7 +776,14 @@ func GetAllUsers() gin.HandlerFunc {
 			}
 		}
 
-		allUsers, err := database.GetAllUsersInfo()
+		var projections = bson.D{
+			{Key: "_id", Value: 0},
+			{Key: "token", Value: 0},
+			{Key: "password", Value: 0},
+			{Key: "refresh_token", Value: 0},
+		}
+
+		allUsers, err := database.GetPartialInfosForAllUsers(projections)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			log.Printf("GetAllUsers failed: %s", err.Error())

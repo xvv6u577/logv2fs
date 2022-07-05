@@ -233,7 +233,7 @@ const Home = () => {
 										{element.status === "plain" ? (
 											<Button
 												onClick={() => handleOffline(element.email)}
-												variant="secondary mx-1"
+												variant="primary mx-1"
 												size="sm"
 											>
 												Disable
@@ -289,7 +289,7 @@ const Home = () => {
 															{key}:{" "}
 															{value ? (
 																<Button
-																	variant="secondary mx-1"
+																	variant="primary mx-1"
 																	size="sm"
 																	onClick={() =>
 																		handleDisableNode({
