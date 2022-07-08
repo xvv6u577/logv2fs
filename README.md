@@ -6,6 +6,8 @@
 
 #### gRPC
 
+> 每个加入的VM实例需要打开端口80、443、50051
+
 ```
 protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative proto/myproto.proto
 ```
@@ -20,9 +22,8 @@ go run . server
 # or 
 go run ./ s
 
-# 清空数据库
-go run ./ mongo delallusers
-go run ./ mongo delalltables
+go build
+go install
 ```
 
 以systemd service运行（以ubuntu 18.04为例）
@@ -49,16 +50,6 @@ npm start
 ### 生成生产环境文件
 ```
 npm run build
-```
-### 辅助脚本 ./tool/ 
-#### 生成 users.json
-```
-node ./tool/generateUsers.js
-```
-#### 把users.json,db.json数据添加到mongoDB (wild mode有效)
-```
-node ./tool/pushUsersToDB.js
-node ./tool/pushJsonFileToDB.js
 ```
 
 

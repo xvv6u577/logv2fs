@@ -144,16 +144,16 @@ func main() {
 
 						var current = time.Now().Local()
 
-						var adminUser User
+						// var adminUser User
 						userCollection := database.OpenCollection(database.Client, "USERS")
-						err := userCollection.FindOne(ctx, bson.M{"email": "casterasadmin"}).Decode(&adminUser)
-						if err != nil {
-							fmt.Printf("Error: %v\n", err)
-						}
+						// err := userCollection.FindOne(ctx, bson.M{"email": "casterasadmin"}).Decode(&adminUser)
+						// if err != nil {
+						// 	fmt.Printf("Error: %v\n", err)
+						// }
 
-						if adminUser.NodeGlobalList == nil {
-							adminUser.NodeGlobalList = make(map[string]string)
-						}
+						// if adminUser.NodeGlobalList == nil {
+						// 	adminUser.NodeGlobalList = make(map[string]string)
+						// }
 
 						allUsers, err := database.GetFullInfosForAllUsers_ForInternalUse()
 						if err != nil {
@@ -161,18 +161,23 @@ func main() {
 						}
 
 						for _, user := range allUsers {
-							if user.Role == "admin" {
-								user.NodeGlobalList = adminUser.NodeGlobalList
+							if user.Status == v2ray.DELETE {
+								fmt.Println(user.Email)
+								for key, val := range user.NodeInUseStatus {
+									user.NodeInUseStatus[key] = false
+									fmt.Printf("%v, %v\n", key, val)
+								}
+
+								filter := bson.D{primitive.E{Key: "email", Value: user.Email}}
+								update := bson.M{"$set": bson.M{"updated_at": current, "node_in_use_status": user.NodeInUseStatus}}
+
+								_, err = userCollection.UpdateOne(ctx, filter, update)
+								if err != nil {
+									msg := "database user info update failed."
+									fmt.Printf("%s", msg)
+									return err
+								}
 							}
-
-							user.ProduceNodeInUse(adminUser.NodeGlobalList)
-							user.UpdatedAt = current
-
-							_, err = userCollection.ReplaceOne(ctx, bson.M{"user_id": user.User_id}, user)
-							if err != nil {
-								fmt.Printf("Error: %v\n", err)
-							}
-
 						}
 
 						return nil

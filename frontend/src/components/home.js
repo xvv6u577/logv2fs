@@ -233,7 +233,7 @@ const Home = () => {
 										{element.status === "plain" ? (
 											<Button
 												onClick={() => handleOffline(element.email)}
-												variant="primary mx-1"
+												variant="primary mx-1 btn-custom"
 												size="sm"
 											>
 												Disable
@@ -241,7 +241,7 @@ const Home = () => {
 										) : (
 											<Button
 												onClick={() => handleOnline(element.email)}
-												variant="success mx-1"
+												variant="success mx-1 btn-custom"
 												size="sm"
 											>
 												Enable
@@ -255,41 +255,47 @@ const Home = () => {
 									</div>
 								</ListGroup.Item>
 								<Accordion.Body>
-									<div className="info-modal mb-3 px-5 h6 small">
-										<div className="my-1">
-											用户名: <TapToCopied>{element.email}</TapToCopied>
+									<div className="d-md-flex flex-row justify-content-between px-md-5">
+										<div className="p-2 flex-fill px-md-5 border border-info border-3 rounded-3  m-1">
+											<div className="d-flex justify-content-between">
+												<span className="">用户名:</span>{" "}
+												<TapToCopied>{element.email}</TapToCopied>
+											</div>
+											{/* <div className="my-1">
+												密码:{" "}
+												<TapToCopied>
+													{element.email.length < 6
+														? "mypassword"
+														: element.email}
+												</TapToCopied>
+											</div> */}
+											<div className="d-flex justify-content-between">
+												<span className="">path: </span>
+												<TapToCopied>{element.path}</TapToCopied>
+											</div>
+											<div className="d-md-flex justify-content-between">
+												<span className="">uuid: </span>
+												<TapToCopied>{element.uuid}</TapToCopied>
+											</div>
+											<div className="d-md-flex justify-content-between">
+												<span className="">SubUrl:</span>
+												<TapToCopied>
+													{process.env.REACT_APP_FILE_AND_SUB_URL +
+														"/static/" +
+														element.email}
+												</TapToCopied>
+											</div>
 										</div>
-										{/* <div className="my-1">
-											密码:{" "}
-											<TapToCopied>
-												{element.email.length < 6
-													? "mypassword"
-													: element.email}
-											</TapToCopied>
-										</div> */}
-										<div className="my-1">
-											path: <TapToCopied>{element.path}</TapToCopied>
-										</div>
-										<div className="my-1">
-											uuid: <TapToCopied>{element.uuid}</TapToCopied>
-										</div>
-										<div className="text-break my-1">
-											SubUrl:{" "}
-											<TapToCopied>
-												{process.env.REACT_APP_FILE_AND_SUB_URL +
-													"/static/" +
-													element.email}
-											</TapToCopied>
-										</div>
-										<div className="my-1">
+
+										<div className="p-2 flex-fill px-md-5 border border-info border-3 rounded-3  m-1">
 											{element &&
 												Object.entries(element.node_in_use_status).map(
 													([key, value]) => (
-														<span className="d-block my-1">
-															{key}:{" "}
+														<div className="d-flex flex-row justify-content-between">
+															<span className="me-auto my-1">Node: {key}</span>
 															{value ? (
 																<Button
-																	variant="primary mx-1"
+																	variant="primary btn-custom"
 																	size="sm"
 																	onClick={() =>
 																		handleDisableNode({
@@ -302,7 +308,7 @@ const Home = () => {
 																</Button>
 															) : (
 																<Button
-																	variant="success mx-1"
+																	variant="success btn-custom"
 																	size="sm"
 																	onClick={() =>
 																		handleEnableNode({
@@ -314,12 +320,12 @@ const Home = () => {
 																	Enable
 																</Button>
 															)}
-														</span>
+														</div>
 													)
 												)}
 										</div>
 									</div>
-									<div className="home-traffic-fs">
+									<div className="home-traffic-fs ">
 										<h4 className=" text-center">Monthly Traffic </h4>
 										<TrafficTable data={element.traffic_by_month} by="月份" />
 									</div>
@@ -344,7 +350,7 @@ function ConfirmDelUser({ btnName, deleteUserFunc }) {
 
 	return (
 		<>
-			<Button variant="dark mx-1" size="sm" onClick={handleShow}>
+			<Button variant="dark mx-1 btn-custom" size="sm" onClick={handleShow}>
 				{btnName}
 			</Button>
 
@@ -429,7 +435,11 @@ function EditUser({ btnName, user, editUserFunc }) {
 
 	return (
 		<>
-			<Button variant="outline-success mx-1" size="sm" onClick={handleShow}>
+			<Button
+				variant="outline-success mx-1 btn-custom"
+				size="sm"
+				onClick={handleShow}
+			>
 				{btnName}
 			</Button>
 

@@ -7,7 +7,7 @@ const TapToCopied = (props) => {
 
 	return (
 		<span className="tap-to-copied h6 me-3">
-			<span ref={target} className="small copied-text">
+			<span ref={target} className="small copied-text text-break">
 				{props.children}
 			</span>
 			{" | "}

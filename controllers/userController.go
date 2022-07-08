@@ -555,6 +555,7 @@ func TakeItOfflineByUserName() gin.HandlerFunc {
 			}
 		}
 
+		wg.Wait()
 		user.ProduceSuburl()
 		filter := bson.D{primitive.E{Key: "email", Value: name}}
 		update := bson.M{"$set": bson.M{"status": v2ray.DELETE, "node_in_use_status": user.NodeInUseStatus, "suburl": user.Suburl}}
@@ -566,8 +567,6 @@ func TakeItOfflineByUserName() gin.HandlerFunc {
 			log.Printf("%s", msg)
 			return
 		}
-
-		wg.Wait()
 
 		c.JSON(http.StatusOK, gin.H{"message": "User " + user.Name + " is offline!"})
 	}
@@ -651,6 +650,7 @@ func TakeItOnlineByUserName() gin.HandlerFunc {
 			}
 		}
 
+		wg.Wait()
 		user.ProduceSuburl()
 		filter := bson.D{primitive.E{Key: "email", Value: name}}
 		update := bson.M{"$set": bson.M{"status": v2ray.PLAIN, "node_in_use_status": user.NodeInUseStatus, "suburl": user.Suburl}}
@@ -662,8 +662,6 @@ func TakeItOnlineByUserName() gin.HandlerFunc {
 			log.Printf("%s", msg)
 			return
 		}
-
-		wg.Wait()
 
 		c.JSON(http.StatusOK, gin.H{"message": "User " + user.Name + " is online!"})
 	}
