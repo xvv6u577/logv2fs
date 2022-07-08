@@ -111,22 +111,6 @@ func CreateUserByName(user *User) error {
 	return err
 }
 
-func UpdateUserStatusByName(name string, status string) error {
-	var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
-	defer cancel()
-
-	filter := bson.D{primitive.E{Key: "email", Value: name}}
-	update := bson.M{"$set": bson.M{"status": status}}
-
-	_, err := OpenCollection(Client, "USERS").UpdateOne(ctx, filter, update)
-	if err != nil {
-		log.Printf("error occured while updating user %s", name)
-		return err
-	}
-
-	return nil
-}
-
 func GetPartialInfosForAllUsers(projections bson.D) ([]*User, error) {
 	var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
 	defer cancel()

@@ -39,6 +39,7 @@ var (
 	V2_API_ADDRESS                   = os.Getenv("V2_API_ADDRESS")
 	V2_API_PORT                      = os.Getenv("V2_API_PORT")
 	NODE_TYPE                        = os.Getenv("NODE_TYPE")
+	CURRENT_DOMAIN                   = os.Getenv("CURRENT_DOMAIN")
 )
 
 type (
@@ -335,7 +336,6 @@ func AddNode() gin.HandlerFunc {
 		var ctx, cancel = context.WithTimeout(context.Background(), 60*time.Second)
 		defer cancel()
 		var domains map[string]string
-		var current = time.Now()
 
 		if err := c.BindJSON(&domains); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -356,18 +356,17 @@ func AddNode() gin.HandlerFunc {
 			}
 
 			user.ProduceNodeInUse(domains)
-			user.UpdatedAt = current
-
-			_, err := userCollection.ReplaceOne(ctx, bson.M{"user_id": user.User_id}, user)
+			filter := bson.D{primitive.E{Key: "user_id", Value: user.User_id}}
+			update := bson.M{"$set": bson.M{"updated_at": time.Now(), "node_in_use_status": user.NodeInUseStatus, "suburl": user.Suburl, "node_global_list": user.NodeGlobalList}}
+			_, err = userCollection.UpdateOne(ctx, filter, update)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-				log.Printf("error: %v", err)
+				log.Printf("%v", err.Error())
 				return
 			}
-
 		}
 
-		c.JSON(http.StatusOK, gin.H{"message": "node added"})
+		c.JSON(http.StatusOK, gin.H{"message": "node added successfully"})
 	}
 }
 
@@ -480,7 +479,6 @@ func GetUserByID() gin.HandlerFunc {
 
 func TakeItOfflineByUserName() gin.HandlerFunc {
 	return func(c *gin.Context) {
-
 		if BOOT_MODE == "" {
 			if err := helper.CheckUserType(c, "admin"); err != nil {
 				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -489,9 +487,20 @@ func TakeItOfflineByUserName() gin.HandlerFunc {
 			}
 		}
 
+		var ctx, cancel = context.WithTimeout(context.Background(), 60*time.Second)
+		defer cancel()
 		name := c.Param("name")
 
-		var projections = bson.D{}
+		var projections = bson.D{
+			{Key: "used_by_current_year", Value: 0},
+			{Key: "used_by_current_month", Value: 0},
+			{Key: "used_by_current_day", Value: 0},
+			{Key: "traffic_by_year", Value: 0},
+			{Key: "traffic_by_month", Value: 0},
+			{Key: "password", Value: 0},
+			{Key: "refresh_token", Value: 0},
+			{Key: "token", Value: 0},
+		}
 		user, err := database.GetUserByName(name, projections)
 		if err != nil {
 			msg := "database get user failed."
@@ -521,6 +530,10 @@ func TakeItOfflineByUserName() gin.HandlerFunc {
 				return
 			}
 
+			if user.NodeInUseStatus[CURRENT_DOMAIN] {
+				user.NodeInUseStatus[CURRENT_DOMAIN] = false
+			}
+
 		} else {
 
 			domainsLen := len(user.NodeInUseStatus)
@@ -536,12 +549,17 @@ func TakeItOfflineByUserName() gin.HandlerFunc {
 							grpctools.GrpcClientToDeleteUser(domain, "50051", user)
 						}
 					}(node)
+					user.NodeInUseStatus[node] = false
 				}
 
 			}
 		}
 
-		err = database.UpdateUserStatusByName(name, v2ray.DELETE)
+		user.ProduceSuburl()
+		filter := bson.D{primitive.E{Key: "email", Value: name}}
+		update := bson.M{"$set": bson.M{"status": v2ray.DELETE, "node_in_use_status": user.NodeInUseStatus, "suburl": user.Suburl}}
+
+		_, err = userCollection.UpdateOne(ctx, filter, update)
 		if err != nil {
 			msg := "database user info update failed."
 			c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
@@ -565,8 +583,19 @@ func TakeItOnlineByUserName() gin.HandlerFunc {
 			}
 		}
 
+		var ctx, cancel = context.WithTimeout(context.Background(), 60*time.Second)
+		defer cancel()
 		name := c.Param("name")
-		var projections = bson.D{}
+		var projections = bson.D{
+			{Key: "used_by_current_year", Value: 0},
+			{Key: "used_by_current_month", Value: 0},
+			{Key: "used_by_current_day", Value: 0},
+			{Key: "traffic_by_year", Value: 0},
+			{Key: "traffic_by_month", Value: 0},
+			{Key: "password", Value: 0},
+			{Key: "refresh_token", Value: 0},
+			{Key: "token", Value: 0},
+		}
 
 		user, err := database.GetUserByName(name, projections)
 		if err != nil {
@@ -597,13 +626,17 @@ func TakeItOnlineByUserName() gin.HandlerFunc {
 				return
 			}
 
+			if !user.NodeInUseStatus[CURRENT_DOMAIN] {
+				user.NodeInUseStatus[CURRENT_DOMAIN] = true
+			}
+
 		} else {
 
 			domainsLen := len(user.NodeInUseStatus)
 			wg.Add(domainsLen)
 			for node, available := range user.NodeInUseStatus {
 
-				if available {
+				if !available {
 					go func(domain string) {
 						defer wg.Done()
 						if domain == "sl.undervineyard.com" {
@@ -612,12 +645,17 @@ func TakeItOnlineByUserName() gin.HandlerFunc {
 							grpctools.GrpcClientToAddUser(domain, "50051", user)
 						}
 					}(node)
+					user.NodeInUseStatus[node] = true
 				}
 
 			}
 		}
 
-		err = database.UpdateUserStatusByName(name, v2ray.PLAIN)
+		user.ProduceSuburl()
+		filter := bson.D{primitive.E{Key: "email", Value: name}}
+		update := bson.M{"$set": bson.M{"status": v2ray.PLAIN, "node_in_use_status": user.NodeInUseStatus, "suburl": user.Suburl}}
+
+		_, err = userCollection.UpdateOne(ctx, filter, update)
 		if err != nil {
 			msg := "database user info update failed."
 			c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
@@ -789,12 +827,21 @@ func GetAllUsers() gin.HandlerFunc {
 			log.Printf("GetAllUsers failed: %s", err.Error())
 			return
 		}
+
 		if len(allUsers) == 0 {
 			c.JSON(http.StatusOK, []User{})
 			return
 		}
-		c.JSON(http.StatusOK, allUsers)
 
+		if NODE_TYPE == "local" {
+			for _, user := range allUsers {
+				user.NodeInUseStatus = map[string]bool{CURRENT_DOMAIN: user.NodeInUseStatus[CURRENT_DOMAIN]}
+			}
+			c.JSON(http.StatusOK, allUsers)
+			return
+		}
+
+		c.JSON(http.StatusOK, allUsers)
 	}
 }
 
@@ -869,7 +916,7 @@ func WriteToDB() gin.HandlerFunc {
 	}
 }
 
-func DisableNode() gin.HandlerFunc {
+func DisableNodePerUser() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if BOOT_MODE == "" {
 			err := helper.CheckUserType(c, "admin")
@@ -884,7 +931,16 @@ func DisableNode() gin.HandlerFunc {
 		email := c.Request.URL.Query().Get("email")
 		node := c.Request.URL.Query().Get("node")
 
-		var projections = bson.D{}
+		var projections = bson.D{
+			{Key: "used_by_current_year", Value: 0},
+			{Key: "used_by_current_month", Value: 0},
+			{Key: "used_by_current_day", Value: 0},
+			{Key: "traffic_by_year", Value: 0},
+			{Key: "traffic_by_month", Value: 0},
+			{Key: "password", Value: 0},
+			{Key: "refresh_token", Value: 0},
+			{Key: "token", Value: 0},
+		}
 		user, err := database.GetUserByName(email, projections)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -892,30 +948,21 @@ func DisableNode() gin.HandlerFunc {
 			return
 		}
 
-		user.DeleteNodeInUse(node)
-
 		if NODE_TYPE == "local" {
 
-			if node == "localhost" {
-				cmdConn, err := grpc.Dial(fmt.Sprintf("%s:%s", V2_API_ADDRESS, V2_API_PORT), grpc.WithInsecure())
-				if err != nil {
-					msg := "v2ray connection failed."
-					log.Panicf("%v", msg)
-					c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
-					return
-				}
+			cmdConn, err := grpc.Dial(fmt.Sprintf("%s:%s", V2_API_ADDRESS, V2_API_PORT), grpc.WithInsecure())
+			if err != nil {
+				msg := "v2ray connection failed."
+				log.Panicf("%v", msg)
+				c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
+				return
+			}
 
-				NHSClient := v2ray.NewHandlerServiceClient(cmdConn, user.Path)
-				err = NHSClient.DelUser(email)
-				if err != nil {
-					msg := "v2ray take user back online failed."
-					log.Panicf("%v", msg)
-					c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
-					return
-				}
-			} else {
-				msg := "You're at local node, you can't disable user at remote node."
-				log.Printf("%v", msg)
+			NHSClient := v2ray.NewHandlerServiceClient(cmdConn, user.Path)
+			err = NHSClient.DelUser(email)
+			if err != nil {
+				msg := "v2ray take user back online failed."
+				log.Panicf("%v", msg)
 				c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
 				return
 			}
@@ -928,15 +975,24 @@ func DisableNode() gin.HandlerFunc {
 			}
 		}
 
-		upsert := false
-		userCollection.FindOneAndReplace(ctx, bson.M{"_id": user.ID}, user, &options.FindOneAndReplaceOptions{Upsert: &upsert})
+		user.DeleteNodeInUse(node)
+		filter := bson.D{primitive.E{Key: "email", Value: email}}
+		update := bson.M{"$set": bson.M{"node_in_use_status": user.NodeInUseStatus, "suburl": user.Suburl}}
 
-		log.Println("Disable node by hand!")
-		c.JSON(http.StatusOK, gin.H{"message": "Disable node successfully!"})
+		_, err = userCollection.UpdateOne(ctx, filter, update)
+		if err != nil {
+			msg := "database user info update failed."
+			c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
+			log.Printf("%s", msg)
+			return
+		}
+
+		log.Printf("Disable user: %v, node: %v by hand!", email, node)
+		c.JSON(http.StatusOK, gin.H{"message": "Disable user: " + email + " at node: " + node + " successfully!"})
 	}
 }
 
-func EnableNode() gin.HandlerFunc {
+func EnableNodePerUser() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if BOOT_MODE == "" {
 			err := helper.CheckUserType(c, "admin")
@@ -959,29 +1015,20 @@ func EnableNode() gin.HandlerFunc {
 			return
 		}
 
-		user.AddNodeInUse(node)
-
 		if NODE_TYPE == "local" {
 
-			if node == "localhost" {
-				cmdConn, err := grpc.Dial(fmt.Sprintf("%s:%s", V2_API_ADDRESS, V2_API_PORT), grpc.WithInsecure())
-				if err != nil {
-					msg := "v2ray connection failed."
-					log.Printf("%v", msg)
-					c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
-					return
-				}
+			cmdConn, err := grpc.Dial(fmt.Sprintf("%s:%s", V2_API_ADDRESS, V2_API_PORT), grpc.WithInsecure())
+			if err != nil {
+				msg := "v2ray connection failed."
+				log.Printf("%v", msg)
+				c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
+				return
+			}
 
-				NHSClient := v2ray.NewHandlerServiceClient(cmdConn, user.Path)
-				err = NHSClient.AddUser(user)
-				if err != nil {
-					msg := "v2ray add user failed."
-					log.Printf("%v", msg)
-					c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
-					return
-				}
-			} else {
-				msg := "You're at local node, you can't enable user at remote node."
+			NHSClient := v2ray.NewHandlerServiceClient(cmdConn, user.Path)
+			err = NHSClient.AddUser(user)
+			if err != nil {
+				msg := "v2ray add user failed."
 				log.Printf("%v", msg)
 				c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
 				return
@@ -995,10 +1042,19 @@ func EnableNode() gin.HandlerFunc {
 			}
 		}
 
-		upsert := false
-		userCollection.FindOneAndReplace(ctx, bson.M{"_id": user.ID}, user, &options.FindOneAndReplaceOptions{Upsert: &upsert})
+		user.AddNodeInUse(node)
+		filter := bson.D{primitive.E{Key: "email", Value: email}}
+		update := bson.M{"$set": bson.M{"node_in_use_status": user.NodeInUseStatus, "suburl": user.Suburl}}
 
-		log.Println("Enable node by hand!")
-		c.JSON(http.StatusOK, gin.H{"message": "Enable node successfully!"})
+		_, err = userCollection.UpdateOne(ctx, filter, update)
+		if err != nil {
+			msg := "database user info update failed."
+			c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
+			log.Printf("%s", msg)
+			return
+		}
+
+		log.Printf("Enable user: %v, node: %v by hand!", email, node)
+		c.JSON(http.StatusOK, gin.H{"message": "Enable user: " + email + " at node: " + node + " successfully!"})
 	}
 }

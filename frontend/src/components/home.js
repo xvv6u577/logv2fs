@@ -80,7 +80,7 @@ const Home = () => {
 
 	const handleDisableNode = ({ email, node }) => {
 		axios
-			.get(process.env.REACT_APP_API_HOST + "disablenode", {
+			.get(process.env.REACT_APP_API_HOST + "disanodeperusr", {
 				params: { email, node },
 				headers: { token: loginState.token },
 			})
@@ -99,7 +99,7 @@ const Home = () => {
 
 	const handleEnableNode = ({ email, node }) => {
 		axios
-			.get(process.env.REACT_APP_API_HOST + "enablenode", {
+			.get(process.env.REACT_APP_API_HOST + "enanodeperusr", {
 				params: { email, node },
 				headers: { token: loginState.token },
 			})

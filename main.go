@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"runtime/debug"
+	"sync"
 	"time"
 
 	"github.com/caster8013/logv2rayfullstack/database"
@@ -22,6 +23,7 @@ import (
 	"github.com/shomali11/parallelizer"
 	"github.com/urfave/cli/v2"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"google.golang.org/grpc"
 )
@@ -110,17 +112,29 @@ func main() {
 					switch tag {
 
 					case "test":
+						var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
+						defer cancel()
 
-						var projections = bson.D{
-							{Key: "uuid", Value: 1},
-							{Key: "name", Value: 1},
-							{Key: "suburl", Value: 1},
-						}
-						user, err := database.GetUserByName("casterasadmin", projections)
+						var adminUser User
+						userCollection := database.OpenCollection(database.Client, "USERS")
+						err := userCollection.FindOne(ctx, bson.M{"email": "casterasadmin"}).Decode(&adminUser)
 						if err != nil {
 							fmt.Printf("Error: %v\n", err)
+							return err
 						}
-						fmt.Printf("%v\n", user)
+
+						adminUser.NodeInUseStatus["sl.undervineyard.com"] = true
+						adminUser.NodeInUseStatus["w8.undervineyard.com"] = true
+						adminUser.ProduceSuburl()
+						filter := bson.D{primitive.E{Key: "email", Value: "casterasadmin"}}
+						update := bson.M{"$set": bson.M{"status": v2ray.PLAIN, "node_in_use_status": adminUser.NodeInUseStatus, "suburl": adminUser.Suburl}}
+
+						_, err = userCollection.UpdateOne(ctx, filter, update)
+						if err != nil {
+							msg := "database user info update failed."
+							fmt.Printf("%s", msg)
+							return err
+						}
 
 						return nil
 
@@ -396,13 +410,21 @@ func runServer() {
 		if err != nil {
 			log.Panic(err)
 		}
+		defer cmdConn.Close()
+
+		var wg sync.WaitGroup
+		wg.Add(len(allUsersInDB))
 
 		for _, user := range allUsersInDB {
-			if user.Status == "plain" && user.NodeInUseStatus[CURRENT_DOMAIN] {
-				NHSClient := v2ray.NewHandlerServiceClient(cmdConn, user.Path)
-				NHSClient.AddUser(*user)
-			}
+			go func(user User) {
+				defer wg.Done()
+				if user.Status == "plain" && user.NodeInUseStatus[CURRENT_DOMAIN] {
+					NHSClient := v2ray.NewHandlerServiceClient(cmdConn, user.Path)
+					NHSClient.AddUser(user)
+				}
+			}(*user)
 		}
+		wg.Wait()
 	}
 	// add cron
 	routine.Cron_loggingJobs(cronInstance)
