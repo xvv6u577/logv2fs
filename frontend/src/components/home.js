@@ -287,11 +287,11 @@ const Home = () => {
 											</div>
 										</div>
 
-										<div className="p-2 flex-fill px-md-5 border border-info border-3 rounded-3  m-1">
+										<div className="p-2 flex-fill px-md-5 border border-info border-3 rounded-3 m-1">
 											{element &&
 												Object.entries(element.node_in_use_status).map(
 													([key, value]) => (
-														<div className="d-flex flex-row justify-content-between">
+														<div className="d-flex flex-row justify-content-between py-1">
 															<span className="me-auto my-1">Node: {key}</span>
 															{value ? (
 																<Button
@@ -325,7 +325,7 @@ const Home = () => {
 												)}
 										</div>
 									</div>
-									<div className="home-traffic-fs ">
+									<div className="home-traffic-fs pt-2">
 										<h4 className=" text-center">Monthly Traffic </h4>
 										<TrafficTable data={element.traffic_by_month} by="月份" />
 									</div>
