@@ -4,8 +4,6 @@ jobs:
   ssh-deploy-test:
     runs-on: ubuntu-latest
     steps:
-      - name: Adding Known Hosts
-        run: ssh-keyscan -H ${{ secrets.SSHED_HOST }} >> ~/.ssh/known_hosts
       - name: Install SSH key
         uses: shimataro/ssh-key-action@v2
         with:
@@ -18,5 +16,7 @@ jobs:
               User caster
               Port 22
               IdentityFile ~/.ssh/w8_id_rsa
+      - name: Adding Known Hosts
+        run: ssh-keyscan -H ${{ secrets.SSHED_HOST }} >> ~/.ssh/known_hosts
       - name: ssh success test
         run: mkdir foobar
