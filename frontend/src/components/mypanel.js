@@ -54,7 +54,7 @@ function Mypanel() {
 							formatBytes(user.used_by_current_month.amount)}
 					</div>
 					<p>
-					Traffic Used This Month (
+						Traffic Used This Month (
 						{user.used_by_current_month && user.used_by_current_month.period})
 					</p>
 				</div>
@@ -64,24 +64,24 @@ function Mypanel() {
 				</div>
 			</div>
 
-			<div className="info-modal my-5 px-5 h6 small">
-				<div className="my-1">
-					Username: <TapToCopied>{user.email}</TapToCopied>
+			<div
+				className="d-md-flex flex-column justify-content-between border border-info border-3 rounded-3  mx-auto my-3 p-3"
+				style={{ width: "50%" }}
+			>
+				<div className="d-flex justify-content-between">
+					<span className="">用户名:</span>{" "}
+					<TapToCopied>{user.email}</TapToCopied>
 				</div>
-				{/* <div className="my-1">
-					密码:{" "}
-					<TapToCopied>
-						{user.email && user.email.length < 6 ? "mypassword" : user.email}
-					</TapToCopied>
-				</div> */}
-				<div className="my-1">
-					path: <TapToCopied>{user.path}</TapToCopied>
+				<div className="d-flex justify-content-between">
+					<span className="">path: </span>
+					<TapToCopied>{user.path}</TapToCopied>
 				</div>
-				<div className="my-1">
-					uuid: <TapToCopied>{user.uuid}</TapToCopied>
+				<div className="d-md-flex justify-content-between">
+					<span className="">uuid: </span>
+					<TapToCopied>{user.uuid}</TapToCopied>
 				</div>
-				<div className="text-break my-1">
-					SubUrl:{" "}
+				<div className="d-md-flex justify-content-between">
+					<span className="">SubUrl:</span>
 					<TapToCopied>
 						{process.env.REACT_APP_FILE_AND_SUB_URL + "/static/" + user.email}
 					</TapToCopied>
@@ -90,11 +90,15 @@ function Mypanel() {
 
 			<row className="">
 				<div className="pb-3 d-flex flex-column">
-					<div className="h5 py-3 text-center">Monthly Traffic in the Past 1 Year</div>
+					<div className="h5 py-3 text-center">
+						Monthly Traffic in the Past 1 Year
+					</div>
 					<TrafficTable data={user.traffic_by_month} limit={12} by="月份" />
 				</div>
 				<div className="d-flex flex-column">
-					<div className="h5 pb-3 text-center">Daily Traffic in the Past 3 Month</div>
+					<div className="h5 pb-3 text-center">
+						Daily Traffic in the Past 3 Month
+					</div>
 					<TrafficTable data={user.traffic_by_day} limit={90} by="日期" />
 				</div>
 			</row>

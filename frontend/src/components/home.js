@@ -261,14 +261,6 @@ const Home = () => {
 												<span className="">用户名:</span>{" "}
 												<TapToCopied>{element.email}</TapToCopied>
 											</div>
-											{/* <div className="my-1">
-												密码:{" "}
-												<TapToCopied>
-													{element.email.length < 6
-														? "mypassword"
-														: element.email}
-												</TapToCopied>
-											</div> */}
 											<div className="d-flex justify-content-between">
 												<span className="">path: </span>
 												<TapToCopied>{element.path}</TapToCopied>
