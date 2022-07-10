@@ -10,4 +10,4 @@ jobs:
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
           echo "${{ secrets.SSHED_HOST }}" > ~/.ssh/known_hosts
       - name: Deploy test
-        run: ssh caster@34.96.219.248 "mkdir -p foobar"
+        run: ssh caster@34.96.219.248 "sudo mkdir -p /root/foobar"
