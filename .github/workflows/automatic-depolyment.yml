@@ -1,0 +1,19 @@
+name: GitHub Actions Automatic Deployment
+on: push
+jobs:
+  deployment-job:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          path: main
+      - name: Create SSH key
+        run: |
+          install -m 600 -D /dev/null ~/.ssh/id_rsa
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" >> ~/.ssh/id_rsa
+          echo "${{ secrets.RM_SSH_HOST }}" >> ~/.ssh/known_hosts
+          echo "${{ secrets.SSHED_HOST }}" >> ~/.ssh/known_hosts
+      - name: Deploy
+        run: |
+          ssh root@172.93.40.89 -p 28714 "/usr/bin/bash deploy.sh"
+          ssh caster@34.96.219.248 "/usr/bin/bash deploy.sh"
