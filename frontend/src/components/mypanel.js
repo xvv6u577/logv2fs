@@ -37,7 +37,7 @@ function Mypanel() {
 
 	return (
 		<Container className="py-3">
-			<h3>#6 Github Actions Test</h3>
+			<h3>#7 Github Actions Test</h3>
 			<div className="row mypanel-row justify-content-evenly">
 				<div className="mypanel-card col">
 					<div className="h3">
