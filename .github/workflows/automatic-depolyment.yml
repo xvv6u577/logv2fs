@@ -20,4 +20,4 @@ jobs:
           ssh caster@34.96.219.248 "/usr/bin/bash deploy.sh"
           ssh root@172.93.40.89 -p 28714 "/usr/bin/bash deploy.sh"
           ssh azureuser@20.239.161.41 "/usr/bin/bash deploy.sh"
-          ssh ubuntu@146.56.144.121 "/usr/bin/bash deploy.sh"
+          ssh ubuntu@146.56.144.121 "/bin/bash deploy.sh"
