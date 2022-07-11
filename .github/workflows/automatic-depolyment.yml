@@ -11,9 +11,13 @@ jobs:
         run: |
           install -m 600 -D /dev/null ~/.ssh/id_rsa
           echo "${{ secrets.SSH_PRIVATE_KEY }}" >> ~/.ssh/id_rsa
-          echo "${{ secrets.RM_SSH_HOST }}" >> ~/.ssh/known_hosts
           echo "${{ secrets.SSHED_HOST }}" >> ~/.ssh/known_hosts
+          echo "${{ secrets.RM_SSH_HOST }}" >> ~/.ssh/known_hosts
+          echo "${{ secrets.W82ND_SSH_HOST }}" >> ~/.ssh/known_hosts
+          echo "${{ secrets.SL_SSH_HOST }}" >> ~/.ssh/known_hosts
       - name: Deploy
         run: |
-          ssh root@172.93.40.89 -p 28714 "/usr/bin/bash deploy.sh"
           ssh caster@34.96.219.248 "/usr/bin/bash deploy.sh"
+          ssh root@172.93.40.89 -p 28714 "/usr/bin/bash deploy.sh"
+          ssh azureuser@20.239.161.41 "/usr/bin/bash deploy.sh"
+          ssh ubuntu@146.56.144.121 "/usr/bin/bash deploy.sh"
