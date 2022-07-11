@@ -1,5 +1,5 @@
 name: GitHub Actions Automatic Deployment
-on: [push]
+on: push
 jobs:
   deployment-job:
     runs-on: ubuntu-latest
