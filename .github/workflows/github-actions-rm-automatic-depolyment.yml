@@ -5,6 +5,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+        with:
+          path: main
       - name: Create SSH key
         run: |
           install -m 600 -D /dev/null ~/.ssh/id_rsa
