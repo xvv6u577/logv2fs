@@ -16,4 +16,4 @@ jobs:
       - name: Deploy
         run: |
           ssh root@172.93.40.89 -p 28714 "/usr/bin/bash deploy.sh"
-          ssh caster@34.96.219.248 "mkdir -p githubactions"
+          ssh caster@34.96.219.248 "/usr/bin/bash deploy.sh"
