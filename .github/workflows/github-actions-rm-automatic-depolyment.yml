@@ -1,7 +1,7 @@
 name: RM - GitHub Actions Automatic Deployment
 on: [push]
 jobs:
-  ssh-deployment:
+  rm-deployment:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -12,5 +12,5 @@ jobs:
           install -m 600 -D /dev/null ~/.ssh/id_rsa
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
           echo "${{ secrets.RM_SSH_HOST }}" > ~/.ssh/known_hosts
-      - name: Deploy test
+      - name: Deploy
         run: ssh root@172.93.40.89 -p 28714 "/usr/bin/bash deploy.sh"
