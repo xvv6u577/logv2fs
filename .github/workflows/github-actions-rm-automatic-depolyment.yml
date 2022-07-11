@@ -1,7 +1,7 @@
-name: GitHub Actions Auto-Deploy
+name: RM - GitHub Actions Automatic Deployment
 on: [push]
 jobs:
-  ssh-deploy-test:
+  ssh-deployment:
     runs-on: ubuntu-latest
     steps:
       - name: Create SSH key
@@ -10,4 +10,4 @@ jobs:
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
           echo "${{ secrets.SSHED_HOST }}" > ~/.ssh/known_hosts
       - name: Deploy test
-        run: ssh root@172.93.40.89:28714 "/usr/bin/bash deploy.sh"
+        run: ssh root@172.93.40.89 -p 28714 "mkdir -p fooobar"
