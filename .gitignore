@@ -17,9 +17,6 @@ frontend/package-lock.json
 frontend/tool/*.json
 frontend/tool/dbTest.js
 frontend/tool/test.js
-CA/*.pem
-
-log_file.log
 .DS_Store
 .env
 .env.local
@@ -30,6 +27,8 @@ log_file.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-environment_setup_ubuntu20.04.sh
-re-deploy.sh
-deploy.sh
+
+*.sh
+*.log
+CA/*.pem
+scripts
