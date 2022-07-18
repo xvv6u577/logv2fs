@@ -7,7 +7,6 @@
 			"url": "http://localhost:3000",
 			"webRoot": "${workspaceFolder}/frontend/src"
 		},
-
 		{
 			"name": "Gin - golang Web Server",
 			"type": "go",

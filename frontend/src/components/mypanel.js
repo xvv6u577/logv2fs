@@ -33,7 +33,7 @@ function Mypanel() {
 			.catch((err) => {
 				dispatch(alert({ show: true, content: err.toString() }));
 			});
-	}, [ loginState, dispatch, rerenderqSignal ]);
+	}, [ loginState, dispatch, rerenderSignal ]);
 
 	return (
 		<Container className="py-3">
