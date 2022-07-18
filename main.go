@@ -13,11 +13,11 @@ import (
 
 	"github.com/caster8013/logv2rayfullstack/database"
 	"github.com/caster8013/logv2rayfullstack/grpctools"
+	"github.com/caster8013/logv2rayfullstack/middleware"
 	"github.com/caster8013/logv2rayfullstack/model"
 	routers "github.com/caster8013/logv2rayfullstack/routers"
 	"github.com/caster8013/logv2rayfullstack/routine"
 	"github.com/caster8013/logv2rayfullstack/v2ray"
-	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/robfig/cron"
 	"github.com/shomali11/parallelizer"
@@ -441,8 +441,8 @@ func runServer() {
 	router.RedirectTrailingSlash = true
 
 	if BOOT_MODE == "" {
-		router.Use(cors.Default())
-		// router.Use(middleware.CORS())
+		// router.Use(cors.Default())
+		router.Use(middleware.CORS())
 	}
 	router.Use(gin.Logger())
 	router.Use(recoverFromError)

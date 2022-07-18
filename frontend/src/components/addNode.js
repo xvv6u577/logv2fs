@@ -87,6 +87,7 @@ const AddNode = ({ btnName }) => {
 							<ListGroup.Item
 								className="d-inline-flex flex-row justify-content-between"
 								eventKey={value}
+								key={key}
 							>
 								<span className="">
 									{key}: {value}

@@ -178,9 +178,9 @@ const Home = () => {
 							);
 						})
 						.map((element, index) => (
-							<Accordion.Item eventKey={index}>
-								<ListGroup.Item as="li" className="d-flex align-items-center">
-									<div className="me-auto ">
+							<Accordion.Item eventKey={index} key={index}>
+								<ListGroup.Item as="li" className="d-flex align-items-center" key={index}>
+									<div className="me-auto " key={index}>
 										<div className="home-traffic-fs">
 											<span className="badge rounded-pill bg-secondary">
 												{index + 1}
@@ -220,7 +220,7 @@ const Home = () => {
 											Used: {formatBytes(element.used)}
 										</div>
 									</div>
-									<div className="d-flex justify-content-center align-items-center">
+									<div className="d-flex justify-content-center align-items-center" key={index}>
 										<EditUser
 											btnName="Edit"
 											editUserFunc={() =>
@@ -257,19 +257,19 @@ const Home = () => {
 								<Accordion.Body>
 									<div className="d-md-flex flex-row justify-content-between px-md-5">
 										<div className="p-2 flex-fill px-md-5 border border-info border-3 rounded-3  m-1">
-											<div className="d-flex justify-content-between">
+											<div className="d-flex justify-content-between py-1">
 												<span className="">用户名:</span>{" "}
 												<TapToCopied>{element.email}</TapToCopied>
 											</div>
-											<div className="d-flex justify-content-between">
+											<div className="d-flex justify-content-between py-1">
 												<span className="">path: </span>
 												<TapToCopied>{element.path}</TapToCopied>
 											</div>
-											<div className="d-md-flex justify-content-between">
+											<div className="d-md-flex justify-content-between py-1">
 												<span className="">uuid: </span>
 												<TapToCopied>{element.uuid}</TapToCopied>
 											</div>
-											<div className="d-md-flex justify-content-between">
+											<div className="d-md-flex justify-content-between py-1">
 												<span className="">SubUrl:</span>
 												<TapToCopied>
 													{process.env.REACT_APP_FILE_AND_SUB_URL +

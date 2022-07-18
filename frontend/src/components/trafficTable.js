@@ -19,7 +19,7 @@ function TrafficTable({ data,limit,by }) {
 							.slice(0, limit)
 							.map((item, index) => {
 								return (
-									<tr key={item.id}>
+									<tr key={index}>
 										<td>{index + 1}</td>
 										<td>{item.period}</td>
 										<td>{formatBytes(item.amount)}</td>

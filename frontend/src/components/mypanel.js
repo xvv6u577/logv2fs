@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Container } from "react-bootstrap";
+import { Container, Row } from "react-bootstrap";
 import { alert } from "../store/message";
 import { useSelector, useDispatch } from "react-redux";
 import { formatBytes } from "../service/service";
@@ -33,7 +33,7 @@ function Mypanel() {
 			.catch((err) => {
 				dispatch(alert({ show: true, content: err.toString() }));
 			});
-	}, [rerenderSignal, loginState, dispatch]);
+	}, [ loginState, dispatch, rerenderqSignal ]);
 
 	return (
 		<Container className="py-3">
@@ -88,7 +88,7 @@ function Mypanel() {
 				</div>
 			</div>
 
-			<row className="">
+			<Row className="">
 				<div className="pb-3 d-flex flex-column">
 					<div className="h5 py-3 text-center">
 						Monthly Traffic in the Past 1 Year
@@ -101,7 +101,7 @@ function Mypanel() {
 					</div>
 					<TrafficTable data={user.traffic_by_day} limit={90} by="日期" />
 				</div>
-			</row>
+			</Row>
 		</Container>
 	);
 }

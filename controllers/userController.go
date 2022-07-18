@@ -1005,7 +1005,16 @@ func EnableNodePerUser() gin.HandlerFunc {
 		email := c.Request.URL.Query().Get("email")
 		node := c.Request.URL.Query().Get("node")
 
-		var projections = bson.D{}
+		var projections = bson.D{
+			{Key: "used_by_current_year", Value: 0},
+			{Key: "used_by_current_month", Value: 0},
+			{Key: "used_by_current_day", Value: 0},
+			{Key: "traffic_by_year", Value: 0},
+			{Key: "traffic_by_month", Value: 0},
+			{Key: "password", Value: 0},
+			{Key: "refresh_token", Value: 0},
+			{Key: "token", Value: 0},
+		}
 		user, err := database.GetUserByName(email, projections)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})

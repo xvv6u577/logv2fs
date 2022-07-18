@@ -12,7 +12,6 @@ require (
 
 require (
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
-	github.com/gin-contrib/cors v1.3.1
 	github.com/gin-contrib/static v0.0.1
 	github.com/go-playground/validator/v10 v10.9.0
 	github.com/joho/godotenv v1.4.0
