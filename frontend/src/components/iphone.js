@@ -6,24 +6,24 @@ function Ihpone() {
 	const loginState = useSelector((state) => state.login);
 
 	return (
-		<Container className="content">
-			<h1 className="py-3">iphone/ipad 客户端:</h1>
-			<h3 className="py-2">step 1、安装 "shadowrocket"。</h3>
+		<Container class="content">
+			<h1 class="py-3">iphone/ipad 客户端:</h1>
+			<h3 class="py-2">step 1、安装 "shadowrocket"。</h3>
 			<p>
-				<div className="inline h4">
-					<Badge bg="secondary" pill className="mx-1">
+				<div class="inline h4">
+					<Badge bg="secondary" pill class="mx-1">
 						设置
 					</Badge>
 				</div>
 				&#x2192;
-				<div className="inline h4">
-					<Badge bg="secondary" pill className="mx-1">
+				<div class="inline h4">
+					<Badge bg="secondary" pill class="mx-1">
 						Apple ID、iCloud、媒体与购买项目
 					</Badge>
 				</div>
 				&#x2192;
-				<div className="inline h4">
-					<Badge bg="secondary" pill className="mx-1">
+				<div class="inline h4">
+					<Badge bg="secondary" pill class="mx-1">
 						媒体与购买项目
 					</Badge>
 				</div>
@@ -46,15 +46,15 @@ function Ihpone() {
 					我会发给你认证数字。
 				</li>
 			</ul>
-			<h3 className="py-2">step 2、导入配置参数</h3>
+			<h3 class="py-2">step 2、导入配置参数</h3>
 			<p>
 				点按shadowrocket右上角“+” &#x2192; 类型选择“Subscribe” &#x2192;
 				填入以下配置
 			</p>
 			<p>
 				备注:
-				<div className="inline h4">
-					<Badge bg="secondary" pill className="mx-1">
+				<div class="inline h4">
+					<Badge bg="secondary" pill class="mx-1">
 						uvp
 					</Badge>
 				</div>
@@ -68,7 +68,7 @@ function Ihpone() {
 				</TapToCopied>
 			</p>
 			<p>点按右上角“完成”。</p>
-			<h3 className="py-2">Step 3: 设置运行模式</h3>
+			<h3 class="py-2">Step 3: 设置运行模式</h3>
 			<p>
 				回到主界面, 向右滑动新添加的选项uvp, 点按“更新”。项目下方会出现2个列表,
 				选中其中一个后, 左边会现黄色圆点。

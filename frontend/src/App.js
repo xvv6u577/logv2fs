@@ -1,15 +1,14 @@
 import React from "react";
 import { useSelector } from "react-redux";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { Container } from "react-bootstrap";
 import "./App.css";
 import Login from "./components/login";
 import Home from "./components/home";
 import Menu from "./components/menu";
-import Macos from "./components/macos";
-import Windows from "./components/windows";
-import Android from "./components/android";
-import Iphone from "./components/iphone";
+// import Macos from "./components/macos";
+// import Windows from "./components/windows";
+// import Android from "./components/android";
+// import Iphone from "./components/iphone";
 import Footer from "./components/footer";
 import Mypanel from "./components/mypanel";
 
@@ -27,17 +26,17 @@ function App() {
 	return (
 		<BrowserRouter>
 			<Routes>
-				<Route path="/" element={<Login />}></Route>
-				<Route path="/login" element={<Login />}></Route>
+				<Route path="/" element={ <Login /> }></Route>
+				<Route path="/login" element={ <Login /> }></Route>
 				<Route
 					path="/mypanel"
 					element={
 						<RequireAuth>
-							<Container className="main px-0" fluid>
+							<div className="flex-1 flex flex-col md:container md:mx-auto" fluid="true">
 								<Menu />
 								<Mypanel />
 								<Footer />
-							</Container>
+							</div>
 						</RequireAuth>
 					}
 				></Route>
@@ -45,11 +44,11 @@ function App() {
 					path="/home"
 					element={
 						<RequireAuth>
-							<Container className="main px-0" fluid>
+							<div className="flex-1 flex flex-col md:container md:mx-auto" fluid="true">
 								<Menu />
 								<Home />
 								<Footer />
-							</Container>
+							</div>
 						</RequireAuth>
 					}
 				></Route>
@@ -57,11 +56,11 @@ function App() {
 					path="/macos"
 					element={
 						<RequireAuth>
-							<Container className="main px-0" fluid>
+							<div className="flex-1 flex flex-col md:container md:mx-auto" fluid="true">
 								<Menu />
-								<Macos />
+								{/* <Macos /> */}
 								<Footer />
-							</Container>
+							</div>
 						</RequireAuth>
 					}
 				></Route>
@@ -69,11 +68,11 @@ function App() {
 					path="/windows"
 					element={
 						<RequireAuth>
-							<Container className="main px-0" fluid>
+							<div className="flex-1 flex flex-col md:container md:mx-auto" fluid="true">
 								<Menu />
-								<Windows />
+								{/* <Windows /> */}
 								<Footer />
-							</Container>
+							</div>
 						</RequireAuth>
 					}
 				></Route>
@@ -81,11 +80,11 @@ function App() {
 					path="/iphone"
 					element={
 						<RequireAuth>
-							<Container className="main px-0" fluid>
+							<div className="flex-1 flex flex-col md:container md:mx-auto" fluid="true">
 								<Menu />
-								<Iphone />
+								{/* <Iphone /> */}
 								<Footer />
-							</Container>
+							</div>
 						</RequireAuth>
 					}
 				></Route>
@@ -93,11 +92,11 @@ function App() {
 					path="/android"
 					element={
 						<RequireAuth>
-							<Container className="main px-0" fluid>
+							<div className="flex-1 flex flex-col md:container md:mx-auto" fluid="true">
 								<Menu />
-								<Android />
+								{/* <Android /> */}
 								<Footer />
-							</Container>
+							</div>
 						</RequireAuth>
 					}
 				></Route>

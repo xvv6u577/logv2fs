@@ -1,7 +1,7 @@
 function Footer() {
 	return (
-		<footer className="footer mt-auto py-3 bg-dark">
-			<div className="d-flex justify-content-center align-items-center">
+		<footer className="mt-auto py-3 bg-dark">
+			<div className="flex content-center justify-center">
 				<span className="text-muted text-light">
 					logv2rayfullstack <span>&copy;</span> 2022
 				</span>

@@ -6,10 +6,10 @@ function Macos() {
 	const loginState = useSelector((state) => state.login);
 
 	return (
-		<Container className="py-3 content">
-			<h1 className="py-3">Mac系统客户端</h1>
+		<Container class="py-3 content">
+			<h1 class="py-3">Mac系统客户端</h1>
 
-			<h3 className="py-2">
+			<h3 class="py-2">
 				<p>Step 1: 安装 V2ray 客户端</p>
 			</h3>
 			<p>
@@ -20,7 +20,7 @@ function Macos() {
 				解压之后, 把 v2rayx 移到/Application 文件夹。四指捏合, 调出
 				launchpad, 点按 v2rayx图标。若标题栏出现钻石图标, 说明 v2ray 已运行。
 			</p>
-			<h3 className="py-2">step 2:添加配置</h3>
+			<h3 class="py-2">step 2:添加配置</h3>
 			<p>
 				点按标题栏 App 图标, 依次选择 Configure... &#x2192; Import... &#x2192;
 				Import from other links... &#x2192; 输入
@@ -29,7 +29,7 @@ function Macos() {
 				<TapToCopied>{process.env.REACT_APP_FILE_AND_SUB_URL + "/static/" + loginState.jwt.Email}</TapToCopied>
 			</p>
 			<p>点按 OK。若添加成功, 配置对话框左侧vmess servers有新项目产生。</p>
-			<h3 className="py-2">step 3: 运行 v2ray 客户端</h3>
+			<h3 class="py-2">step 3: 运行 v2ray 客户端</h3>
 			<p>
 				点击App图标, 选择 Server... &#x2192; w8, rm, sl 3个节点选择一个!
 			</p>

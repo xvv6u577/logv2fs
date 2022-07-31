@@ -1,14 +1,16 @@
 import { useEffect, useState } from "react";
-import { Container, Row } from "react-bootstrap";
-import { alert } from "../store/message";
+import { alert, reset, success, info } from "../store/message";
 import { useSelector, useDispatch } from "react-redux";
 import { formatBytes } from "../service/service";
 import axios from "axios";
 import TapToCopied from "./tapToCopied";
 import TrafficTable from "./trafficTable";
+import Alert from "./alert";
 
 function Mypanel() {
 	const [user, setUser] = useState({});
+	const [modalShown, toggleModal] = useState(false);
+
 	const dispatch = useDispatch();
 	const loginState = useSelector((state) => state.login);
 	const message = useSelector((state) => state.message);
@@ -17,7 +19,7 @@ function Mypanel() {
 	useEffect(() => {
 		if (message.show === true) {
 			setTimeout(() => {
-				dispatch(alert({ show: false }));
+				dispatch(reset({}));
 			}, 5000);
 		}
 	}, [message, dispatch]);
@@ -33,12 +35,13 @@ function Mypanel() {
 			.catch((err) => {
 				dispatch(alert({ show: true, content: err.toString() }));
 			});
-	}, [ loginState, dispatch, rerenderSignal ]);
+	}, [loginState, dispatch, rerenderSignal]);
 
 	return (
-		<Container className="py-3">
-			<div className="row mypanel-row justify-content-evenly">
-				<div className="mypanel-card col">
+		<div className="py-3 flex-1">
+			<Alert message={message.content} type={message.type} shown={message.show} close={() => { dispatch(reset({})); }}/>
+			<div className="flex flex-col md:flex-row">
+				<div className="grow p-6 m-3 bg-white rounded-lg border border-gray-200 shadow-md hover:bg-gray-100 dark:bg-gray-800 dark:border-gray-700 dark:hover:bg-gray-700">
 					<div className="h3">
 						{user.used_by_current_day &&
 							formatBytes(user.used_by_current_day.amount)}
@@ -48,7 +51,7 @@ function Mypanel() {
 						{user.used_by_current_day && user.used_by_current_day.period})
 					</p>
 				</div>
-				<div className="mypanel-card col">
+				<div className="grow p-6 m-3 md:mx-2 bg-white rounded-lg border border-gray-200 shadow-md hover:bg-gray-100 dark:bg-gray-800 dark:border-gray-700 dark:hover:bg-gray-700">
 					<div className="h3">
 						{user.used_by_current_month &&
 							formatBytes(user.used_by_current_month.amount)}
@@ -58,51 +61,50 @@ function Mypanel() {
 						{user.used_by_current_month && user.used_by_current_month.period})
 					</p>
 				</div>
-				<div className="mypanel-card col">
+				<div className="grow p-6 m-3 bg-white rounded-lg border border-gray-200 shadow-md hover:bg-gray-100 dark:bg-gray-800 dark:border-gray-700 dark:hover:bg-gray-700">
 					<div className="h3">{user && formatBytes(user.used)}</div>
 					<p>Traffic Used In Total</p>
 				</div>
 			</div>
 
 			<div
-				className="d-md-flex flex-column justify-content-between border border-info border-3 rounded-3  mx-auto my-3 p-3"
-				style={{ width: "50%" }}
+				className="flex flex-col content-between rounded-lg border-4 border-neutral-100 mx-auto my-3 p-3 w-1/2"
 			>
-				<div className="d-flex justify-content-between">
-					<span className="">用户名:</span>{" "}
+				<div className="flex justify-between">
+					<span className="flex items-center text-sm">用户名:</span>
 					<TapToCopied>{user.email}</TapToCopied>
 				</div>
-				<div className="d-flex justify-content-between">
-					<span className="">path: </span>
+				<div className="flex justify-between">
+					<span className="flex items-center text-sm">path: </span>
 					<TapToCopied>{user.path}</TapToCopied>
 				</div>
-				<div className="d-md-flex justify-content-between">
-					<span className="">uuid: </span>
+				<div className="flex justify-between">
+					<span className="flex items-center text-sm">uuid: </span>
 					<TapToCopied>{user.uuid}</TapToCopied>
 				</div>
-				<div className="d-md-flex justify-content-between">
-					<span className="">SubUrl:</span>
+				<div className="flex justify-between">
+					<span className="flex items-center text-sm">SubUrl:</span>
 					<TapToCopied>
 						{process.env.REACT_APP_FILE_AND_SUB_URL + "/static/" + user.email}
 					</TapToCopied>
 				</div>
 			</div>
 
-			<Row className="">
-				<div className="pb-3 d-flex flex-column">
-					<div className="h5 py-3 text-center">
+			<div className="">
+				<div className="px-3 flex flex-col">
+					<div className="text-4xl my-3 text-center">
 						Monthly Traffic in the Past 1 Year
 					</div>
 					<TrafficTable data={user.traffic_by_month} limit={12} by="月份" />
 				</div>
-				<div className="d-flex flex-column">
-					<div className="h5 pb-3 text-center">
+				<div className="flex flex-col">
+					<div className="text-4xl my-3 text-center">
 						Daily Traffic in the Past 3 Month
 					</div>
 					<TrafficTable data={user.traffic_by_day} limit={90} by="日期" />
 				</div>
-			</Row>
-		</Container>
+			</div>
+		</div>
 	);
 }
 

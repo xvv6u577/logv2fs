@@ -1,6 +1,14 @@
 {
 	"configurations": [
 		{
+			"name": "go - generate yaml",
+			"type": "go",
+			"request": "launch",
+			"mode": "debug",
+			"program": "./",
+			"args": ["yaml"]
+		},
+		{
 			"name": "React Dubug at Chrome",
 			"request": "launch",
 			"type": "chrome",

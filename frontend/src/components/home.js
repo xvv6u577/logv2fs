@@ -1,24 +1,10 @@
 import { useEffect, useState } from "react";
-import {
-	Container,
-	Button,
-	Alert,
-	Badge,
-	ListGroup,
-	Modal,
-	Form,
-	Row,
-	Col,
-	Accordion,
-} from "react-bootstrap";
 import { useSelector, useDispatch } from "react-redux";
-import { alert, success } from "../store/message";
-import { doRerender } from "../store/rerender";
-import { formatBytes } from "../service/service";
+import { alert, reset} from "../store/message";
 import axios from "axios";
 import { logout } from "../store/login";
-import TapToCopied from "./tapToCopied";
-import TrafficTable from "./trafficTable";
+import UserComp from "./userComp";
+import Alert from "./alert";
 
 const Home = () => {
 	const [users, setUsers] = useState([]);
@@ -28,98 +14,10 @@ const Home = () => {
 
 	const dispatch = useDispatch();
 
-	const handleOnline = (name) => {
-		axios
-			.get(process.env.REACT_APP_API_HOST + "takeuseronline/" + name, {
-				headers: { token: loginState.token },
-			})
-			.then((response) => {
-				dispatch(doRerender({ rerender: !rerenderSignal.rerender }));
-				dispatch(success({ show: true, content: response.data.message }));
-			})
-			.catch((err) => {
-				dispatch(alert({ show: true, content: err.toString() }));
-			});
-	};
-
-	const handleOffline = (name) => {
-		axios
-			.get(process.env.REACT_APP_API_HOST + "takeuseroffline/" + name, {
-				headers: { token: loginState.token },
-			})
-			.then((response) => {
-				dispatch(doRerender({ rerender: !rerenderSignal.rerender }));
-				dispatch(success({ show: true, content: response.data.message }));
-			})
-			.catch((err) => {
-				if (err.response) {
-					dispatch(alert({ show: true, content: err.response.data.error }));
-				} else {
-					dispatch(alert({ show: true, content: err.toString() }));
-				}
-			});
-	};
-
-	const handleDeleteUser = (name) => {
-		axios
-			.get(process.env.REACT_APP_API_HOST + "deluser/" + name, {
-				headers: { token: loginState.token },
-			})
-			.then((response) => {
-				dispatch(doRerender({ rerender: !rerenderSignal.rerender }));
-				dispatch(success({ show: true, content: response.data.message }));
-			})
-			.catch((err) => {
-				if (err.response) {
-					dispatch(alert({ show: true, content: err.response.data.error }));
-				} else {
-					dispatch(alert({ show: true, content: err.toString() }));
-				}
-			});
-	};
-
-	const handleDisableNode = ({ email, node }) => {
-		axios
-			.get(process.env.REACT_APP_API_HOST + "disanodeperusr", {
-				params: { email, node },
-				headers: { token: loginState.token },
-			})
-			.then((response) => {
-				dispatch(doRerender({ rerender: !rerenderSignal.rerender }));
-				dispatch(success({ show: true, content: response.data.message }));
-			})
-			.catch((err) => {
-				if (err.response) {
-					dispatch(alert({ show: true, content: err.response.data.error }));
-				} else {
-					dispatch(alert({ show: true, content: err.toString() }));
-				}
-			});
-	};
-
-	const handleEnableNode = ({ email, node }) => {
-		axios
-			.get(process.env.REACT_APP_API_HOST + "enanodeperusr", {
-				params: { email, node },
-				headers: { token: loginState.token },
-			})
-			.then((response) => {
-				dispatch(doRerender({ rerender: !rerenderSignal.rerender }));
-				dispatch(success({ show: true, content: response.data.message }));
-			})
-			.catch((err) => {
-				if (err.response) {
-					dispatch(alert({ show: true, content: err.response.data.error }));
-				} else {
-					dispatch(alert({ show: true, content: err.toString() }));
-				}
-			});
-	};
-
 	useEffect(() => {
 		if (message.show === true) {
 			setTimeout(() => {
-				dispatch(alert({ show: false }));
+				dispatch(reset({}));
 			}, 5000);
 		}
 	}, [message, dispatch]);
@@ -149,14 +47,36 @@ const Home = () => {
 	}, [rerenderSignal, loginState.jwt.Email, loginState.token, dispatch]);
 
 	return (
-		<Container className="my-3 home-list">
-			<Alert show={message.show} variant={message.type}>
-				{" "}
-				{message.content}{" "}
-			</Alert>
-			<ListGroup
+		<div className="my-3">
+			<Alert message={message.content} type={message.type} shown={message.show} close={() => { dispatch(reset({})); }}/>
+
+			<div id="accordion-collapse" data-accordion="collapse">
+				{users
+					// put admin at the top of the list
+					.reduce((acc, ele) => {
+						if (ele.role === "admin") {
+							return [ele, ...acc];
+						}
+						return [...acc, ele];
+					}, [])
+					// sort the normal users by used_by_current_month.amount
+					.sort((a, b) => {
+						if ((a.role === "admin") | (b.role === "admin")) {
+							return 0;
+						}
+						return (
+							b.used_by_current_month.amount - a.used_by_current_month.amount
+						);
+					})
+					.map((element, index) => ( 
+						<UserComp user={element} index={index} key={index} />
+					))
+				}
+			</div>
+
+			{/* <ListGroup
 				as="ol"
-				className="list-group list-group-striped list-group-hover"
+				class="list-group list-group-striped list-group-hover"
 				numbered
 			>
 				<Accordion>
@@ -179,39 +99,39 @@ const Home = () => {
 						})
 						.map((element, index) => (
 							<Accordion.Item eventKey={index} key={index}>
-								<ListGroup.Item as="li" className="d-flex align-items-center" key={index}>
-									<div className="me-auto " key={index}>
-										<div className="home-traffic-fs">
-											<span className="badge rounded-pill bg-secondary">
+								<ListGroup.Item as="li" class="d-flex align-items-center" key={index}>
+									<div class="me-auto " key={index}>
+										<div class="home-traffic-fs">
+											<span class="badge rounded-pill bg-secondary">
 												{index + 1}
 											</span>{" "}
-											<b className="">{element.name}</b>
+											<span class="">{element.name}</span>
 											{element.status === "plain" ? (
-												<span className="badge rounded-pill bg-success mx-1">
+												<span class="badge rounded-pill bg-success mx-1">
 													online
 												</span>
 											) : (
-												<span className="badge rounded-pill bg-danger mx-1">
+												<span class="badge rounded-pill bg-danger mx-1">
 													offline
 												</span>
 											)}
 											{element.role === "admin" ? (
-												<span className="badge rounded-pill bg-dark mx-1">
+												<span class="badge rounded-pill bg-dark mx-1">
 													admin
 												</span>
 											) : (
-												<span className="badge rounded-pill bg-primary mx-1">
+												<span class="badge rounded-pill bg-primary mx-1">
 													user
 												</span>
 											)}
 											{element.email === loginState.jwt.Email && (
-												<span className="badge rounded-pill bg-info text-dark">
+												<span class="badge rounded-pill bg-info text-dark">
 													Me
 												</span>
 											)}
 										</div>
 
-										<div className="home-traffic-fs">
+										<div class="home-traffic-fs">
 											Today: {formatBytes(element.used_by_current_day.amount)}
 											{", "}
 											This month:{" "}
@@ -220,7 +140,7 @@ const Home = () => {
 											Used: {formatBytes(element.used)}
 										</div>
 									</div>
-									<div className="d-flex justify-content-center align-items-center" key={index}>
+									<div class="d-flex justify-content-center align-items-center" key={index}>
 										<EditUser
 											btnName="Edit"
 											editUserFunc={() =>
@@ -255,22 +175,22 @@ const Home = () => {
 									</div>
 								</ListGroup.Item>
 								<Accordion.Body>
-									<div className="d-md-flex flex-row justify-content-between px-md-5">
-										<div className="p-2 flex-fill px-md-5 border border-info border-3 rounded-3  m-1">
-											<div className="d-flex justify-content-between py-1">
-												<span className="">用户名:</span>{" "}
+									<div class="d-md-flex flex-row justify-content-between px-md-5">
+										<div class="p-2 flex-fill px-md-5 border border-info border-3 rounded-3  m-1">
+											<div class="d-flex justify-content-between py-1">
+												<span class="">用户名:</span>{" "}
 												<TapToCopied>{element.email}</TapToCopied>
 											</div>
-											<div className="d-flex justify-content-between py-1">
-												<span className="">path: </span>
+											<div class="d-flex justify-content-between py-1">
+												<span class="">path: </span>
 												<TapToCopied>{element.path}</TapToCopied>
 											</div>
-											<div className="d-md-flex justify-content-between py-1">
-												<span className="">uuid: </span>
+											<div class="d-md-flex justify-content-between py-1">
+												<span class="">uuid: </span>
 												<TapToCopied>{element.uuid}</TapToCopied>
 											</div>
-											<div className="d-md-flex justify-content-between py-1">
-												<span className="">SubUrl:</span>
+											<div class="d-md-flex justify-content-between py-1">
+												<span class="">SubUrl:</span>
 												<TapToCopied>
 													{process.env.REACT_APP_FILE_AND_SUB_URL +
 														"/static/" +
@@ -279,12 +199,12 @@ const Home = () => {
 											</div>
 										</div>
 
-										<div className="p-2 flex-fill px-md-5 border border-info border-3 rounded-3 m-1">
+										<div class="p-2 flex-fill px-md-5 border border-info border-3 rounded-3 m-1">
 											{element &&
 												Object.entries(element.node_in_use_status).map(
 													([key, value]) => (
-														<div className="d-flex flex-row justify-content-between py-1">
-															<span className="me-auto my-1">Node: {key}</span>
+														<div class="d-flex flex-row justify-content-between py-1">
+															<span class="me-auto my-1">Node: {key}</span>
 															{value ? (
 																<Button
 																	variant="primary btn-custom"
@@ -317,257 +237,22 @@ const Home = () => {
 												)}
 										</div>
 									</div>
-									<div className="home-traffic-fs pt-2">
-										<h4 className=" text-center">Monthly Traffic </h4>
+									<div class="home-traffic-fs pt-2">
+										<h4 class=" text-center">Monthly Traffic </h4>
 										<TrafficTable data={element.traffic_by_month} by="月份" />
 									</div>
-									<div className="home-traffic-fs">
-										<h4 className="pt-2 text-center">Daily Traffic</h4>
+									<div class="home-traffic-fs">
+										<h4 class="pt-2 text-center">Daily Traffic</h4>
 										<TrafficTable data={element.traffic_by_day} by="日期" />
 									</div>
 								</Accordion.Body>
 							</Accordion.Item>
 						))}
 				</Accordion>
-			</ListGroup>
-		</Container>
+			</ListGroup> */}
+		</div >
 	);
 };
 
-function ConfirmDelUser({ btnName, deleteUserFunc }) {
-	const [show, setShow] = useState(false);
-
-	const handleClose = () => setShow(false);
-	const handleShow = () => setShow(true);
-
-	return (
-		<>
-			<Button variant="dark mx-1 btn-custom" size="sm" onClick={handleShow}>
-				{btnName}
-			</Button>
-
-			<Modal show={show} onHide={handleClose}>
-				<Modal.Header closeButton>
-					<Modal.Title>Notice!</Modal.Title>
-				</Modal.Header>
-				<Modal.Body>确认删除用户？</Modal.Body>
-				<Modal.Footer>
-					<Button variant="secondary" onClick={handleClose}>
-						关闭
-					</Button>
-					<Button
-						variant="primary"
-						onClick={() => {
-							deleteUserFunc();
-							handleClose();
-						}}
-					>
-						确认
-					</Button>
-				</Modal.Footer>
-			</Modal>
-		</>
-	);
-}
-
-function EditUser({ btnName, user, editUserFunc }) {
-	const [show, setShow] = useState(false);
-	const handleClose = () => setShow(false);
-	const handleShow = () => setShow(true);
-
-	const [status, setStatus] = useState(user.status);
-	const [{ used, password, name, role, credit }, setState] = useState({
-		used: user.used,
-		password: user.password,
-		name: user.name,
-		role: user.role,
-		credit: user.credit,
-	});
-
-	const onChange = (e) => {
-		const { name, value } = e.target;
-		setState((prevState) => ({ ...prevState, [name]: value }));
-	};
-
-	const dispatch = useDispatch();
-	const message = useSelector((state) => state.message);
-	const loginState = useSelector((state) => state.login);
-
-	useEffect(() => {
-		setStatus(user.status);
-	}, [user.status]);
-
-	const handleEditUser = (e) => {
-		e.preventDefault();
-		axios({
-			method: "post",
-			url: process.env.REACT_APP_API_HOST + "edit/" + user.email,
-			headers: { token: loginState.token },
-			data: {
-				role,
-				email: user.email,
-				password,
-				name,
-				used: parseInt(used),
-				credit: parseInt(credit),
-			},
-		})
-			.then((response) => {
-				dispatch(success({ show: true, content: "user info updated!" }));
-				editUserFunc();
-			})
-			.catch((err) => {
-				if (err.response) {
-					dispatch(alert({ show: true, content: err.response.data.error }));
-				} else {
-					dispatch(alert({ show: true, content: err.toString() }));
-				}
-			});
-	};
-
-	return (
-		<>
-			<Button
-				variant="outline-success mx-1 btn-custom"
-				size="sm"
-				onClick={handleShow}
-			>
-				{btnName}
-			</Button>
-
-			<Modal
-				show={show}
-				onHide={handleClose}
-				size="lg"
-				aria-labelledby="contained-modal-title-vcenter"
-				centered
-			>
-				<Modal.Header closeButton>
-					<Modal.Title>Edit User</Modal.Title>
-				</Modal.Header>
-				<Modal.Body>
-					<Form id="editForm" onSubmit={handleEditUser}>
-						<Row className="mb-3">
-							<Form.Group controlId="formGridDomains">
-								<Form.Label>User Status:</Form.Label>
-								<Badge pill bg="light" text="dark" className="mx-1">
-									<b className="h4">{status}</b>
-								</Badge>
-							</Form.Group>
-						</Row>
-						<Row className="mb-3">
-							<Form.Group as={Col} controlId="formGridName">
-								<Form.Label>Email</Form.Label>
-								<Form.Control
-									type="input"
-									name="email"
-									placeholder={user.email}
-									value={user.email}
-									disabled
-								/>
-							</Form.Group>
-
-							<Form.Group as={Col} controlId="formGridPassword">
-								<Form.Label>Password</Form.Label>
-								<Form.Control
-									type="password"
-									name="password"
-									onChange={onChange}
-									placeholder="Password"
-									value={password}
-									autoComplete=""
-								/>
-							</Form.Group>
-						</Row>
-						<hr />
-						<Row className="mb-3">
-							<Form.Group as={Col} controlId="formGridUserType">
-								<Form.Label>User Type</Form.Label>
-								<Form.Select name="role" onChange={onChange} value={role}>
-									<option value="admin">Admin</option>
-									<option value="normal">Normal</option>
-								</Form.Select>
-							</Form.Group>
-
-							<Form.Group as={Col} controlId="formGridTag">
-								<Form.Label>Name</Form.Label>
-								<Form.Control
-									type="input"
-									name="name"
-									onChange={onChange}
-									placeholder={user.name}
-									value={name}
-								/>
-							</Form.Group>
-						</Row>
-
-						<Row className="mb-3"></Row>
-
-						<Row className="mb-3">
-							<Form.Group as={Col} controlId="formGridTrafficeUsed">
-								<Form.Label>已用流量</Form.Label>
-								<Form.Control
-									type="number"
-									name="used"
-									onChange={onChange}
-									placeholder={user.used}
-									value={used}
-								/>
-							</Form.Group>
-
-							<Form.Group as={Col} controlId="formGridTrafficCredit">
-								<Form.Label>每月限额</Form.Label>
-								<Form.Control
-									type="number"
-									name="credit"
-									onChange={onChange}
-									placeholder={user.credit}
-									value={credit}
-								/>
-							</Form.Group>
-						</Row>
-
-						<hr />
-						<Row className="mb-3">
-							<Form.Group controlId="formGridDomains">
-								<Form.Label>Domains: </Form.Label>
-								<Badge pill bg="light" text="dark">
-									<b className="h5">
-										{user.domain ? user.domain : "w8.undervineyard.com"}
-									</b>
-								</Badge>
-							</Form.Group>
-
-							<Form.Group controlId="formGridPath">
-								<Form.Label>Path: </Form.Label>
-								<Badge pill bg="light" text="dark" className="mx-1">
-									<b className="h5">{user.path}</b>
-								</Badge>
-							</Form.Group>
-
-							<Form.Group controlId="formGridUuid">
-								<Form.Label>UUID: </Form.Label>
-								<Badge pill bg="light" text="dark" className="mx-1">
-									<b className="h5">{user.uuid}</b>
-								</Badge>
-							</Form.Group>
-						</Row>
-					</Form>
-					<Alert show={message.show} variant={message.type}>
-						{message.content}
-					</Alert>
-				</Modal.Body>
-				<Modal.Footer>
-					<Button variant="secondary" onClick={handleClose}>
-						关闭
-					</Button>
-					<Button type="submit" variant="primary" form="editForm">
-						提交
-					</Button>
-				</Modal.Footer>
-			</Modal>
-		</>
-	);
-}
 
 export default Home;
