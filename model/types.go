@@ -68,6 +68,45 @@ type Node struct {
 	Tls     string `default:"tls" json:"tls"`
 }
 
+type YamlTemplate struct {
+	Port               int           `yaml:"port"`
+	SocksPort          int           `yaml:"socks-port"`
+	AllowLan           bool          `yaml:"allow-lan"`
+	Mode               string        `yaml:"mode"`
+	LogLevel           string        `yaml:"log-level"`
+	ExternalController string        `yaml:"external-controller"`
+	Proxies            []Proxies     `yaml:"proxies"`
+	ProxyGroups        []ProxyGroups `yaml:"proxy-groups"`
+	Rules              []string      `yaml:"rules"`
+}
+type Headers struct {
+	Host string `yaml:"Host"`
+}
+type WsOpts struct {
+	Path    string  `yaml:"path"`
+	Headers Headers `yaml:"headers"`
+}
+type Proxies struct {
+	Name           string `yaml:"name"`
+	Server         string `yaml:"server"`
+	Port           int    `yaml:"port"`
+	Type           string `yaml:"type"`
+	UUID           string `yaml:"uuid"`
+	AlterID        int    `yaml:"alterId"`
+	Cipher         string `yaml:"cipher"`
+	TLS            bool   `yaml:"tls"`
+	SkipCertVerify bool   `yaml:"skip-cert-verify"`
+	Network        string `yaml:"network"`
+	WsOpts         WsOpts `yaml:"ws-opts"`
+}
+type ProxyGroups struct {
+	Name     string   `yaml:"name"`
+	Type     string   `yaml:"type"`
+	Proxies  []string `yaml:"proxies"`
+	URL      string   `yaml:"url,omitempty"`
+	Interval int      `yaml:"interval,omitempty"`
+}
+
 func (u *User) ProduceSuburl() {
 	var node Node
 	subscription := ""

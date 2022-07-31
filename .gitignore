@@ -17,6 +17,8 @@ frontend/package-lock.json
 frontend/tool/*.json
 frontend/tool/dbTest.js
 frontend/tool/test.js
+yaml/results
+yaml/template.yaml
 .DS_Store
 .env
 .env.local

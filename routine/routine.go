@@ -263,18 +263,33 @@ func Cron_loggingJobs(c *cron.Cron) {
 				}
 
 				singleUserFilter := bson.D{primitive.E{Key: "email", Value: currentUser.Email}}
-				trafficByMonth := currentUser.TrafficByMonth
-				trafficByMonth = append(trafficByMonth, currentUser.UsedByCurrentMonth)
+				var update bson.D
 				var usedByDomain = make(map[string]int64)
-				update := bson.D{primitive.E{Key: "$set", Value: bson.D{
-					primitive.E{Key: "used_by_current_month", Value: primitive.D{
-						primitive.E{Key: "amount", Value: 0},
-						primitive.E{Key: "period", Value: current_month},
-						primitive.E{Key: "used_by_domain", Value: usedByDomain},
-					}},
-					primitive.E{Key: "traffic_by_month", Value: trafficByMonth},
-					primitive.E{Key: "updated_at", Value: last},
-				}}}
+				if currentUser.UsedByCurrentMonth.Amount == 0 {
+
+					update = bson.D{primitive.E{Key: "$set", Value: bson.D{
+						primitive.E{Key: "used_by_current_month", Value: primitive.D{
+							primitive.E{Key: "amount", Value: 0},
+							primitive.E{Key: "period", Value: current_month},
+							primitive.E{Key: "used_by_domain", Value: usedByDomain},
+						}},
+						primitive.E{Key: "updated_at", Value: last},
+					}}}
+
+				} else {
+
+					trafficByMonth := currentUser.TrafficByMonth
+					trafficByMonth = append(trafficByMonth, currentUser.UsedByCurrentMonth)
+					update = bson.D{primitive.E{Key: "$set", Value: bson.D{
+						primitive.E{Key: "used_by_current_month", Value: primitive.D{
+							primitive.E{Key: "amount", Value: 0},
+							primitive.E{Key: "period", Value: current_month},
+							primitive.E{Key: "used_by_domain", Value: usedByDomain},
+						}},
+						primitive.E{Key: "traffic_by_month", Value: trafficByMonth},
+						primitive.E{Key: "updated_at", Value: last},
+					}}}
+				}
 
 				userCollection.FindOneAndUpdate(ctx, singleUserFilter, update)
 			}

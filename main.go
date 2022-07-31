@@ -18,27 +18,33 @@ import (
 	routers "github.com/caster8013/logv2rayfullstack/routers"
 	"github.com/caster8013/logv2rayfullstack/routine"
 	"github.com/caster8013/logv2rayfullstack/v2ray"
+	yamlTools "github.com/caster8013/logv2rayfullstack/yaml"
 	"github.com/gin-gonic/gin"
 	"github.com/robfig/cron"
 	"github.com/shomali11/parallelizer"
 	"github.com/urfave/cli/v2"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo/options"
 	"google.golang.org/grpc"
 )
 
-type User = model.User
-type Traffic = model.Traffic
-type TrafficAtPeriod = model.TrafficAtPeriod
+type (
+	User            = model.User
+	Traffic         = model.Traffic
+	TrafficAtPeriod = model.TrafficAtPeriod
+	YamlTemplate    = model.YamlTemplate
+	Proxies         = model.Proxies
+	Headers         = model.Headers
+	WsOpts          = model.WsOpts
+	ProxyGroups     = model.ProxyGroups
+)
 
 var (
 	BOOT_MODE      = os.Getenv("BOOT_MODE")
 	NODE_TYPE      = os.Getenv("NODE_TYPE")
 	CURRENT_DOMAIN = os.Getenv("CURRENT_DOMAIN")
+	cronInstance   *cron.Cron
 )
-
-var cronInstance *cron.Cron
 
 func init() {
 
@@ -90,10 +96,13 @@ func main() {
 				},
 			},
 			{
-				Name:    "cron",
-				Aliases: []string{"c"},
-				Usage:   "run cron job",
+				Name:    "yaml",
+				Aliases: []string{"y"},
+				Usage:   "generate yaml file",
 				Action: func(c *cli.Context) error {
+
+					yamlTools.GenerateAllClashxConfig()
+
 					return nil
 				},
 			},
@@ -188,156 +197,8 @@ func main() {
 
 					case "emptydb":
 						database.DelUsersTable()
-						database.DelUsersTable()
+						database.DelUsersInfo()
 						fmt.Println("user info, user traffic tables deleted in success!")
-						return nil
-
-					case "update":
-						var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
-						defer cancel()
-
-						var current = time.Now().Local()
-						var current_year = current.Format("2006")
-						var current_month = current.Format("200601")
-						var current_day = current.Format("20060102")
-
-						allUsers, err := database.GetFullInfosForAllUsers_ForInternalUse()
-						if err != nil {
-							fmt.Printf("Error: %v\n", err)
-						}
-
-						var checkEleInArray = func(str string, ts []TrafficAtPeriod) (bool, int) {
-							for index, ele := range ts {
-								if ele.Period == str {
-									return true, index
-								}
-							}
-							return false, -1
-						}
-
-						for _, user := range allUsers {
-
-							user.Usedtraffic = 0
-							user.UsedByCurrentDay = TrafficAtPeriod{}
-							user.UsedByCurrentMonth = TrafficAtPeriod{}
-							user.UsedByCurrentYear = TrafficAtPeriod{}
-							user.TrafficByDay = []TrafficAtPeriod{}
-							user.TrafficByMonth = []TrafficAtPeriod{}
-							user.TrafficByYear = []TrafficAtPeriod{}
-
-							userCollection := database.OpenCollection(database.Client, "USERS")
-
-							userTrafficCollection := database.OpenCollection(database.Client, user.Email)
-							userTrafficFilter := bson.D{{}}
-							cur, err := userTrafficCollection.Find(ctx, userTrafficFilter)
-							if err != nil {
-								fmt.Printf("Error: %v\n", err)
-							}
-
-							for cur.Next(ctx) {
-
-								var t model.TrafficInDB
-								err := cur.Decode(&t)
-								if err != nil {
-									fmt.Printf("Error: %v\n", err)
-								}
-
-								var at_time = t.CreatedAt
-								var at_year = at_time.Format("2006")
-								var at_month = at_time.Format("200601")
-								var at_day = at_time.Format("20060102")
-
-								user.Usedtraffic += t.Total
-								user.CreatedAt = at_time
-
-								if at_day == current_day {
-									user.UsedByCurrentDay.Amount += t.Total
-									if val, ok := user.UsedByCurrentDay.UsedByDomain[t.Domain]; ok {
-										user.UsedByCurrentDay.UsedByDomain[t.Domain] = val + t.Total
-									} else {
-										user.UsedByCurrentDay.Period = at_day
-										if user.UsedByCurrentDay.UsedByDomain == nil {
-											user.UsedByCurrentDay.UsedByDomain = make(map[string]int64)
-										}
-										user.UsedByCurrentDay.UsedByDomain[t.Domain] = t.Total
-									}
-								} else {
-									if ok, index := checkEleInArray(at_day, user.TrafficByDay); ok {
-										user.TrafficByDay[index].Amount += t.Total
-										if val, ok := user.TrafficByDay[index].UsedByDomain[t.Domain]; ok {
-											user.TrafficByDay[index].UsedByDomain[t.Domain] = val + t.Total
-										} else {
-											if user.TrafficByDay[index].UsedByDomain == nil {
-												user.TrafficByDay[index].UsedByDomain = make(map[string]int64)
-											}
-											user.TrafficByDay[index].UsedByDomain[t.Domain] = t.Total
-										}
-									} else {
-										user.TrafficByDay = append(user.TrafficByDay, TrafficAtPeriod{Period: at_day, Amount: t.Total, UsedByDomain: map[string]int64{t.Domain: t.Total}})
-									}
-								}
-
-								if at_month == current_month {
-									user.UsedByCurrentMonth.Amount += t.Total
-									if val, ok := user.UsedByCurrentMonth.UsedByDomain[t.Domain]; ok {
-										user.UsedByCurrentMonth.UsedByDomain[t.Domain] = val + t.Total
-									} else {
-										user.UsedByCurrentMonth.Period = at_month
-										if user.UsedByCurrentMonth.UsedByDomain == nil {
-											user.UsedByCurrentMonth.UsedByDomain = make(map[string]int64)
-										}
-										user.UsedByCurrentMonth.UsedByDomain[t.Domain] = t.Total
-									}
-								} else {
-									if ok, index := checkEleInArray(at_month, user.TrafficByMonth); ok {
-										user.TrafficByMonth[index].Amount += t.Total
-										if val, ok := user.TrafficByMonth[index].UsedByDomain[t.Domain]; ok {
-											user.TrafficByMonth[index].UsedByDomain[t.Domain] = val + t.Total
-										} else {
-											if user.TrafficByMonth[index].UsedByDomain == nil {
-												user.TrafficByMonth[index].UsedByDomain = make(map[string]int64)
-											}
-											user.TrafficByMonth[index].UsedByDomain[t.Domain] = t.Total
-										}
-									} else {
-										user.TrafficByMonth = append(user.TrafficByMonth, TrafficAtPeriod{Period: at_month, Amount: t.Total, UsedByDomain: map[string]int64{t.Domain: t.Total}})
-									}
-								}
-
-								if at_year == current_year {
-									user.UsedByCurrentYear.Amount += t.Total
-									if val, ok := user.UsedByCurrentYear.UsedByDomain[t.Domain]; ok {
-										user.UsedByCurrentYear.UsedByDomain[t.Domain] = val + t.Total
-									} else {
-										user.UsedByCurrentYear.Period = at_year
-										if user.UsedByCurrentYear.UsedByDomain == nil {
-											user.UsedByCurrentYear.UsedByDomain = make(map[string]int64)
-										}
-										user.UsedByCurrentYear.UsedByDomain[t.Domain] = t.Total
-									}
-								} else {
-									if ok, index := checkEleInArray(at_year, user.TrafficByYear); ok {
-										user.TrafficByYear[index].Amount += t.Total
-										if val, ok := user.TrafficByYear[index].UsedByDomain[t.Domain]; ok {
-											user.TrafficByYear[index].UsedByDomain[t.Domain] = val + t.Total
-										} else {
-											if user.TrafficByYear[index].UsedByDomain == nil {
-												user.TrafficByYear[index].UsedByDomain = make(map[string]int64)
-											}
-											user.TrafficByYear[index].UsedByDomain[t.Domain] = t.Total
-										}
-									} else {
-										user.TrafficByYear = append(user.TrafficByYear, TrafficAtPeriod{Period: at_year, Amount: t.Total, UsedByDomain: map[string]int64{t.Domain: t.Total}})
-									}
-								}
-
-							}
-							defer cur.Close(ctx)
-
-							upsert := true
-							userCollection.FindOneAndReplace(ctx, bson.M{"_id": user.ID}, user, &options.FindOneAndReplaceOptions{Upsert: &upsert})
-						}
-
 						return nil
 
 					default:
@@ -352,7 +213,9 @@ func main() {
 				Aliases: []string{"t"},
 				Usage:   "command test",
 				Action: func(c *cli.Context) error {
+
 					fmt.Println("added task: ", c.Args().First(), c.Args().Get(2))
+
 					return nil
 				},
 			},
@@ -473,4 +336,5 @@ func recoverFromError(c *gin.Context) {
 
 	// 加载完defer recover, 继续后续接口调用
 	c.Next()
+
 }

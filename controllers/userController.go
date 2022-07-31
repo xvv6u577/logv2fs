@@ -46,6 +46,11 @@ type (
 	User            = model.User
 	TrafficAtPeriod = model.TrafficAtPeriod
 	Node            = model.Node
+	YamlTemplate    = model.YamlTemplate
+	Proxies         = model.Proxies
+	Headers         = model.Headers
+	WsOpts          = model.WsOpts
+	ProxyGroups     = model.ProxyGroups
 )
 
 //HashPassword is used to encrypt the password before it is stored in the DB
@@ -817,6 +822,9 @@ func GetAllUsers() gin.HandlerFunc {
 			{Key: "token", Value: 0},
 			{Key: "password", Value: 0},
 			{Key: "refresh_token", Value: 0},
+			{Key: "traffic_by_year", Value: 0},
+			{Key: "traffic_by_month", Value: 0},
+			{Key: "traffic_by_day", Value: 0},
 		}
 
 		allUsers, err := database.GetPartialInfosForAllUsers(projections)
@@ -856,14 +864,17 @@ func GetUserByName() gin.HandlerFunc {
 		var projections = bson.D{
 			{Key: "used_by_current_day", Value: 1},
 			{Key: "used_by_current_month", Value: 1},
-			{Key: "traffic_by_month", Value: 1},
+			{Key: "used_by_current_year", Value: 1},
 			{Key: "traffic_by_day", Value: 1},
+			{Key: "traffic_by_month", Value: 1},
+			{Key: "traffic_by_year", Value: 1},
 			{Key: "used", Value: 1},
 			{Key: "email", Value: 1},
 			{Key: "path", Value: 1},
 			{Key: "uuid", Value: 1},
 			{Key: "name", Value: 1},
 			{Key: "node_global_list", Value: 1},
+			{Key: "node_in_use_status", Value: 1},
 			{Key: "_id", Value: 0},
 		}
 		user, err := database.GetUserByName(name, projections)
@@ -1063,5 +1074,39 @@ func EnableNodePerUser() gin.HandlerFunc {
 
 		log.Printf("Enable user: %v, node: %v by hand!", email, node)
 		c.JSON(http.StatusOK, gin.H{"message": "Enable user: " + email + " at node: " + node + " successfully!"})
+	}
+}
+
+func GenerateYaml() gin.HandlerFunc {
+	return func(c *gin.Context) {
+
+		var name string
+		if c.Query("name") != "" {
+			name = c.Query("name")
+		} else {
+			name = c.Param("name")
+		}
+
+		var projections = bson.D{
+			{Key: "used_by_current_year", Value: 0},
+			{Key: "used_by_current_month", Value: 0},
+			{Key: "used_by_current_day", Value: 0},
+			{Key: "traffic_by_year", Value: 0},
+			{Key: "traffic_by_month", Value: 0},
+			{Key: "traffic_by_day", Value: 0},
+			{Key: "password", Value: 0},
+			{Key: "refresh_token", Value: 0},
+			{Key: "token", Value: 0},
+		}
+		user, err := database.GetUserByName(name, projections)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			log.Printf("Get all users failed: %s", err.Error())
+			return
+		}
+
+		fmt.Printf("%v", user)
+
+		c.YAML(http.StatusOK, user.Email)
 	}
 }

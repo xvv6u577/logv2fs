@@ -36,6 +36,8 @@ func AuthRoutes(incomingRoutes *gin.Engine) {
 	incomingRoutes.GET("/static/:name", controller.GetSubscripionURL())
 	incomingRoutes.GET("/static/:name/ip", controller.GetSubscripionURL())
 	incomingRoutes.GET("/config/:name", controller.GenerateConfig())
+	incomingRoutes.GET("/yaml/:name", controller.GenerateYaml())
+	incomingRoutes.Use(static.Serve("/clash/", static.LocalFile("./yaml/results/", false)))
 
 	// incomingRoutes.NoRoute(func(c *gin.Context) {
 	// 	c.JSON(http.StatusNotFound, gin.H{"error": "page not found."})
