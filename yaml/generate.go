@@ -1,8 +1,8 @@
 package yaml
 
 import (
-	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 	"strings"
 
@@ -21,13 +21,46 @@ type (
 	ProxyGroups  = model.ProxyGroups
 )
 
-func GenerateAllClashxConfig() {
+func GenerateOneByQuery(email string) error {
 
-	yamlFile, err := os.ReadFile("./yaml/template.yaml")
+	var projections = bson.D{
+		{Key: "used_by_current_year", Value: 0},
+		{Key: "used_by_current_month", Value: 0},
+		{Key: "used_by_current_day", Value: 0},
+		{Key: "traffic_by_year", Value: 0},
+		{Key: "traffic_by_month", Value: 0},
+		{Key: "traffic_by_day", Value: 0},
+		{Key: "password", Value: 0},
+		{Key: "refresh_token", Value: 0},
+		{Key: "token", Value: 0},
+		{Key: "suburl", Value: 0},
+	}
+	user, err := database.GetUserByName(email, projections)
 	if err != nil {
-		fmt.Printf("yamlFile.Get err #%v ", err)
+		log.Printf("Error: %v\n", err)
+		return err
 	}
 
+	err = GenerateOne(user)
+	if err != nil {
+		log.Printf("Error: %v\n", err)
+		return err
+	}
+
+	log.Printf("generate %v yaml config Done!", user.Email)
+	return nil
+}
+
+func RemoveOne(email string) error {
+	err := os.Remove("./yaml/results/" + email + ".yaml")
+	if err != nil {
+		log.Printf("Remove: %v", err)
+		return err
+	}
+	return nil
+}
+
+func GenerateAllClashxConfig() error {
 	var projections = bson.D{
 		{Key: "used_by_current_year", Value: 0},
 		{Key: "used_by_current_month", Value: 0},
@@ -42,57 +75,73 @@ func GenerateAllClashxConfig() {
 	}
 	allUsers, err := database.GetPartialInfosForAllUsers(projections)
 	if err != nil {
-		fmt.Printf("Error: %v\n", err)
+		log.Printf("Error: %v\n", err)
+		return err
 	}
 
 	for _, user := range allUsers {
+		GenerateOne(*user)
+	}
 
-		var yamlTemplate = YamlTemplate{}
-		err = yaml.Unmarshal(yamlFile, &yamlTemplate)
-		if err != nil {
-			fmt.Printf("Unmarshal: %v", err)
-		}
+	log.Println("generate all user yaml file Done!")
+	return nil
+}
 
-		for node, status := range user.NodeInUseStatus {
-			nodeFlag := strings.Split(node, ".")[0]
-			if status {
-				yamlTemplate.Proxies = append(yamlTemplate.Proxies, Proxies{
-					Name:           nodeFlag,
-					Server:         node,
-					Port:           443,
-					Type:           "vmess",
-					UUID:           user.UUID,
-					AlterID:        64,
-					Cipher:         "auto",
-					TLS:            true,
-					SkipCertVerify: false,
-					Network:        "ws",
-					WsOpts: WsOpts{
-						Path:    "/" + user.Path,
-						Headers: Headers{Host: node},
-					},
-				})
+func GenerateOne(user User) error {
 
-				for index, value := range yamlTemplate.ProxyGroups {
-					if value.Name == "manual-select" || value.Name == "auto-select" {
-						yamlTemplate.ProxyGroups[index].Proxies = append(yamlTemplate.ProxyGroups[index].Proxies, nodeFlag)
-					}
+	yamlFile, err := os.ReadFile("./yaml/template.yaml")
+	if err != nil {
+		log.Printf("yamlFile.Get err #%v ", err)
+		return err
+	}
+
+	var yamlTemplate = YamlTemplate{}
+	err = yaml.Unmarshal(yamlFile, &yamlTemplate)
+	if err != nil {
+		log.Printf("Unmarshal: %v", err)
+		return err
+	}
+
+	for node, status := range user.NodeInUseStatus {
+		nodeFlag := strings.Split(node, ".")[0]
+		if status {
+			yamlTemplate.Proxies = append(yamlTemplate.Proxies, Proxies{
+				Name:           nodeFlag,
+				Server:         node,
+				Port:           443,
+				Type:           "vmess",
+				UUID:           user.UUID,
+				AlterID:        64,
+				Cipher:         "auto",
+				TLS:            true,
+				SkipCertVerify: false,
+				Network:        "ws",
+				WsOpts: WsOpts{
+					Path:    "/" + user.Path,
+					Headers: Headers{Host: node},
+				},
+			})
+
+			for index, value := range yamlTemplate.ProxyGroups {
+				if value.Name == "manual-select" || value.Name == "auto-select" {
+					yamlTemplate.ProxyGroups[index].Proxies = append(yamlTemplate.ProxyGroups[index].Proxies, nodeFlag)
 				}
 			}
 		}
-		fmt.Printf("%v\n", user.Name)
+	}
+	log.Printf("%v\n", user.Name)
 
-		newYaml, err := yaml.Marshal(&yamlTemplate)
-		if err != nil {
-			fmt.Printf("Marshal: %v", err)
-		}
-
-		err = ioutil.WriteFile("./yaml/results/"+user.Email+".yaml", newYaml, 0644)
-		if err != nil {
-			fmt.Printf("WriteFile: %v", err)
-		}
+	newYaml, err := yaml.Marshal(&yamlTemplate)
+	if err != nil {
+		log.Printf("Marshal: %v", err)
+		return err
 	}
 
-	fmt.Println("generate all user yaml file Done!")
+	err = ioutil.WriteFile("./yaml/results/"+user.Email+".yaml", newYaml, 0644)
+	if err != nil {
+		log.Printf("WriteFile: %v", err)
+		return err
+	}
 
+	return nil
 }

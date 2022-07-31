@@ -101,7 +101,14 @@ func main() {
 				Usage:   "generate yaml file",
 				Action: func(c *cli.Context) error {
 
-					yamlTools.GenerateAllClashxConfig()
+					// err := yamlTools.GenerateOneByQuery("casterasadmin")
+					// if err != nil {
+					// 	return err
+					// }
+					err := yamlTools.GenerateAllClashxConfig()
+					if err != nil {
+						return err
+					}
 
 					return nil
 				},

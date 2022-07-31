@@ -5,7 +5,6 @@ import { doRerender } from "../store/rerender";
 import axios from "axios";
 
 const AddNode = ({ btnName }) => {
-	const [show, setShow] = useState(false);
 	const [domains, setDomains] = useState({});
 	const [newdomain, updateNewdomain] = useState("");
 	const [showModal, setShowModal] = useState(false);
@@ -14,11 +13,6 @@ const AddNode = ({ btnName }) => {
 	const loginState = useSelector((state) => state.login);
 	const message = useSelector((state) => state.message);
 	const rerenderSignal = useSelector((state) => state.rerender);
-
-
-	const targetEl = document.getElementById('add-node-modal');
-
-
 
 	useEffect(() => {
 		if (message.show === true) {
@@ -43,6 +37,7 @@ const AddNode = ({ btnName }) => {
 
 	const handleAddNode = (e) => {
 		e.preventDefault();
+		setShowModal(!showModal)
 
 		axios({
 			method: "put",
@@ -124,7 +119,7 @@ const AddNode = ({ btnName }) => {
 											type="text"
 											onChange={(e) => updateNewdomain(e.target.value)}
 											value={newdomain} className="block p-4 pl-10 w-full text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" placeholder="New domain" />
-										<button type="submit"
+										<button type="button"
 											onClick={() => {
 												if (newdomain.length > 0) {
 													setDomains((prevState) => ({

@@ -35,8 +35,7 @@ func AuthRoutes(incomingRoutes *gin.Engine) {
 	incomingRoutes.POST("/v1/login", controller.Login())
 	incomingRoutes.GET("/static/:name", controller.GetSubscripionURL())
 	incomingRoutes.GET("/static/:name/ip", controller.GetSubscripionURL())
-	incomingRoutes.GET("/config/:name", controller.GenerateConfig())
-	incomingRoutes.GET("/yaml/:name", controller.GenerateYaml())
+	incomingRoutes.GET("/config/:name", controller.GetUserSimpleInfo())
 	incomingRoutes.Use(static.Serve("/clash/", static.LocalFile("./yaml/results/", false)))
 
 	// incomingRoutes.NoRoute(func(c *gin.Context) {

@@ -24,6 +24,7 @@ import (
 
 	"github.com/caster8013/logv2rayfullstack/grpctools"
 	"github.com/caster8013/logv2rayfullstack/model"
+	yamlTools "github.com/caster8013/logv2rayfullstack/yaml"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -250,8 +251,14 @@ func SignUp() gin.HandlerFunc {
 
 		wg.Wait()
 
-		fmt.Println(user.Email, "created at v2ray and database.")
+		err = yamlTools.GenerateOne(user)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			log.Printf("error occured while generating yaml: %v", err)
+			return
+		}
 
+		fmt.Println(user.Email, "created at v2ray and database.")
 		c.JSON(http.StatusOK, gin.H{"message": "user " + user.Name + " created at v2ray and database."})
 
 	}
@@ -304,7 +311,7 @@ func Login() gin.HandlerFunc {
 	}
 }
 
-func GenerateConfig() gin.HandlerFunc {
+func GetUserSimpleInfo() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
 		var name string
@@ -348,7 +355,18 @@ func AddNode() gin.HandlerFunc {
 			return
 		}
 
-		allUsers, err := database.GetFullInfosForAllUsers_ForInternalUse()
+		var projections = bson.D{
+			{Key: "used_by_current_year", Value: 0},
+			{Key: "used_by_current_month", Value: 0},
+			{Key: "used_by_current_day", Value: 0},
+			{Key: "traffic_by_year", Value: 0},
+			{Key: "traffic_by_month", Value: 0},
+			{Key: "traffic_by_day", Value: 0},
+			{Key: "password", Value: 0},
+			{Key: "refresh_token", Value: 0},
+			{Key: "token", Value: 0},
+		}
+		allUsers, err := database.GetPartialInfosForAllUsers(projections)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			log.Printf("error: %v", err)
@@ -367,6 +385,13 @@ func AddNode() gin.HandlerFunc {
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 				log.Printf("%v", err.Error())
+				return
+			}
+
+			err = yamlTools.GenerateOneByQuery(user.Email)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				log.Printf("error occured while generating yaml: %v", err)
 				return
 			}
 		}
@@ -573,6 +598,14 @@ func TakeItOfflineByUserName() gin.HandlerFunc {
 			return
 		}
 
+		err = yamlTools.GenerateOneByQuery(user.Email)
+		if err != nil {
+			msg := "yaml generate failed."
+			c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
+			log.Printf("%s", msg)
+			return
+		}
+
 		c.JSON(http.StatusOK, gin.H{"message": "User " + user.Name + " is offline!"})
 	}
 }
@@ -668,6 +701,14 @@ func TakeItOnlineByUserName() gin.HandlerFunc {
 			return
 		}
 
+		err = yamlTools.GenerateOneByQuery(user.Email)
+		if err != nil {
+			msg := "yaml generate failed."
+			c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
+			log.Printf("%s", msg)
+			return
+		}
+
 		c.JSON(http.StatusOK, gin.H{"message": "User " + user.Name + " is online!"})
 	}
 }
@@ -699,11 +740,22 @@ func DeleteUserByUserName() gin.HandlerFunc {
 			var wg sync.WaitGroup
 
 			if NODE_TYPE == "local" {
-				wg.Add(1)
-				go func(domain string) {
-					defer wg.Done()
-					grpctools.GrpcClientToDeleteUser(domain, "50051", user)
-				}("0.0.0.0")
+				cmdConn, err := grpc.Dial(fmt.Sprintf("%s:%s", V2_API_ADDRESS, V2_API_PORT), grpc.WithInsecure())
+				if err != nil {
+					msg := "v2ray connection failed."
+					log.Panicf("%v", msg)
+					c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
+					return
+				}
+
+				NHSClient := v2ray.NewHandlerServiceClient(cmdConn, user.Path)
+				err = NHSClient.DelUser(user.Email)
+				if err != nil {
+					msg := "v2ray take user back online failed."
+					log.Panicf("%v", msg)
+					c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
+					return
+				}
 			} else {
 
 				domainsLen := len(user.NodeInUseStatus)
@@ -731,6 +783,13 @@ func DeleteUserByUserName() gin.HandlerFunc {
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			log.Printf("DeleteUserByUserName: %s", err.Error())
+			return
+		}
+
+		err = yamlTools.RemoveOne(user.Name)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			log.Printf("Remove yaml file by user name: %s", err.Error())
 			return
 		}
 
@@ -996,6 +1055,14 @@ func DisableNodePerUser() gin.HandlerFunc {
 			return
 		}
 
+		err = yamlTools.GenerateOneByQuery(user.Email)
+		if err != nil {
+			msg := "yaml generate failed."
+			c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
+			log.Printf("%s", msg)
+			return
+		}
+
 		log.Printf("Disable user: %v, node: %v by hand!", email, node)
 		c.JSON(http.StatusOK, gin.H{"message": "Disable user: " + email + " at node: " + node + " successfully!"})
 	}
@@ -1072,41 +1139,15 @@ func EnableNodePerUser() gin.HandlerFunc {
 			return
 		}
 
-		log.Printf("Enable user: %v, node: %v by hand!", email, node)
-		c.JSON(http.StatusOK, gin.H{"message": "Enable user: " + email + " at node: " + node + " successfully!"})
-	}
-}
-
-func GenerateYaml() gin.HandlerFunc {
-	return func(c *gin.Context) {
-
-		var name string
-		if c.Query("name") != "" {
-			name = c.Query("name")
-		} else {
-			name = c.Param("name")
-		}
-
-		var projections = bson.D{
-			{Key: "used_by_current_year", Value: 0},
-			{Key: "used_by_current_month", Value: 0},
-			{Key: "used_by_current_day", Value: 0},
-			{Key: "traffic_by_year", Value: 0},
-			{Key: "traffic_by_month", Value: 0},
-			{Key: "traffic_by_day", Value: 0},
-			{Key: "password", Value: 0},
-			{Key: "refresh_token", Value: 0},
-			{Key: "token", Value: 0},
-		}
-		user, err := database.GetUserByName(name, projections)
+		err = yamlTools.GenerateOneByQuery(user.Email)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			log.Printf("Get all users failed: %s", err.Error())
+			msg := "yaml generate failed."
+			c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
+			log.Printf("%s", msg)
 			return
 		}
 
-		fmt.Printf("%v", user)
-
-		c.YAML(http.StatusOK, user.Email)
+		log.Printf("Enable user: %v, node: %v by hand!", email, node)
+		c.JSON(http.StatusOK, gin.H{"message": "Enable user: " + email + " at node: " + node + " successfully!"})
 	}
 }

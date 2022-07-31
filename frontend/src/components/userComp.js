@@ -412,7 +412,7 @@ function EditUser({ btnName, user, editUserFunc }) {
                                         />
                                     </div>
                                     <div>
-                                        <label for="name" className="block mb-2 text-sm font-medium text-gray-900 dark:text-gray-300">已用流量</label>
+                                        <label for="name" className="block mb-2 text-sm font-medium text-gray-900 dark:text-gray-300">Name</label>
                                         <input
                                             type="input"
                                             id="name"
