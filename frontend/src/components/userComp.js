@@ -17,8 +17,7 @@ const UserComp = (props) => {
     const dispatch = useDispatch();
 
     const fetchMore = () => {
-        setCollapse(!collapse);
-        collapse && axios
+        axios
             .get(process.env.REACT_APP_API_HOST + "user/" + props.user.email, {
                 headers: { token: loginState.token },
             })
@@ -88,7 +87,8 @@ const UserComp = (props) => {
                 headers: { token: loginState.token },
             })
             .then((response) => {
-                dispatch(doRerender({ rerender: !rerenderSignal.rerender }));
+                // dispatch(doRerender({ rerender: !rerenderSignal.rerender }));
+                fetchMore()
                 dispatch(success({ show: true, content: response.data.message }));
             })
             .catch((err) => {
@@ -107,7 +107,8 @@ const UserComp = (props) => {
                 headers: { token: loginState.token },
             })
             .then((response) => {
-                dispatch(doRerender({ rerender: !rerenderSignal.rerender }));
+                // dispatch(doRerender({ rerender: !rerenderSignal.rerender }));
+                fetchMore()
                 dispatch(success({ show: true, content: response.data.message }));
             })
             .catch((err) => {
@@ -207,7 +208,7 @@ const UserComp = (props) => {
                         />
                     </span>
                     <svg
-                        onClick={() => { fetchMore(); }}
+                        onClick={() => { setCollapse(!collapse); collapse && fetchMore(); }}
                         className={`w-6 h-6 shrink-0 dark:hover:bg-gray-600 hover:cursor-pointer ${collapse ? "rotate-180" : "rotate-0"}`}
                         fill="currentColor"
                         viewBox="0 0 20 20"
@@ -243,7 +244,7 @@ const UserComp = (props) => {
                         <div className="flex justify-between">
                             <span className="flex items-center text-sm">Clash:</span>
                             <TapToCopied>
-                                {process.env.REACT_APP_FILE_AND_SUB_URL + "/clash/" + user.email+".yaml"}
+                                {process.env.REACT_APP_FILE_AND_SUB_URL + "/clash/" + user.email + ".yaml"}
                             </TapToCopied>
                         </div>
                     </div>
@@ -257,7 +258,7 @@ const UserComp = (props) => {
                                         {value ? (
                                             <button
                                                 type="button"
-                                                className="flex text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-2.5 py-2.5 m-1 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
+                                                className="flex text-white bg-red-700 hover:bg-red-800 focus:ring-4 focus:outline-none focus:ring-red-300 font-medium rounded-lg text-sm px-2.5 py-2.5 m-1 text-center dark:bg-red-600 dark:hover:bg-red-700 dark:focus:ring-red-800"
                                                 onClick={() =>
                                                     handleDisableNode({
                                                         email: user.email,
@@ -273,7 +274,7 @@ const UserComp = (props) => {
                                         ) : (
                                             <button
                                                 type="button"
-                                                className="flex text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-2.5 py-2.5 m-1 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
+                                                className="flex text-white bg-green-700 hover:bg-green-800 focus:ring-4 focus:outline-none focus:ring-green-300 font-medium rounded-lg text-sm px-2.5 py-2.5 m-1 text-center dark:bg-green-600 dark:hover:bg-green-700 dark:focus:ring-green-800"
                                                 onClick={() =>
                                                     handleEnableNode({
                                                         email: user.email,
@@ -498,7 +499,7 @@ function ConfirmDelUser({ btnName, deleteUserFunc }) {
                             <div className="p-6 text-center">
                                 <svg aria-hidden="true" className="mx-auto mb-4 w-14 h-14 text-gray-400 dark:text-gray-200" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                                 <h3 className="mb-5 text-lg font-normal text-gray-500 dark:text-gray-400">Are you sure you want to delete this user?</h3>
-                                <button 
+                                <button
                                     type="button"
                                     onClick={() => {
                                         setShow(!show);
@@ -507,9 +508,9 @@ function ConfirmDelUser({ btnName, deleteUserFunc }) {
                                     className="text-white bg-red-600 hover:bg-red-800 focus:ring-4 focus:outline-none focus:ring-red-300 dark:focus:ring-red-800 font-medium rounded-lg text-sm inline-flex items-center px-5 py-2.5 text-center mr-2">
                                     Yes, I'm sure
                                 </button>
-                                <button 
-                                    type="button" 
-                                    onClick={()=> setShow(!show)}
+                                <button
+                                    type="button"
+                                    onClick={() => setShow(!show)}
                                     className="text-gray-500 bg-white hover:bg-gray-100 focus:ring-4 focus:outline-none focus:ring-gray-200 rounded-lg border border-gray-200 text-sm font-medium px-5 py-2.5 hover:text-gray-900 focus:z-10 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-500 dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-gray-600"
                                 >
                                     No, cancel

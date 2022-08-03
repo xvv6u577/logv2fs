@@ -180,8 +180,9 @@ func main() {
 							if user.Status == v2ray.DELETE {
 								fmt.Println(user.Email)
 								for key, val := range user.NodeInUseStatus {
+									fmt.Printf("before: %v\n", val)
 									user.NodeInUseStatus[key] = false
-									fmt.Printf("%v, %v\n", key, val)
+									fmt.Printf("after: %v\n", user.NodeInUseStatus[key])
 								}
 
 								filter := bson.D{primitive.E{Key: "email", Value: user.Email}}

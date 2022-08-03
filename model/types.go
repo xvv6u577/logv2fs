@@ -152,7 +152,11 @@ func (u *User) AddNodeInUse(domain string) {
 func (u *User) ProduceNodeInUse(nodes map[string]string) {
 	u.NodeInUseStatus = map[string]bool{}
 	for _, item := range nodes {
-		u.NodeInUseStatus[item] = true
+		if u.Status == "plain" {
+			u.NodeInUseStatus[item] = true
+		} else {
+			u.NodeInUseStatus[item] = false
+		}
 	}
 	u.ProduceSuburl()
 }
