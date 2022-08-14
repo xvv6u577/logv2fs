@@ -9,12 +9,12 @@ import { doRerender } from "../store/rerender";
 
 
 const UserComp = (props) => {
-    const [collapse, setCollapse] = useState(true);
+
     const [user, setUser] = useState({});
 
+    const dispatch = useDispatch();
     const loginState = useSelector((state) => state.login);
     const rerenderSignal = useSelector((state) => state.rerender);
-    const dispatch = useDispatch();
 
     const fetchMore = () => {
         axios
@@ -208,8 +208,11 @@ const UserComp = (props) => {
                         />
                     </span>
                     <svg
-                        onClick={() => { setCollapse(!collapse); collapse && fetchMore(); }}
-                        className={`w-6 h-6 shrink-0 dark:hover:bg-gray-600 hover:cursor-pointer ${collapse ? "rotate-180" : "rotate-0"}`}
+                        onClick={() => { 
+                            props.update();
+                            props.active && fetchMore();
+                        }}
+                        className={`w-6 h-6 shrink-0 dark:hover:bg-gray-600 hover:cursor-pointer ${props.active ? "rotate-180" : "rotate-0"}`}
                         fill="currentColor"
                         viewBox="0 0 20 20"
                         xmlns="http://www.w3.org/2000/svg">
@@ -219,7 +222,7 @@ const UserComp = (props) => {
             </h2>
             <div
                 id={`accordion-collapse-body-${props.index}`}
-                className={collapse ? "hidden" : null}
+                className={`${props.active ? "hidden " : ""}accordion-collapse-body`}
             >
                 <div className="flex flex-row p-5 font-light border border-b-0 border-gray-200 dark:border-gray-700 dark:bg-gray-900">
                     <div className="flex flex-col justify-between rounded-lg border-4 border-neutral-100 mx-auto my-3 p-3 w-2/5" >

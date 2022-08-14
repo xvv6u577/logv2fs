@@ -7,12 +7,18 @@ import UserComp from "./userComp";
 import Alert from "./alert";
 
 const Home = () => {
+
 	const [users, setUsers] = useState([]);
+	const [activeTab, setActiveTab] = useState(-1);
+	
+	const dispatch = useDispatch();
 	const loginState = useSelector((state) => state.login);
 	const message = useSelector((state) => state.message);
 	const rerenderSignal = useSelector((state) => state.rerender);
 
-	const dispatch = useDispatch();
+	const activateTab = (index) => {
+		activeTab === index ? setActiveTab(-1) : setActiveTab(index);
+ };
 
 	useEffect(() => {
 		if (message.show === true) {
@@ -69,7 +75,13 @@ const Home = () => {
 						);
 					})
 					.map((element, index) => (
-						<UserComp user={element} index={index} key={index} />
+						<UserComp
+							user={element}
+							index={index}
+							key={index}
+							active={!(activeTab === index)}
+							update={() => activateTab(index)}
+						/>
 					))
 				}
 			</div>

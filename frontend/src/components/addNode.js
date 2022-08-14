@@ -5,6 +5,7 @@ import { doRerender } from "../store/rerender";
 import axios from "axios";
 
 const AddNode = ({ btnName }) => {
+
 	const [domains, setDomains] = useState({});
 	const [newdomain, updateNewdomain] = useState("");
 	const [showModal, setShowModal] = useState(false);
@@ -101,15 +102,18 @@ const AddNode = ({ btnName }) => {
 								<ul className="my-4 space-y-3">
 									{Object.entries(domains).map(([key, value]) => (
 										<li key={key} >
-											<a href="#" className="flex items-center p-3 text-base font-bold text-gray-900 bg-gray-50 rounded-lg hover:bg-gray-100 group hover:shadow dark:bg-gray-600 dark:hover:bg-gray-500 dark:text-white">
+											<div className="flex items-center p-3 text-base font-bold text-gray-900 bg-gray-50 rounded-lg hover:bg-gray-100 group hover:shadow dark:bg-gray-600 dark:hover:bg-gray-500 dark:text-white">
 												<span className="flex-1 ml-3 whitespace-nowrap">{key}: {value}</span>
 												<span
 													onClick={() => {
 														delete domains[key];
 														setDomains({ ...domains });
 													}}
-													className="inline-flex items-center justify-center px-2 py-0.5 ml-3 text-xs font-medium text-gray-500 bg-gray-200 rounded dark:bg-gray-700 dark:text-gray-400">Delete</span>
-											</a>
+													className="cursor-pointer inline-flex items-center justify-center px-2 py-0.5 ml-3 text-xs font-medium text-gray-500 bg-gray-200 rounded dark:bg-gray-700 dark:text-gray-400"
+												>
+													Delete
+												</span>
+											</div>
 										</li>
 									))}
 								</ul>

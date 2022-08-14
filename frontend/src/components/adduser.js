@@ -6,11 +6,6 @@ import axios from "axios";
 
 function AddUser({ btnName }) {
 
-	const loginState = useSelector((state) => state.login);
-	const dispatch = useDispatch();
-	const rerenderSignal = useSelector((state) => state.rerender);
-	const [showModal, setShowModal] = useState(false);
-
 	const initialState = {
 		email: "",
 		password: "",
@@ -19,9 +14,13 @@ function AddUser({ btnName }) {
 		role: "normal",
 		uuid: ""
 	};
+	const [showModal, setShowModal] = useState(false);
+	const [{ email, password, name, path, role, uuid }, setState] = useState(initialState);
 
-	const [{ email, password, name, path, role, uuid }, setState] =
-		useState(initialState);
+	const dispatch = useDispatch();
+	const loginState = useSelector((state) => state.login);
+	const rerenderSignal = useSelector((state) => state.rerender);
+
 
 	const clearState = () => {
 		setState({ ...initialState });
