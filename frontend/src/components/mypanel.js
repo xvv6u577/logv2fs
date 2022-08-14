@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { alert, reset, success, info } from "../store/message";
+import { alert, reset } from "../store/message";
 import { useSelector, useDispatch } from "react-redux";
 import { formatBytes } from "../service/service";
 import axios from "axios";
@@ -9,7 +9,6 @@ import Alert from "./alert";
 
 function Mypanel() {
 	const [user, setUser] = useState({});
-	const [modalShown, toggleModal] = useState(false);
 
 	const dispatch = useDispatch();
 	const loginState = useSelector((state) => state.login);
@@ -39,7 +38,7 @@ function Mypanel() {
 
 	return (
 		<div className="py-3 flex-1">
-			<Alert message={message.content} type={message.type} shown={message.show} close={() => { dispatch(reset({})); }}/>
+			<Alert message={message.content} type={message.type} shown={message.show} close={() => { dispatch(reset({})); }} />
 			<div className="flex flex-col md:flex-row">
 				<div className="grow p-6 m-3 bg-white rounded-lg border border-gray-200 shadow-md hover:bg-gray-100 dark:bg-gray-800 dark:border-gray-700 dark:hover:bg-gray-700">
 					<div className="h3">

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 
 const TapToCopied = (props) => {
 	const [showTooltip, setShowTooltip] = useState(false);
