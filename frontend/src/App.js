@@ -5,10 +5,10 @@ import "./App.css";
 import Login from "./components/login";
 import Home from "./components/home";
 import Menu from "./components/menu";
-// import Macos from "./components/macos";
-// import Windows from "./components/windows";
-// import Android from "./components/android";
-// import Iphone from "./components/iphone";
+import Macos from "./components/macos";
+import Windows from "./components/windows";
+import Iphone from "./components/iphone";
+import Android from "./components/android";
 import Footer from "./components/footer";
 import Mypanel from "./components/mypanel";
 
@@ -58,7 +58,7 @@ function App() {
 						<RequireAuth>
 							<div className="flex-1 flex flex-col md:container md:mx-auto" fluid="true">
 								<Menu />
-								{/* <Macos /> */}
+								<Macos />
 								<Footer />
 							</div>
 						</RequireAuth>
@@ -70,7 +70,7 @@ function App() {
 						<RequireAuth>
 							<div className="flex-1 flex flex-col md:container md:mx-auto" fluid="true">
 								<Menu />
-								{/* <Windows /> */}
+								<Windows />
 								<Footer />
 							</div>
 						</RequireAuth>
@@ -82,7 +82,7 @@ function App() {
 						<RequireAuth>
 							<div className="flex-1 flex flex-col md:container md:mx-auto" fluid="true">
 								<Menu />
-								{/* <Iphone /> */}
+								<Iphone />
 								<Footer />
 							</div>
 						</RequireAuth>
@@ -94,7 +94,7 @@ function App() {
 						<RequireAuth>
 							<div className="flex-1 flex flex-col md:container md:mx-auto" fluid="true">
 								<Menu />
-								{/* <Android /> */}
+								<Android />
 								<Footer />
 							</div>
 						</RequireAuth>

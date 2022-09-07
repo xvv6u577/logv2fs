@@ -1,178 +1,44 @@
-import { useEffect, useState } from "react";
-import { Container, Alert, Badge, Tabs, Tab } from "react-bootstrap";
-import { useSelector, useDispatch } from "react-redux";
-import axios from "axios";
-import { alert } from "../store/message";
+import { useSelector } from "react-redux";
 import TapToCopied from "./tapToCopied";
 
 function Windows() {
-	const [user, updateUser] = useState({});
 	const loginState = useSelector((state) => state.login);
-	const message = useSelector((state) => state.message);
-	const dispatch = useDispatch();
-
-	useEffect(() => {
-		axios
-			.get(process.env.REACT_APP_API_HOST + "user/" + loginState.jwt.Email, {
-				headers: { token: loginState.token },
-			})
-			.then((response) => {
-				updateUser(response.data);
-			})
-			.catch((err) => {
-				dispatch(alert({ show: true, content: err.toString() }));
-			});
-	}, [dispatch, loginState.jwt.Email, loginState.token]);
 
 	return (
-		<Container class="content py-3">
-			<Alert show={message.show} variant={message.type}>
-				{" "}
-				{message.content}{" "}
-			</Alert>
-			<h1 class="py-3">Windows 客户端 (v2rayw)</h1>
-			<h3 class="py-2">step 1: window 系统时间校准</h3>
-			<p>
-				请确保你的PC已联网! windows 的本地时间和标准时间相差必须在 90s
-				以内(时区无关), 否则客户端运行会有问题。
+		<div className="md:container md:mx-auto px-20">
+			<h1 className="my-4 px-auto text-4xl font-extrabold tracking-tight leading-none text-gray-900 md:text-5xl lg:text-6xl dark:text-white">
+				Windows 系统中安装 clash
+			</h1>
+			<p className="my-6 text-baseg font-normal text-gray-500 lg:text-xl sm:px-16 xl:px-10 dark:text-gray-400">Step 1: 安装 clash 客户端</p>
+			<div className="my-6 text-baseg font-normal text-gray-500 lg:text-base sm:px-16 xl:px-10 dark:text-sky-200">
+				客户端下载:{" "}<br /> <TapToCopied>{process.env.REACT_APP_FILE_AND_SUB_URL + "/dl/Clash.for.Windows.Setup.0.19.26.exe"}</TapToCopied>
+			</div>
+			<p className="my-6 text-baseg font-normal text-gray-500 lg:text-base sm:px-16 xl:px-10 dark:text-sky-200">
+				下载之后，双击安装包，运行安装程序，并授权 clash 接入网络。若标题栏出现小黑猫图标, 说明 clash 已运行。
 			</p>
-			<p>
-				右键点击右下角的“时间” &#x2192; 点击“调整日期时间” &#x2192;
-				把自动设置时间和自动设置时区勾选上即可.
+			<p className="my-6 text-baseg font-normal text-gray-500 lg:text-xl sm:px-16 xl:px-10 dark:text-gray-400">Step 2: 添加配置</p>
+			<p className="my-6 text-baseg font-normal text-gray-500 lg:text-base sm:px-16 xl:px-10 dark:text-sky-200">
+				双击下方标题栏 clash 图标, 选择 General 页，<br />
+				点按 Service Mode 右边的 Manage, 点按 Install 按钮，安装服务。<br />
+				安装成功后，程序会自动重启！<br />
+				再次回到 General 页, Service Mode 右边的图标会变成绿色，说明服务已启动。<br />
 			</p>
-			<h3 class="py-2">step 2: 下载客户端</h3>
-			<p>
-				下载客户端:{" "}
-				<TapToCopied>
-					{process.env.REACT_APP_FILE_AND_SUB_URL + "/dl/v2rayw.zip"}
-				</TapToCopied>
+			<div className="my-6 text-baseg font-normal text-gray-500 lg:text-base sm:px-16 xl:px-12 dark:text-sky-200">
+				双击下方标题栏 clash 图标, 选择 Profiles 页，复制下面的 Url, <br />
+				<p className="py-5"><TapToCopied>{process.env.REACT_APP_FILE_AND_SUB_URL + "/clash/" + loginState.jwt.Email+".yaml"}</TapToCopied></p>
+				粘贴到提示信息"Download from URL" 的输入框中，点按 Download 按钮，添加配置。<br />
+				添加成功后, Profiles 页面有新的条目出现。<br />
+			</div>
+			<p className="my-6 text-baseg font-normal text-gray-500 lg:text-xl sm:px-16 xl:px-10 dark:text-gray-400">Step 3: 日常运行设置</p>
+			<p className="my-6 text-baseg font-normal text-gray-500 lg:text-base sm:px-16 xl:px-10 dark:text-sky-200">
+				右击下方标题栏 clash 图标, Proxy Mode, 选择 Rule<br />
+				选中 TUN Mode<br />
+				选中 System Proxy<br />
 			</p>
-			<p>
-				解压v2rayw.zip。打开解压后文件夹,
-				双击运行v2rayw.exe文件。windows右下角状态栏出现绿色W形状图标。
-			</p>
-			<h3 class="py-2">step 3: 添加配置</h3>
-			<p>
-				右击绿色W形状图标 &#x2192; 配置..., 在v2rayw配置面板中,
-				依次填入下面参数:
-			</p>
-			<p>
-				本地socks5端口:{" "}
-				<div class="inline h4">
-					<Badge bg="secondary" pill class="mx-1">
-						1080
-					</Badge>{" "}
-				</div>
-				本地http端口:{" "}
-				<div class="inline h4">
-					<Badge bg="secondary" pill class="mx-1">
-						8008
-					</Badge>{" "}
-				</div>
-			</p>
-			<p> 点按“添加”, 填入服务器信息&#x2192; </p>
-			<Tabs
-				defaultActiveKey={user.node_in_use_status && Object.keys(user.node_in_use_status)[0]}
-				id="uncontrolled-tab-example"
-				class="mb-3"
-			>
-				{user.node_in_use_status &&
-					Object.keys(user.node_in_use_status).map((key) => (
-						<Tab eventKey={key} title={key} class="bg-secondary rounded p-3">
-							<div>
-								{" "}
-								地址:
-								<TapToCopied>
-									{user.node_in_use_status && user.node_in_use_status[key]}:443
-								</TapToCopied>
-								用户ID: <TapToCopied>{user.uuid}</TapToCopied>
-								额外ID:{" "}
-								<div class="inline h4">
-									<Badge bg="secondary" pill class="mx-1">
-										64
-									</Badge>{" "}
-								</div>
-								等级:{" "}
-								<div class="inline h4">
-									<Badge bg="secondary" pill class="mx-1">
-										0
-									</Badge>{" "}
-								</div>
-								加密方式:{" "}
-								<div class="inline h4">
-									<Badge bg="secondary" pill class="mx-1">
-										auto
-									</Badge>
-								</div>
-								标签:{" "}
-								<div class="inline h4">
-									<Badge bg="secondary" pill class="mx-1">
-										w8
-									</Badge>{" "}
-								</div>
-								网络类型:{" "}
-								<div class="inline h4">
-									<Badge bg="secondary" pill class="mx-1">
-										ws
-									</Badge>
-								</div>
-							</div>
-							<p>点按“传输设置”&#x2192;</p>
-							<ul>
-								<li>
-									WebSocket标签:
-									<p>
-										路径:{" "}
-										<div class="inline h4">
-											<TapToCopied>{"/" + user.path}</TapToCopied>
-										</div>
-										http头部: (留空)
-									</p>
-								</li>
-								<li>
-									TLS标签:
-									<p>选中"启用传输层加密TLS"; </p>
-									<p> “域名服务器”, 删除“server.cc”, 留空白; </p>
-								</li>
-								<li>其它标签保持原配置, 不用更改。</li>
-							</ul>
-						</Tab>
-					))}
-			</Tabs>
-
-			<p class="mt-2">点按“保存”。v2rayw配置面板中, 点按保存。</p>
-			<h3 class="py-2">step 4: 设置系统代理</h3>
-			<p>windows系统设置中, 搜索“proxy”。选中“使用代理服务器”</p>
-			<p>
-				地址:{" "}
-				<div class="inline h4">
-					<Badge bg="secondary" pill class="mx-1">
-						127.0.0.1
-					</Badge>
-				</div>
-				端口:{" "}
-				<div class="inline h4">
-					<Badge bg="secondary" pill class="mx-1">
-						8008
-					</Badge>
-				</div>
-				选中“请勿将代理服务器用于本地地址”。
-			</p>
-			<h3 class="py-2">step 5: 运行v2rayw</h3>
-			<p>
-				右击绿色W形状图标 &#x2192; v2ray内部路由规则 &#x2192;
-				选择“绕过本地和CN地址”
-			</p>
-			<p>右击绿色W形状图标 &#x2192; 选择“加载v2ray”</p>
-			<p>
-				配置完成! 打开edge/chrome浏览器, 输入baidu.com, 测试是否能正常联网;
-				输入www.google.com, 测试是否能正常联外网。
-			</p>
-			<p>
-				(以上内容, 遇到问题, 请给我发信息,
-				我们可以约时间通过zoom远程控制帮助你安装。)
-			</p>
-		</Container>
+			<div className="my-6 text-baseg font-normal text-gray-500 lg:text-base sm:px-16 xl:px-10 dark:text-sky-200">
+				打开浏览器，访问 <TapToCopied>https://www.google.com</TapToCopied>，如果能正常访问，说明配置成功。
+			</div>
+		</div>
 	);
 }
 
