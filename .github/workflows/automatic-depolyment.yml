@@ -12,20 +12,23 @@ jobs:
           install -m 600 -D /dev/null ~/.ssh/id_rsa
           echo "${{ secrets.SSH_PRIVATE_KEY }}" >> ~/.ssh/id_rsa
           # ssh-keyscan -H 172.93.40.89
-          echo "${{ secrets.SSHED_HOST }}" >> ~/.ssh/known_hosts
+          echo "${{ secrets.W8_SSH_HOST }}" >> ~/.ssh/known_hosts
           echo "${{ secrets.RM_SSH_HOST }}" >> ~/.ssh/known_hosts
-          echo "${{ secrets.W82ND_SSH_HOST }}" >> ~/.ssh/known_hosts
           echo "${{ secrets.SL_SSH_HOST }}" >> ~/.ssh/known_hosts
           echo "${{ secrets.SG_SSH_HOST }}" >> ~/.ssh/known_hosts
+          echo "${{ secrets.W82ND_SSH_HOST }}" >> ~/.ssh/known_hosts
+          echo "${{ secrets.TW_SSH_HOST }}" >> ~/.ssh/known_hosts
       - name: Deploy
         run: |
           echo '--------------------- w8 ---------------------'
-          ssh caster@34.96.219.248 "./deploy.sh"
+          ssh caster@104.208.108.46 "./deploy.sh"
           echo '--------------------- rm ---------------------'
           ssh root@172.93.40.89 -p 28714 "./deploy.sh"
-          echo '--------------------- w82nd ---------------------'
-          ssh caster@34.92.69.172 "./deploy.sh"
           echo '--------------------- sl ---------------------'
           ssh ubuntu@146.56.144.121 "./deploy.sh"
           echo '--------------------- sg ---------------------'
           ssh root@45.79.73.241 "./deploy.sh"
+          echo '--------------------- w82nd ---------------------'
+          ssh caster@34.92.69.172 "./deploy.sh"
+          echo '--------------------- tw ---------------------'
+          ssh caster@34.81.85.35 "./deploy.sh"
