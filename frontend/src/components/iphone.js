@@ -32,7 +32,7 @@ function Ihpone() {
 			<div className="my-6 text-baseg font-normal text-gray-500 lg:text-base sm:px-16 xl:px-12 dark:text-sky-200">
 				<p>打开 Shadowrocket, 点按shadowrocket右上角“+”号</p>
 				<p>类型选择“Subscribe”,URL 填写下面的地址</p>
-				<TapToCopied>{process.env.REACT_APP_FILE_AND_SUB_URL + "/static/" + loginState.jwt.Email} </TapToCopied>
+				<TapToCopied>{process.env.REACT_APP_FILE_AND_SUB_URL + "/static/" + loginState.jwt.Email}</TapToCopied>
 				<p>备注填"clash"</p>
 				<p>然后点按右上角的“完成”按钮。配置添加成功的话, 回到 Shadowrocket 首页, 有新的项目生成！</p>
 				<p></p>
