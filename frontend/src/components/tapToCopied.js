@@ -4,8 +4,8 @@ const TapToCopied = (props) => {
 	const [showTooltip, setShowTooltip] = useState(false);
 
 	return (
-		<span className="me-3 my-1 relative">
-			<span className="truncate block md:inline">
+		<span className="me-3 my-1 relative block">
+			<span className="truncate md:inline">
 				{props.children}
 			</span>
 			{" | "}

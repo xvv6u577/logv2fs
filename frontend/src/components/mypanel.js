@@ -67,21 +67,21 @@ function Mypanel() {
 			</div>
 
 			<div
-				className="flex flex-col content-between rounded-lg border-4 border-neutral-100 mx-auto my-3 p-3 w-1/2"
+				className="flex flex-col content-between rounded-lg box-border border-4 border-neutral-100 mx-auto md:my-3 md:p-3 md:w-1/2"
 			>
-				<div className="flex justify-between">
+				<div className="flex md:justify-between">
 					<span className="flex items-center text-sm">用户名:</span>
 					<TapToCopied>{user.email}</TapToCopied>
 				</div>
-				<div className="flex justify-between">
+				<div className="flex md:justify-between">
 					<span className="flex items-center text-sm">path: </span>
 					<TapToCopied>{user.path}</TapToCopied>
 				</div>
-				<div className="flex justify-between">
+				<div className="flex md:justify-between">
 					<span className="flex items-center text-sm">uuid: </span>
 					<TapToCopied>{user.uuid}</TapToCopied>
 				</div>
-				<div className="flex justify-between">
+				<div className="flex md:justify-between">
 					<span className="flex items-center text-sm">SubUrl:</span>
 					<TapToCopied>
 						{process.env.REACT_APP_FILE_AND_SUB_URL + "/static/" + user.email}

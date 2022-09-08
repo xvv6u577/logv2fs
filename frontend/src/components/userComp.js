@@ -123,9 +123,9 @@ const UserComp = (props) => {
     return (
         <>
             <h2 id={`accordion-collapse-heading-${props.index}`} >
-                <span className="flex items-center justify-between w-full px-5 font-medium text-left border border-b-0 border-gray-200 rounded-t-xl focus:ring-4 focus:ring-gray-200 dark:focus:ring-gray-800 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white"
+                <span className="flex flex-col md:flex-row items-center md:justify-between w-full md:px-5 font-medium text-left border border-b-0 border-gray-200 rounded-t-xl focus:ring-4 focus:ring-gray-200 dark:focus:ring-gray-800 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white"
                 >
-                    <span className="w-1/3">
+                    <span className="md:w-1/3">
                         <span className="bg-gray-100 text-gray-800 text-xs font-medium inline-flex items-center px-2.5 py-0.5 rounded mr-2 dark:bg-gray-700 dark:text-gray-300">
                             {props.index + 1}{"."}
                         </span>
@@ -156,7 +156,7 @@ const UserComp = (props) => {
                             </span>
                         )}
                     </span>
-                    <span className="w-1/3"> Today:{" "}
+                    <span className="md:w-1/3"> Today:{" "}
                         <span className="bg-indigo-100 text-indigo-800 text-sm font-medium mr-2 px-2.5 py-0.5 rounded dark:bg-indigo-200 dark:text-indigo-900">
                             {formatBytes(props.user.used_by_current_day.amount)}
                         </span>
@@ -170,7 +170,7 @@ const UserComp = (props) => {
                             {formatBytes(props.user.used)}
                         </span>
                     </span>
-                    <span className="flex flex-row w-1/3">
+                    <span className="flex flex-row md:w-1/3">
                         <EditUser
                             btnName="Edit"
                             editUserFunc={() =>
@@ -224,27 +224,27 @@ const UserComp = (props) => {
                 id={`accordion-collapse-body-${props.index}`}
                 className={`${props.active ? "hidden " : ""}accordion-collapse-body`}
             >
-                <div className="flex flex-row p-5 font-light border border-b-0 border-gray-200 dark:border-gray-700 dark:bg-gray-900">
-                    <div className="flex flex-col justify-between rounded-lg border-4 border-neutral-100 mx-auto my-3 p-3 w-2/5" >
-                        <div className="flex justify-between">
+                <div className="flex flex-col md:flex-row md:p-5 font-light border border-b-0 border-gray-200 dark:border-gray-700 dark:bg-gray-900">
+                    <div className="flex flex-col justify-between rounded-lg border-4 border-neutral-100 mx-auto my-3 md:p-3 md:w-2/5" >
+                        <div className="flex md:justify-between">
                             <span className="flex items-center text-sm">用户名:</span>
                             <TapToCopied>{user.email}</TapToCopied>
                         </div>
-                        <div className="flex justify-between">
+                        <div className="flex md:justify-between">
                             <span className="flex items-center text-sm">path: </span>
                             <TapToCopied>{user.path}</TapToCopied>
                         </div>
-                        <div className="flex justify-between">
+                        <div className="flex md:justify-between">
                             <span className="flex items-center text-sm">uuid: </span>
                             <TapToCopied>{user.uuid}</TapToCopied>
                         </div>
-                        <div className="flex justify-between">
+                        <div className="flex md:justify-between">
                             <span className="flex items-center text-sm">Shdowrocket:</span>
                             <TapToCopied>
                                 {process.env.REACT_APP_FILE_AND_SUB_URL + "/static/" + user.email}
                             </TapToCopied>
                         </div>
-                        <div className="flex justify-between">
+                        <div className="flex md:justify-between">
                             <span className="flex items-center text-sm">Clash:</span>
                             <TapToCopied>
                                 {process.env.REACT_APP_FILE_AND_SUB_URL + "/clash/" + user.email + ".yaml"}
@@ -252,7 +252,7 @@ const UserComp = (props) => {
                         </div>
                     </div>
 
-                    <div className="flex flex-col content-between rounded-lg border-4 border-neutral-100 mx-auto my-3 p-3 w-1/3">
+                    <div className="flex flex-col content-between rounded-lg border-4 border-neutral-100 md:mx-auto md:my-3 md:p-3 md:w-1/3">
                         {user && user.node_in_use_status &&
                             Object.entries(user.node_in_use_status).map(
                                 ([key, value]) => (

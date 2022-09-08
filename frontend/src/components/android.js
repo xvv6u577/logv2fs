@@ -6,7 +6,7 @@ function Android() {
 	const loginState = useSelector((state) => state.login);
 
 	return (
-		<div className="md:container md:mx-auto px-20">
+		<div className="xl:container xl:mx-auto px-5 xl:px-20">
 			<h1 className="my-4 px-auto text-4xl font-extrabold tracking-tight leading-none text-gray-900 md:text-5xl lg:text-6xl dark:text-white">
 				Android 系统中安装 clash
 			</h1>
