@@ -55,7 +55,7 @@ const Login = () => {
 	}
 
 	return (
-		<div className="container px-5 py-24 mx-auto lg:w-1/3">
+		<div className="container px-5 py-24 mx-auto md:w-96">
 			<form onSubmit={handleSubmit}>
 				<h3 className="mb-4 text-xl font-medium text-white-900 dark:text-white">Sign in to our platform</h3>
 				<div className="mb-6">
