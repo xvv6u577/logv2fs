@@ -34,9 +34,9 @@ function AddUser({ btnName }) {
 			url: process.env.REACT_APP_API_HOST + "signup",
 			headers: { token: loginState.token },
 			data: {
-				role,
 				email,
 				password,
+				role,
 				name,
 				path,
 				status: "plain",

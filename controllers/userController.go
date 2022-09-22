@@ -21,10 +21,12 @@ import (
 	"github.com/caster8013/logv2rayfullstack/v2ray"
 
 	helper "github.com/caster8013/logv2rayfullstack/helpers"
+	sanitize "github.com/caster8013/logv2rayfullstack/sanitize"
 
 	"github.com/caster8013/logv2rayfullstack/grpctools"
 	"github.com/caster8013/logv2rayfullstack/model"
 	yamlTools "github.com/caster8013/logv2rayfullstack/yaml"
+
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -111,7 +113,8 @@ func SignUp() gin.HandlerFunc {
 			return
 		}
 
-		count, err := userCollection.CountDocuments(ctx, bson.M{"email": user.Email})
+		user_email := sanitize.SanitizeStr(user.Email)
+		count, err := userCollection.CountDocuments(ctx, bson.M{"email": user_email})
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "error occured while checking for the email"})
 			log.Printf("error occured while checking for the email: %s", err.Error())
@@ -125,8 +128,7 @@ func SignUp() gin.HandlerFunc {
 		}
 
 		var adminUser model.User
-		userId := c.GetString("uid")
-		log.Println("userId: ", userId)
+		userId := sanitize.SanitizeStr(c.GetString("uid"))
 
 		err = userCollection.FindOne(ctx, bson.M{"user_id": userId}).Decode(&adminUser)
 		if err != nil {
@@ -136,7 +138,7 @@ func SignUp() gin.HandlerFunc {
 		}
 
 		if user.Name == "" {
-			user.Name = user.Email
+			user.Name = user_email
 		}
 
 		if user.Path == "" {
@@ -155,7 +157,8 @@ func SignUp() gin.HandlerFunc {
 		}
 
 		user.ProduceNodeInUse(adminUser.NodeGlobalList)
-		if user.Role == "admin" {
+		user_role := sanitize.SanitizeStr(user.Role)
+		if user_role == "admin" {
 			user.NodeGlobalList = adminUser.NodeGlobalList
 		}
 
@@ -190,7 +193,7 @@ func SignUp() gin.HandlerFunc {
 
 		user.ID = primitive.NewObjectID()
 		user.User_id = user.ID.Hex()
-		token, refreshToken, _ := helper.GenerateAllTokens(user.Email, user.UUID, user.Path, user.Role, user.User_id)
+		token, refreshToken, _ := helper.GenerateAllTokens(user_email, user.UUID, user.Path, user_role, user.User_id)
 		user.Token = &token
 		user.Refresh_token = &refreshToken
 
@@ -245,7 +248,7 @@ func SignUp() gin.HandlerFunc {
 		err = database.Client.Database("logV2rayTrafficDB").CreateCollection(ctx, user.Email)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			log.Printf("error occured while creating collection for user %s", user.Email)
+			log.Printf("error occured while creating collection for user %s", user_email)
 			return
 		}
 
@@ -258,7 +261,6 @@ func SignUp() gin.HandlerFunc {
 			return
 		}
 
-		fmt.Println(user.Email, "created at v2ray and database.")
 		c.JSON(http.StatusOK, gin.H{"message": "user " + user.Name + " created at v2ray and database."})
 
 	}
@@ -278,7 +280,8 @@ func Login() gin.HandlerFunc {
 			return
 		}
 
-		err := userCollection.FindOne(ctx, bson.M{"email": boundUser.Email}).Decode(&foundUser)
+		boundUser_email := sanitize.SanitizeStr(boundUser.Email)
+		err := userCollection.FindOne(ctx, bson.M{"email": boundUser_email}).Decode(&foundUser)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			log.Printf("error: %v", err)
@@ -292,7 +295,7 @@ func Login() gin.HandlerFunc {
 			return
 		}
 
-		token, refreshToken, _ := helper.GenerateAllTokens(foundUser.Email, foundUser.UUID, foundUser.Path, foundUser.Role, foundUser.User_id)
+		token, refreshToken, _ := helper.GenerateAllTokens(boundUser_email, foundUser.UUID, foundUser.Path, foundUser.Role, foundUser.User_id)
 
 		helper.UpdateAllTokens(token, refreshToken, foundUser.User_id)
 		var projections = bson.D{
@@ -422,7 +425,7 @@ func EditUser() gin.HandlerFunc {
 			return
 		}
 
-		err := userCollection.FindOne(ctx, bson.M{"email": user.Email}).Decode(&foundUser)
+		err := userCollection.FindOne(ctx, bson.M{"email": sanitize.SanitizeStr(user.Email)}).Decode(&foundUser)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "email is incorrect"})
 			log.Printf("email is incorrect")
@@ -470,7 +473,7 @@ func EditUser() gin.HandlerFunc {
 			return
 		}
 
-		err = userCollection.FindOne(ctx, bson.M{"email": user.Email}).Decode(&foundUser)
+		err = userCollection.FindOne(ctx, bson.M{"email": sanitize.SanitizeStr(user.Email)}).Decode(&foundUser)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			log.Printf("error: %v", err)
@@ -488,7 +491,7 @@ func GetUserByID() gin.HandlerFunc {
 		defer cancel()
 
 		var user model.User
-		userId := c.Param("user_id")
+		userId := sanitize.SanitizeStr(c.Param("user_id"))
 
 		if err := helper.MatchUserTypeAndUid(c, userId); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -996,8 +999,9 @@ func DisableNodePerUser() gin.HandlerFunc {
 
 		var ctx, cancel = context.WithTimeout(context.Background(), 60*time.Second)
 		defer cancel()
-		email := c.Request.URL.Query().Get("email")
-		node := c.Request.URL.Query().Get("node")
+
+		email := sanitize.SanitizeStr(c.Request.URL.Query().Get("email"))
+		node := sanitize.SanitizeStr(c.Request.URL.Query().Get("node"))
 
 		var projections = bson.D{
 			{Key: "used_by_current_year", Value: 0},
@@ -1063,7 +1067,7 @@ func DisableNodePerUser() gin.HandlerFunc {
 			return
 		}
 
-		log.Printf("Disable user: %v, node: %v by hand!", email, node)
+		log.Printf("Disable user: %v, node: %v by hand!", sanitize.SanitizeStr(email), sanitize.SanitizeStr(node))
 		c.JSON(http.StatusOK, gin.H{"message": "Disable user: " + email + " at node: " + node + " successfully!"})
 	}
 }
@@ -1080,8 +1084,8 @@ func EnableNodePerUser() gin.HandlerFunc {
 		var ctx, cancel = context.WithTimeout(context.Background(), 60*time.Second)
 		defer cancel()
 
-		email := c.Request.URL.Query().Get("email")
-		node := c.Request.URL.Query().Get("node")
+		email := sanitize.SanitizeStr(c.Request.URL.Query().Get("email"))
+		node := sanitize.SanitizeStr(c.Request.URL.Query().Get("node"))
 
 		var projections = bson.D{
 			{Key: "used_by_current_year", Value: 0},
@@ -1147,7 +1151,7 @@ func EnableNodePerUser() gin.HandlerFunc {
 			return
 		}
 
-		log.Printf("Enable user: %v, node: %v by hand!", email, node)
+		log.Printf("Enable user: %v, node: %v by hand!", sanitize.SanitizeStr(email), sanitize.SanitizeStr(node))
 		c.JSON(http.StatusOK, gin.H{"message": "Enable user: " + email + " at node: " + node + " successfully!"})
 	}
 }

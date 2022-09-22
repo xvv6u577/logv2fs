@@ -14,6 +14,7 @@ import (
 
 	"github.com/caster8013/logv2rayfullstack/model"
 	pb "github.com/caster8013/logv2rayfullstack/proto"
+	sanitize "github.com/caster8013/logv2rayfullstack/sanitize"
 	"github.com/caster8013/logv2rayfullstack/v2ray"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -139,7 +140,7 @@ func GrpcClientToAddUser(domain string, port string, user User) error {
 
 	conn, err := grpc.Dial(fmt.Sprintf("%s:%s", domain, port), grpc.WithTransportCredentials(tlsCredential))
 	if err != nil {
-		log.Panicf("%v. Did not connect: %v", domain, err)
+		log.Panicf("%v. Did not connect: %v", sanitize.SanitizeStr(domain), err)
 		return err
 	}
 	defer conn.Close()
@@ -151,11 +152,11 @@ func GrpcClientToAddUser(domain string, port string, user User) error {
 	defer cancel()
 	r, err := client.AddUser(ctx, &pb.GRPCRequest{Uuid: user.UUID, Path: user.Path, Name: user.Email})
 	if err != nil {
-		log.Panicf("%v could not add user %v: %v", user.Email, domain, err)
+		log.Panicf("%v could not add user %v: %v", sanitize.SanitizeStr(user.Email), sanitize.SanitizeStr(domain), err)
 		return err
 	}
 
-	log.Printf("Info: %s, %s", domain, r.GetSuccesOrNot())
+	log.Printf("Info: %s, %s", sanitize.SanitizeStr(domain), r.GetSuccesOrNot())
 	return nil
 }
 
@@ -166,7 +167,7 @@ func GrpcClientToDeleteUser(domain string, port string, user User) error {
 
 	conn, err := grpc.Dial(fmt.Sprintf("%s:%s", domain, port), grpc.WithTransportCredentials(tlsCredential))
 	if err != nil {
-		log.Panicf("%v. Did not connect: %v", domain, err)
+		log.Panicf("%v. Did not connect: %v", sanitize.SanitizeStr(domain), err)
 		return err
 	}
 	defer conn.Close()
@@ -178,11 +179,11 @@ func GrpcClientToDeleteUser(domain string, port string, user User) error {
 	defer cancel()
 	r, err := client.DeleteUser(ctx, &pb.GRPCRequest{Uuid: user.UUID, Path: user.Path, Name: user.Email})
 	if err != nil {
-		log.Panicf("%v could not delete user %v: %v", user.Email, domain, err)
+		log.Panicf("%v could not delete user %v: %v", sanitize.SanitizeStr(user.Email), sanitize.SanitizeStr(domain), err)
 		return err
 	}
 
-	log.Printf("Info: %s, %s", domain, r.GetSuccesOrNot())
+	log.Printf("Info: %s, %s", sanitize.SanitizeStr(domain), r.GetSuccesOrNot())
 
 	return nil
 }

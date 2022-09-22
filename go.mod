@@ -15,6 +15,7 @@ require (
 	github.com/gin-contrib/static v0.0.1
 	github.com/go-playground/validator/v10 v10.9.0
 	github.com/joho/godotenv v1.4.0
+	github.com/mrz1836/go-sanitize v1.1.5
 	github.com/robfig/cron v1.2.0
 	github.com/shomali11/parallelizer v0.0.0-20210506023428-ed2dd4732c78
 	github.com/urfave/cli/v2 v2.3.0

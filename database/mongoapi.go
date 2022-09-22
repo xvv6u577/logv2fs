@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/caster8013/logv2rayfullstack/model"
+	sanitize "github.com/caster8013/logv2rayfullstack/sanitize"
 	"github.com/go-playground/validator/v10"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -71,7 +72,7 @@ func DeleteUserByName(email string) error {
 	filter := bson.D{primitive.E{Key: "email", Value: email}}
 	_, error := OpenCollection(Client, "USERS").DeleteOne(ctx, filter)
 	if error != nil {
-		log.Printf("error occured while deleting user %s", email)
+		log.Printf("error occured while deleting user %s", sanitize.SanitizeStr(email))
 		return error
 	}
 
@@ -86,24 +87,24 @@ func CreateUserByName(user *User) error {
 
 	validationErr := validate.Struct(user)
 	if validationErr != nil {
-		log.Printf("error occured while validating user %s", user.Email)
+		log.Printf("error occured while validating user %s", sanitize.SanitizeStr(user.Email))
 		return validationErr
 	}
 
 	count, err := OpenCollection(Client, "USERS").CountDocuments(ctx, bson.M{"email": user.Email})
 	if err != nil {
-		log.Printf("error occured while counting user %v", user.Email)
+		log.Printf("error occured while counting user %v", sanitize.SanitizeStr(user.Email))
 		return err
 	}
 
 	if count > 0 {
-		log.Printf("user %s already exists", user.Email)
+		log.Printf("user %s already exists", sanitize.SanitizeStr(user.Email))
 		return errors.New("this email already exists")
 	}
 
 	_, err = OpenCollection(Client, "USERS").InsertOne(ctx, user)
 	if err != nil {
-		log.Printf("error occured while inserting user %v", user.Email)
+		log.Printf("error occured while inserting user %v", sanitize.SanitizeStr(user.Email))
 		return err
 	}
 
@@ -194,13 +195,13 @@ func GetUserByName(name string, projections bson.D) (User, error) {
 
 	var user User
 	filter := bson.D{
-		primitive.E{Key: "email", Value: name},
+		primitive.E{Key: "email", Value: sanitize.SanitizeStr(name)},
 	}
 	opts := options.FindOne().SetProjection(projections)
 
 	err := OpenCollection(Client, "USERS").FindOne(ctx, filter, opts).Decode(&user)
 	if err != nil {
-		log.Printf("error occured while finding user %s", name)
+		log.Printf("error occured while finding user %s", sanitize.SanitizeStr(name))
 		return user, err
 	}
 

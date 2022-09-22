@@ -39,6 +39,8 @@ sudo systemctl stop logv2rayfullstack.service
 ## Frontend
 
 > 环境变量：frontend/.env
+> nodejs v17.2.0
+> npm v8.1.4
 
 ```
 cd logv2rayfullstack

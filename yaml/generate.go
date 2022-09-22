@@ -8,6 +8,7 @@ import (
 
 	"github.com/caster8013/logv2rayfullstack/database"
 	"github.com/caster8013/logv2rayfullstack/model"
+	sanitize "github.com/caster8013/logv2rayfullstack/sanitize"
 	"go.mongodb.org/mongo-driver/bson"
 	"gopkg.in/yaml.v2"
 )
@@ -20,6 +21,14 @@ type (
 	WsOpts       = model.WsOpts
 	ProxyGroups  = model.ProxyGroups
 )
+
+func CurrentPath() string {
+	dir, err := os.Getwd()
+	if err != nil {
+		log.Fatal(err)
+	}
+	return strings.Replace(dir, "\\", "/", -1)
+}
 
 func GenerateOneByQuery(email string) error {
 
@@ -89,7 +98,7 @@ func GenerateAllClashxConfig() error {
 
 func GenerateOne(user User) error {
 
-	yamlFile, err := os.ReadFile("./yaml/template.yaml")
+	yamlFile, err := os.ReadFile(CurrentPath() + "/yaml/template.yaml")
 	if err != nil {
 		log.Printf("yamlFile.Get err #%v ", err)
 		return err
@@ -129,7 +138,8 @@ func GenerateOne(user User) error {
 			}
 		}
 	}
-	log.Printf("%v\n", user.Name)
+	user_email := sanitize.SanitizeStr(user.Email)
+	log.Printf("%v generated yaml!\n", user_email)
 
 	newYaml, err := yaml.Marshal(&yamlTemplate)
 	if err != nil {
@@ -137,7 +147,11 @@ func GenerateOne(user User) error {
 		return err
 	}
 
-	err = ioutil.WriteFile("./yaml/results/"+user.Email+".yaml", newYaml, 0644)
+	// if directory not exist, create it
+	if _, err := os.Stat(CurrentPath() + "/yaml/results"); os.IsNotExist(err) {
+		os.Mkdir(CurrentPath()+"/yaml/results", os.ModePerm)
+	}
+	err = ioutil.WriteFile(CurrentPath()+"/yaml/results/"+user.Email+".yaml", newYaml, 0644)
 	if err != nil {
 		log.Printf("WriteFile: %v", err)
 		return err
