@@ -463,7 +463,7 @@ func EditUser() gin.HandlerFunc {
 
 		err = userCollection.FindOneAndUpdate(
 			ctx,
-			bson.M{"email": user.Email},
+			bson.M{"email": sanitize.SanitizeStr(user.Email)},
 			bson.M{"$set": newFoundUser},
 			options.FindOneAndUpdate().SetUpsert(true),
 		).Decode(&replacedDocument)
@@ -522,8 +522,8 @@ func TakeItOfflineByUserName() gin.HandlerFunc {
 
 		var ctx, cancel = context.WithTimeout(context.Background(), 60*time.Second)
 		defer cancel()
-		name := c.Param("name")
 
+		name := sanitize.SanitizeStr(c.Param("name"))
 		var projections = bson.D{
 			{Key: "used_by_current_year", Value: 0},
 			{Key: "used_by_current_month", Value: 0},
@@ -625,7 +625,7 @@ func TakeItOnlineByUserName() gin.HandlerFunc {
 
 		var ctx, cancel = context.WithTimeout(context.Background(), 60*time.Second)
 		defer cancel()
-		name := c.Param("name")
+		name := sanitize.SanitizeStr(c.Param("name"))
 		var projections = bson.D{
 			{Key: "used_by_current_year", Value: 0},
 			{Key: "used_by_current_month", Value: 0},
@@ -828,7 +828,7 @@ func GetTrafficByUser() gin.HandlerFunc {
 		downlink, err := NSSClient.GetUserDownlink(name)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			log.Printf("Get user %s downlink failed.", name)
+			log.Printf("Get user %s downlink failed.", sanitize.SanitizeStr(name))
 			return
 		}
 

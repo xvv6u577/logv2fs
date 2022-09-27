@@ -69,10 +69,11 @@ func DeleteUserByName(email string) error {
 	var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
 	defer cancel()
 
+	email = sanitize.SanitizeStr(email)
 	filter := bson.D{primitive.E{Key: "email", Value: email}}
 	_, error := OpenCollection(Client, "USERS").DeleteOne(ctx, filter)
 	if error != nil {
-		log.Printf("error occured while deleting user %s", sanitize.SanitizeStr(email))
+		log.Printf("error occured while deleting user %s", email)
 		return error
 	}
 
@@ -86,25 +87,26 @@ func CreateUserByName(user *User) error {
 	defer cancel()
 
 	validationErr := validate.Struct(user)
+	sanitized_email := sanitize.SanitizeStr(user.Email)
 	if validationErr != nil {
-		log.Printf("error occured while validating user %s", sanitize.SanitizeStr(user.Email))
+		log.Printf("error occured while validating user %s", sanitized_email)
 		return validationErr
 	}
 
 	count, err := OpenCollection(Client, "USERS").CountDocuments(ctx, bson.M{"email": user.Email})
 	if err != nil {
-		log.Printf("error occured while counting user %v", sanitize.SanitizeStr(user.Email))
+		log.Printf("error occured while counting user %v", sanitized_email)
 		return err
 	}
 
 	if count > 0 {
-		log.Printf("user %s already exists", sanitize.SanitizeStr(user.Email))
+		log.Printf("user %s already exists", sanitized_email)
 		return errors.New("this email already exists")
 	}
 
 	_, err = OpenCollection(Client, "USERS").InsertOne(ctx, user)
 	if err != nil {
-		log.Printf("error occured while inserting user %v", sanitize.SanitizeStr(user.Email))
+		log.Printf("error occured while inserting user %v", sanitized_email)
 		return err
 	}
 

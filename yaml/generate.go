@@ -151,7 +151,7 @@ func GenerateOne(user User) error {
 	if _, err := os.Stat(CurrentPath() + "/yaml/results"); os.IsNotExist(err) {
 		os.Mkdir(CurrentPath()+"/yaml/results", os.ModePerm)
 	}
-	err = ioutil.WriteFile(CurrentPath()+"/yaml/results/"+user.Email+".yaml", newYaml, 0644)
+	err = ioutil.WriteFile(CurrentPath()+"/yaml/results/"+user_email+".yaml", newYaml, 0644)
 	if err != nil {
 		log.Printf("WriteFile: %v", err)
 		return err

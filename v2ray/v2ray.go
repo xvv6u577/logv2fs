@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/caster8013/logv2rayfullstack/model"
+	sanitize "github.com/caster8013/logv2rayfullstack/sanitize"
 	"github.com/v2fly/v2ray-core/v4/app/proxyman/command"
 	statsservice "github.com/v2fly/v2ray-core/v4/app/stats/command"
 	"github.com/v2fly/v2ray-core/v4/common/protocol"
@@ -57,7 +58,7 @@ func (s *StatsServiceClient) GetUserTraffic(name string, reset bool) (uint64, er
 	res, err := s.GetStats(context.Background(), req)
 	if err != nil {
 		if status, ok := status.FromError(err); ok && strings.HasSuffix(status.Message(), fmt.Sprintf("%s not found.", name)) {
-			log.Printf("%s not found", name)
+			log.Printf("%s not found", sanitize.SanitizeStr(name))
 			return 0, nil
 		}
 		log.Printf("%s", err)
