@@ -87,6 +87,12 @@ function Mypanel() {
 						{process.env.REACT_APP_FILE_AND_SUB_URL + "/static/" + user.email}
 					</TapToCopied>
 				</div>
+				<div className="flex md:justify-between">
+					<span className="flex items-center text-sm">Clash YAML:</span>
+					<TapToCopied>
+						{process.env.REACT_APP_FILE_AND_SUB_URL + "/clash/" + user.email + ".yaml"}
+					</TapToCopied>
+				</div>
 			</div>
 
 			<div className="">
