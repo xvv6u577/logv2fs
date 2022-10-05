@@ -6,7 +6,7 @@
 
 #### gRPC
 
-> 每个加入的VM实例需要打开端口80、443、50051
+> Open Ports: 80、443、50051
 
 ```
 protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative proto/myproto.proto
@@ -29,10 +29,10 @@ go install
 以systemd service运行（以ubuntu 18.04为例）
 ```
 sudo mv pre-setup/logv2rayfullstack.service /etc/systemd/system/
-sudo systemctl daemon-reload
 
-sudo systemctl start logv2rayfullstack.service
 sudo systemctl status logv2rayfullstack.service
+sudo systemctl start logv2rayfullstack.service
+sudo systemctl enable logv2rayfullstack.service
 sudo systemctl stop logv2rayfullstack.service
 ```
 
@@ -42,19 +42,12 @@ sudo systemctl stop logv2rayfullstack.service
 > nodejs v17.2.0
 > npm v8.1.4
 
-```
-cd logv2rayfullstack
-npx create-react-app frontend --template redux
-cd frontend
-
-npm start
-```
 ### 生成生产环境文件
 ```
+cd logv2rayfullstack/frontend
+npm i
 npm run build
 ```
-
-
 
 ### Thanks To:
 
