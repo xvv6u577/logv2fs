@@ -17,8 +17,8 @@ jobs:
           echo "${{ secrets.RM_SSH_HOST }}" >> ~/.ssh/known_hosts
           echo "${{ secrets.SL_SSH_HOST }}" >> ~/.ssh/known_hosts
           echo "${{ secrets.W82ND_SSH_HOST }}" >> ~/.ssh/known_hosts
-          echo "${{ secrets.TW_SSH_HOST }}" >> ~/.ssh/known_hosts
           echo "${{ secrets.AZHK1_SSH_HOST }}" >> ~/.ssh/known_hosts
+          echo "${{ secrets.TW_SSH_HOST }}" >> ~/.ssh/known_hosts
       - name: Deploy
         run: |
           echo '--------------------- w8 ---------------------'
