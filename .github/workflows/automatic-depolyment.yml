@@ -13,7 +13,7 @@ jobs:
           echo "${{ secrets.SSH_PRIVATE_KEY }}" >> ~/.ssh/id_rsa
           # ssh-keyscan -H 172.93.40.89
           echo "${{ secrets.W8_SSH_HOST }}" >> ~/.ssh/known_hosts
-          # ssh-keyscan -p 28714 172.93.40.89
+          # ssh-keyscan -p 28714 98.142.143.106
           echo "${{ secrets.RM_SSH_HOST }}" >> ~/.ssh/known_hosts
           echo "${{ secrets.SL_SSH_HOST }}" >> ~/.ssh/known_hosts
           echo "${{ secrets.W82ND_SSH_HOST }}" >> ~/.ssh/known_hosts
