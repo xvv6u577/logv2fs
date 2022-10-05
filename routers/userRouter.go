@@ -43,6 +43,8 @@ func UserRoutes(incomingRoutes *gin.Engine) {
 	incomingRoutes.GET("/v1/takeuseroffline/:name", controller.TakeItOfflineByUserName())
 	incomingRoutes.GET("/v1/takeuseronline/:name", controller.TakeItOnlineByUserName())
 	incomingRoutes.GET("/v1/deluser/:name", controller.DeleteUserByUserName())
+
+	// affect single node!
 	incomingRoutes.GET("/v1/writetodb", controller.WriteToDB())
 
 	incomingRoutes.GET("/v1/traffic/all", controller.GetAllUserTraffic())  // v2api

@@ -15,20 +15,20 @@ jobs:
           echo "${{ secrets.W8_SSH_HOST }}" >> ~/.ssh/known_hosts
           echo "${{ secrets.RM_SSH_HOST }}" >> ~/.ssh/known_hosts
           echo "${{ secrets.SL_SSH_HOST }}" >> ~/.ssh/known_hosts
-          echo "${{ secrets.SG_SSH_HOST }}" >> ~/.ssh/known_hosts
           echo "${{ secrets.W82ND_SSH_HOST }}" >> ~/.ssh/known_hosts
           echo "${{ secrets.TW_SSH_HOST }}" >> ~/.ssh/known_hosts
+          echo "${{ secrets.AZHK1_SSH_HOST }}" >> ~/.ssh/known_hosts
       - name: Deploy
         run: |
           echo '--------------------- w8 ---------------------'
-          ssh ha@20.24.70.152 "./deploy.sh"
+          ssh azureuser@20.205.32.114 "./deploy.sh"
           echo '--------------------- rm ---------------------'
           ssh root@172.93.40.89 -p 28714 "./deploy.sh"
           echo '--------------------- sl ---------------------'
           ssh ubuntu@146.56.144.121 "./deploy.sh"
-          echo '--------------------- sg ---------------------'
-          ssh root@45.79.73.241 "./deploy.sh"
           echo '--------------------- w82nd ---------------------'
           ssh caster@34.92.69.172 "./deploy.sh"
           echo '--------------------- tw ---------------------'
           ssh caster@34.81.85.35 "./deploy.sh"
+          echo '--------------------- azhk1 ---------------------'
+          ssh azureuser@20.187.121.27 "./deploy.sh"
