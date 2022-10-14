@@ -21,7 +21,7 @@ func AuthRoutes(incomingRoutes *gin.Engine) {
 	incomingRoutes.Use(static.Serve("/android", static.LocalFile(FRONTEND_PATH, true)))
 	incomingRoutes.Use(static.Serve("/", static.LocalFile(FRONTEND_PATH, true)))
 
-	// http://127.0.0.1:8079/v1/user/login
+	// http://127.0.0.1:8079/v1/login
 	// body:
 	// {
 	// 	"email":"testuser",

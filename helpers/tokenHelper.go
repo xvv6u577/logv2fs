@@ -73,24 +73,20 @@ func ValidateToken(signedToken string) (claims *SignedDetails, msg string) {
 			return []byte(SECRET_KEY), nil
 		},
 	)
-
 	if err != nil {
-		msg = err.Error()
-		log.Printf("Error: %s", msg)
-		return
+		log.Printf("Error: %s", err.Error())
+		return nil, err.Error()
 	}
 
 	claims, ok := token.Claims.(*SignedDetails)
 	if !ok {
 		msg = "the token is invalid"
-		msg = err.Error()
-		return
+		return nil, msg
 	}
 
 	if claims.ExpiresAt < time.Now().Local().Unix() {
 		msg = "token is expired"
-		msg = err.Error()
-		return
+		return nil, msg
 	}
 
 	return claims, msg
@@ -98,8 +94,8 @@ func ValidateToken(signedToken string) (claims *SignedDetails, msg string) {
 
 //UpdateAllTokens renews the user tokens when they login
 func UpdateAllTokens(signedToken string, signedRefreshToken string, userId string) {
-	var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
 
+	var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
 	var updateObj primitive.D
 
 	updateObj = append(updateObj, bson.E{Key: "token", Value: signedToken})
@@ -113,20 +109,16 @@ func UpdateAllTokens(signedToken string, signedRefreshToken string, userId strin
 	opt := options.UpdateOptions{
 		Upsert: &upsert,
 	}
-
 	_, err := userCollection.UpdateOne(
 		ctx,
 		filter,
-		bson.D{
-			{Key: "$set", Value: updateObj},
-		},
+		bson.D{{Key: "$set", Value: updateObj}},
 		&opt,
 	)
 	defer cancel()
 
 	if err != nil {
-		log.Panic(err)
-		return
+		log.Printf("Error: %s", err.Error())
 	}
 
 }

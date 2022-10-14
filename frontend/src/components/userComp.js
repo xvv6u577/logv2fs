@@ -393,7 +393,7 @@ function EditUser({ btnName, user, editUserFunc }) {
                                 <div><span>Path:  <b>{user.path}</b></span></div>
                                 <form className="space-y-6" onSubmit={handleEditUser}>
                                     <div>
-                                        <label for="email" className="block mb-2 text-sm font-medium text-gray-900 dark:text-gray-300">Email</label>
+                                        <label htmlFor="email" className="block mb-2 text-sm font-medium text-gray-900 dark:text-gray-300">Email</label>
                                         <input
                                             type="input"
                                             id="email"
@@ -404,7 +404,7 @@ function EditUser({ btnName, user, editUserFunc }) {
                                             disabled />
                                     </div>
                                     <div>
-                                        <label for="password" className="block mb-2 text-sm font-medium text-gray-900 dark:text-gray-300">Password (6+ characters)</label>
+                                        <label htmlFor="password" className="block mb-2 text-sm font-medium text-gray-900 dark:text-gray-300">Password (6+ characters)</label>
                                         <input
                                             type="password"
                                             name="password"
@@ -416,7 +416,7 @@ function EditUser({ btnName, user, editUserFunc }) {
                                         />
                                     </div>
                                     <div>
-                                        <label for="name" className="block mb-2 text-sm font-medium text-gray-900 dark:text-gray-300">Name</label>
+                                        <label htmlFor="name" className="block mb-2 text-sm font-medium text-gray-900 dark:text-gray-300">Name</label>
                                         <input
                                             type="input"
                                             id="name"
@@ -428,19 +428,19 @@ function EditUser({ btnName, user, editUserFunc }) {
                                         />
                                     </div>
                                     <div>
-                                        <label for="userType" className="block mb-2 text-sm font-medium text-gray-900 dark:text-gray-400">User Type</label>
+                                        <label htmlFor="userType" className="block mb-2 text-sm font-medium text-gray-900 dark:text-gray-400">User Type</label>
                                         <select
                                             id="userType"
                                             className="block p-2 mb-6 w-full text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
                                             onChange={onChange}
                                             value={role}
                                         >
-                                            <option value="normal" selected>Normal</option>
+                                            <option value="normal">Normal</option>
                                             <option value="admin">Admin</option>
                                         </select>
                                     </div>
                                     <div>
-                                        <label for="name" className="block mb-2 text-sm font-medium text-gray-900 dark:text-gray-300">已用流量</label>
+                                        <label htmlFor="name" className="block mb-2 text-sm font-medium text-gray-900 dark:text-gray-300">已用流量</label>
                                         <input
                                             type="number"
                                             name="used"
@@ -451,7 +451,7 @@ function EditUser({ btnName, user, editUserFunc }) {
                                         />
                                     </div>
                                     <div>
-                                        <label for="path" className="block mb-2 text-sm font-medium text-gray-900 dark:text-gray-300">每月限额</label>
+                                        <label htmlFor="path" className="block mb-2 text-sm font-medium text-gray-900 dark:text-gray-300">每月限额</label>
                                         <input
                                             type="number"
                                             name="credit"

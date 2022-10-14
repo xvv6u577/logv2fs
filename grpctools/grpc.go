@@ -22,7 +22,6 @@ import (
 
 var (
 	// addr           = flag.String("addr", "0.0.0.0:50051", "the address to connect to")
-	BOOT_MODE      = os.Getenv("BOOT_MODE")
 	V2_API_ADDRESS = os.Getenv("V2_API_ADDRESS")
 	V2_API_PORT    = os.Getenv("V2_API_PORT")
 )

@@ -38,7 +38,6 @@ import (
 var (
 	userCollection *mongo.Collection = database.OpenCollection(database.Client, "USERS")
 	validate                         = validator.New()
-	BOOT_MODE                        = os.Getenv("BOOT_MODE")
 	V2_API_ADDRESS                   = os.Getenv("V2_API_ADDRESS")
 	V2_API_PORT                      = os.Getenv("V2_API_PORT")
 	NODE_TYPE                        = os.Getenv("NODE_TYPE")
@@ -84,13 +83,11 @@ func VerifyPassword(userPassword string, providedPassword string) (bool, string)
 func SignUp() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
-		if BOOT_MODE == "" {
-			err := helper.CheckUserType(c, "admin")
-			if err != nil {
-				c.JSON(http.StatusBadRequest, gin.H{"sign up error": err.Error()})
-				log.Printf("%s", err.Error())
-				return
-			}
+		err := helper.CheckUserType(c, "admin")
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"sign up error": err.Error()})
+			log.Printf("%s", err.Error())
+			return
 		}
 
 		var ctx, cancel = context.WithTimeout(context.Background(), 60*time.Second)
@@ -102,14 +99,14 @@ func SignUp() gin.HandlerFunc {
 
 		if err := c.BindJSON(&user); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			log.Printf("error: %v", err)
+			log.Printf("BindJSON error: %v", err)
 			return
 		}
 
 		validationErr := validate.Struct(user)
 		if validationErr != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": validationErr.Error()})
-			log.Printf("error: %v", validationErr)
+			log.Printf("validate error: %v", validationErr)
 			return
 		}
 
@@ -128,12 +125,13 @@ func SignUp() gin.HandlerFunc {
 		}
 
 		var adminUser model.User
-		userId := sanitize.SanitizeStr(c.GetString("uid"))
+		userId := c.GetString("uid")
+		log.Printf("userId: %s", userId)
 
 		err = userCollection.FindOne(ctx, bson.M{"user_id": userId}).Decode(&adminUser)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			log.Printf("error: %v", err)
+			log.Printf("FindOne error: %v", err)
 			return
 		}
 
@@ -339,13 +337,11 @@ func GetUserSimpleInfo() gin.HandlerFunc {
 func AddNode() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
-		if BOOT_MODE == "" {
-			err := helper.CheckUserType(c, "admin")
-			if err != nil {
-				c.JSON(http.StatusBadRequest, gin.H{"sign up error": err.Error()})
-				log.Printf("%s", err.Error())
-				return
-			}
+		err := helper.CheckUserType(c, "admin")
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"sign up error": err.Error()})
+			log.Printf("%s", err.Error())
+			return
 		}
 
 		var ctx, cancel = context.WithTimeout(context.Background(), 60*time.Second)
@@ -406,12 +402,10 @@ func AddNode() gin.HandlerFunc {
 func EditUser() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
-		if BOOT_MODE == "" {
-			if err := helper.CheckUserType(c, "admin"); err != nil {
-				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-				log.Printf("%s", err.Error())
-				return
-			}
+		if err := helper.CheckUserType(c, "admin"); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			log.Printf("%s", err.Error())
+			return
 		}
 
 		var ctx, cancel = context.WithTimeout(context.Background(), 60*time.Second)
@@ -512,12 +506,10 @@ func GetUserByID() gin.HandlerFunc {
 
 func TakeItOfflineByUserName() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		if BOOT_MODE == "" {
-			if err := helper.CheckUserType(c, "admin"); err != nil {
-				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-				log.Printf("%s", err.Error())
-				return
-			}
+		if err := helper.CheckUserType(c, "admin"); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			log.Printf("%s", err.Error())
+			return
 		}
 
 		var ctx, cancel = context.WithTimeout(context.Background(), 60*time.Second)
@@ -615,12 +607,11 @@ func TakeItOfflineByUserName() gin.HandlerFunc {
 
 func TakeItOnlineByUserName() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		if BOOT_MODE == "" {
-			if err := helper.CheckUserType(c, "admin"); err != nil {
-				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-				log.Printf("%s", err.Error())
-				return
-			}
+
+		if err := helper.CheckUserType(c, "admin"); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			log.Printf("%s", err.Error())
+			return
 		}
 
 		var ctx, cancel = context.WithTimeout(context.Background(), 60*time.Second)
@@ -719,12 +710,10 @@ func TakeItOnlineByUserName() gin.HandlerFunc {
 func DeleteUserByUserName() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
-		if BOOT_MODE == "" {
-			if err := helper.CheckUserType(c, "admin"); err != nil {
-				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-				log.Printf("%s", err.Error())
-				return
-			}
+		if err := helper.CheckUserType(c, "admin"); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			log.Printf("%s", err.Error())
+			return
 		}
 
 		name := c.Param("name")
@@ -839,12 +828,10 @@ func GetTrafficByUser() gin.HandlerFunc {
 func GetAllUserTraffic() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
-		if BOOT_MODE == "" {
-			if err := helper.CheckUserType(c, "admin"); err != nil {
-				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-				log.Printf("%s", err.Error())
-				return
-			}
+		if err := helper.CheckUserType(c, "admin"); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			log.Printf("%s", err.Error())
+			return
 		}
 
 		cmdConn, err := grpc.Dial(fmt.Sprintf("%s:%s", V2_API_ADDRESS, V2_API_PORT), grpc.WithInsecure())
@@ -870,13 +857,11 @@ func GetAllUserTraffic() gin.HandlerFunc {
 func GetAllUsers() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
-		if BOOT_MODE == "" {
-			err := helper.CheckUserType(c, "admin")
-			if err != nil {
-				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-				log.Printf("%s", err.Error())
-				return
-			}
+		err := helper.CheckUserType(c, "admin")
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			log.Printf("%s", err.Error())
+			return
 		}
 
 		var projections = bson.D{
@@ -968,14 +953,14 @@ func GetSubscripionURL() gin.HandlerFunc {
 
 func WriteToDB() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		if BOOT_MODE == "" {
-			err := helper.CheckUserType(c, "admin")
-			if err != nil {
-				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-				return
-			}
+
+		err := helper.CheckUserType(c, "admin")
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
 		}
-		err := routine.Log_basicAction()
+
+		err = routine.Log_basicAction()
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			log.Printf("Write to DB failed: %s", err.Error())
@@ -989,12 +974,11 @@ func WriteToDB() gin.HandlerFunc {
 
 func DisableNodePerUser() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		if BOOT_MODE == "" {
-			err := helper.CheckUserType(c, "admin")
-			if err != nil {
-				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-				return
-			}
+
+		err := helper.CheckUserType(c, "admin")
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
 		}
 
 		var ctx, cancel = context.WithTimeout(context.Background(), 60*time.Second)
@@ -1074,13 +1058,13 @@ func DisableNodePerUser() gin.HandlerFunc {
 
 func EnableNodePerUser() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		if BOOT_MODE == "" {
-			err := helper.CheckUserType(c, "admin")
-			if err != nil {
-				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-				return
-			}
+
+		err := helper.CheckUserType(c, "admin")
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
 		}
+
 		var ctx, cancel = context.WithTimeout(context.Background(), 60*time.Second)
 		defer cancel()
 

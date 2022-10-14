@@ -40,14 +40,18 @@ type (
 )
 
 var (
-	BOOT_MODE      = os.Getenv("BOOT_MODE")
 	NODE_TYPE      = os.Getenv("NODE_TYPE")
 	CURRENT_DOMAIN = os.Getenv("CURRENT_DOMAIN")
+	SERVER_ADDRESS = os.Getenv("SERVER_ADDRESS")
+	SERVER_PORT    = os.Getenv("SERVER_PORT")
+	V2_API_ADDRESS = os.Getenv("V2_API_ADDRESS")
+	V2_API_PORT    = os.Getenv("V2_API_PORT")
+	V2RAY          = os.Getenv("V2RAY")
+	V2RAY_CONFIG   = os.Getenv("V2RAY_CONFIG")
 	cronInstance   *cron.Cron
 )
 
 func init() {
-
 	cronInstance = cron.New()
 	cronInstance.Start()
 }
@@ -87,7 +91,14 @@ func main() {
 					defer group.Close()
 
 					group.Add(V2rayProcess)
-					group.Add(runServer)
+
+					group.Add(func() {
+						err := RunServer().Run(fmt.Sprintf("%s:%s", SERVER_ADDRESS, SERVER_PORT))
+						if err != nil {
+							log.Panic("Panic: ", err)
+						}
+					})
+
 					group.Add(RunGRPCServer)
 
 					err := group.Wait()
@@ -256,15 +267,9 @@ func V2rayProcess() {
 	}
 }
 
-func runServer() {
+func RunServer() *gin.Engine {
 	// wait v2ray process to be ready.
 	time.Sleep(time.Second)
-
-	var V2_API_ADDRESS = os.Getenv("V2_API_ADDRESS")
-	var V2_API_PORT = os.Getenv("V2_API_PORT")
-
-	var SERVER_ADDRESS = os.Getenv("SERVER_ADDRESS")
-	var SERVER_PORT = os.Getenv("SERVER_PORT")
 
 	var projections = bson.D{
 		{Key: "_id", Value: 0},
@@ -311,10 +316,7 @@ func runServer() {
 	// handler for the path with (without) the trailing slash exists.
 	router.RedirectTrailingSlash = true
 
-	if BOOT_MODE == "" {
-		// router.Use(cors.Default())
-		router.Use(middleware.CORS())
-	}
+	router.Use(middleware.CORS())
 	router.Use(gin.Logger())
 	router.Use(recoverFromError)
 
@@ -325,8 +327,7 @@ func runServer() {
 		c.JSON(http.StatusNotFound, gin.H{"error": "status: 404! no route found."})
 	})
 
-	router.Run(fmt.Sprintf("%s:%s", SERVER_ADDRESS, SERVER_PORT))
-
+	return router
 }
 
 func recoverFromError(c *gin.Context) {

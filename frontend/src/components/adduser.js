@@ -84,14 +84,14 @@ function AddUser({ btnName }) {
 								className="absolute top-3 right-2.5 text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm p-1.5 ml-auto inline-flex items-center dark:hover:bg-gray-800 dark:hover:text-white"
 								onClick={() => setShowModal(!showModal)}
 							>
-								<svg aria-hidden="true" className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path></svg>
+								<svg aria-hidden="true" className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd"></path></svg>
 								<span className="sr-only">Close modal</span>
 							</button>
 							<div className="py-6 px-6 lg:px-8">
 								<h3 className="mb-4 text-xl font-medium text-gray-900 dark:text-white">Add User</h3>
 								<form className="space-y-6" onSubmit={handleAddUser}>
 									<div>
-										<label for="email" className="block mb-2 text-sm font-medium text-gray-900 dark:text-gray-300">Email (4-100 characters)*</label>
+										<label htmlFor="email" className="block mb-2 text-sm font-medium text-gray-900 dark:text-gray-300">Email (4-100 characters)*</label>
 										<input
 											type="input"
 											name="email"
@@ -102,7 +102,7 @@ function AddUser({ btnName }) {
 											required />
 									</div>
 									<div>
-										<label for="password" className="block mb-2 text-sm font-medium text-gray-900 dark:text-gray-300">Password (6+ characters)*</label>
+										<label htmlFor="password" className="block mb-2 text-sm font-medium text-gray-900 dark:text-gray-300">Password (6+ characters)*</label>
 										<input
 											type="password"
 											name="password"
@@ -114,19 +114,19 @@ function AddUser({ btnName }) {
 											required />
 									</div>
 									<div>
-										<label for="userType" className="block mb-2 text-sm font-medium text-gray-900 dark:text-gray-400">User Type (optinal)</label>
+										<label htmlFor="userType" className="block mb-2 text-sm font-medium text-gray-900 dark:text-gray-400">User Type (optinal)</label>
 										<select
 											id="userType"
 											className="block p-2 mb-6 w-full text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
 											onChange={onChange}
 											value={role}
 										>
-											<option value="normal" selected>Normal</option>
+											<option value="normal">Normal</option>
 											<option value="admin">Admin</option>
 										</select>
 									</div>
 									<div>
-										<label for="name" className="block mb-2 text-sm font-medium text-gray-900 dark:text-gray-300">Name (optinal)</label>
+										<label htmlFor="name" className="block mb-2 text-sm font-medium text-gray-900 dark:text-gray-300">Name (optinal)</label>
 										<input
 											type="text"
 											id="name"
@@ -138,7 +138,7 @@ function AddUser({ btnName }) {
 										/>
 									</div>
 									<div>
-										<label for="path" className="block mb-2 text-sm font-medium text-gray-900 dark:text-gray-300">Path (optinal)</label>
+										<label htmlFor="path" className="block mb-2 text-sm font-medium text-gray-900 dark:text-gray-300">Path (optinal)</label>
 										<input
 											type="text"
 											id="path"
@@ -150,7 +150,7 @@ function AddUser({ btnName }) {
 										/>
 									</div>
 									<div>
-										<label for="uuid" className="block mb-2 text-sm font-medium text-gray-900 dark:text-gray-300">UUID (optinal)</label>
+										<label htmlFor="uuid" className="block mb-2 text-sm font-medium text-gray-900 dark:text-gray-300">UUID (optinal)</label>
 										<input
 											type="text"
 											id="uuid"
