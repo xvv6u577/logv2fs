@@ -61,10 +61,14 @@ func GenerateOneByQuery(email string) error {
 }
 
 func RemoveOne(email string) error {
-	err := os.Remove("./yaml/results/" + email + ".yaml")
-	if err != nil {
-		log.Printf("Remove: %v", err)
-		return err
+	// check if file exist, if exist, remove it
+	filePath := CurrentPath() + "/yaml/results/" + email + ".yaml"
+	if _, err := os.Stat(filePath); err == nil {
+		err := os.Remove(filePath)
+		if err != nil {
+			log.Printf("Remove: %v\n", err)
+			return err
+		}
 	}
 	return nil
 }
