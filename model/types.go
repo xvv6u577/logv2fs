@@ -149,14 +149,32 @@ func (u *User) AddNodeInUse(domain string) {
 	u.ProduceSuburl()
 }
 
-func (u *User) ProduceNodeInUse(nodes map[string]string) {
-	u.NodeInUseStatus = map[string]bool{}
-	for _, item := range nodes {
-		if u.Status == "plain" {
-			u.NodeInUseStatus[item] = true
-		} else {
-			u.NodeInUseStatus[item] = false
+func (u *User) ProduceNodeInUse(submittedNodes map[string]string) {
+
+	var updatedNodes = map[string]bool{}
+	var submittedNodesReverse = map[string]string{}
+	for k, v := range submittedNodes {
+		submittedNodesReverse[v] = k
+	}
+
+	if u.Status == "plain" {
+		// if node in u.NodeInUseStatus and in submittedNodesReverse, keep it
+		for node, status := range u.NodeInUseStatus {
+			if _, ok := submittedNodesReverse[node]; ok {
+				updatedNodes[node] = status
+			}
+		}
+		// if node in submittedNodesReverse not in updatedNodes, add it
+		for node := range submittedNodesReverse {
+			if _, ok := updatedNodes[node]; !ok {
+				updatedNodes[node] = true
+			}
+		}
+	} else {
+		for node := range submittedNodesReverse {
+			updatedNodes[node] = false
 		}
 	}
+	u.NodeInUseStatus = updatedNodes
 	u.ProduceSuburl()
 }
