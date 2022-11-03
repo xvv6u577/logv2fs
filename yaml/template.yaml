@@ -80,6 +80,7 @@ rules:
  - PROCESS-NAME,uTorrent,all-direct,DIRECT
  - PROCESS-NAME,WebTorrent,all-direct,DIRECT
  - PROCESS-NAME,WebTorrent Helper,all-direct,DIRECT
+ - DOMAIN-SUFFIX,onedrive.live.com,manual-select
  - DOMAIN-KEYWORD,1drv,microsoft-svs
  - DOMAIN-KEYWORD,microsoft,microsoft-svs
  - DOMAIN-SUFFIX,aadrm.com,microsoft-svs
@@ -9712,7 +9713,6 @@ rules:
  - DOMAIN-SUFFIX,github.io,manual-select
  - DOMAIN-SUFFIX,githubassets.com,manual-select
  - DOMAIN-SUFFIX,githubusercontent.com,manual-select
- - DOMAIN-SUFFIX,onedrive.live.com,manual-select
  - DOMAIN-SUFFIX,streaming.mediaservices.windows.net,manual-select
  - DOMAIN,assets1.xboxlive.com,manual-select
  - DOMAIN,assets2.xboxlive.com,manual-select
