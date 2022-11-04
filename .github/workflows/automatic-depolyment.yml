@@ -13,23 +13,17 @@ jobs:
           echo "${{ secrets.SSH_PRIVATE_KEY }}" >> ~/.ssh/id_rsa
           # ssh-keyscan -H 172.93.40.89
           echo "${{ secrets.W8_SSH_HOST }}" >> ~/.ssh/known_hosts
-          # ssh-keyscan -p 28714 98.142.143.106
-          echo "${{ secrets.RM_SSH_HOST }}" >> ~/.ssh/known_hosts
+          # ssh-keyscan -p 28714 172.93.47.146
+          echo "${{ secrets.CAL_SSH_HOST }}" >> ~/.ssh/known_hosts
           echo "${{ secrets.SL_SSH_HOST }}" >> ~/.ssh/known_hosts
-          echo "${{ secrets.W82ND_SSH_HOST }}" >> ~/.ssh/known_hosts
-          echo "${{ secrets.AZHK1_SSH_HOST }}" >> ~/.ssh/known_hosts
-          echo "${{ secrets.TW_SSH_HOST }}" >> ~/.ssh/known_hosts
+          echo "${{ secrets.SGP_SSH_HOST }}" >> ~/.ssh/known_hosts
       - name: Deploy
         run: |
           echo '--------------------- w8 ---------------------'
-          ssh azureuser@20.205.32.114 "./deploy.sh"
-          echo '--------------------- rm ---------------------'
-          ssh root@98.142.143.106 -p 28714 "./deploy.sh"
+          ssh azureuser@20.195.28.177 "./deploy.sh"
+          echo '--------------------- cal ---------------------'
+          ssh root@172.93.47.146 -p 28714 "./deploy.sh"
           echo '--------------------- sl ---------------------'
           ssh ubuntu@146.56.144.121 "./deploy.sh"
-          echo '--------------------- w82nd ---------------------'
-          ssh caster@34.92.69.172 "./deploy.sh"
-          echo '--------------------- tw ---------------------'
-          ssh caster@34.81.85.35 "./deploy.sh"
-          echo '--------------------- azhk1 ---------------------'
-          ssh azureuser@20.187.121.27 "./deploy.sh"
+          echo '--------------------- sgp ---------------------'
+          ssh azureuser@20.205.179.89 "./deploy.sh"
