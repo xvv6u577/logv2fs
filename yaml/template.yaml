@@ -80,7 +80,10 @@ rules:
  - PROCESS-NAME,uTorrent,all-direct,DIRECT
  - PROCESS-NAME,WebTorrent,all-direct,DIRECT
  - PROCESS-NAME,WebTorrent Helper,all-direct,DIRECT
- - DOMAIN-SUFFIX,onedrive.live.com,manual-select
+ # --- uvp rules ----
+- DOMAIN-SUFFIX,undervineyard.com,all-direct
+- DOMAIN-SUFFIX,onedrive.live.com,manual-select
+# ------------------
  - DOMAIN-KEYWORD,1drv,microsoft-svs
  - DOMAIN-KEYWORD,microsoft,microsoft-svs
  - DOMAIN-SUFFIX,aadrm.com,microsoft-svs
