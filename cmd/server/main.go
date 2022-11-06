@@ -53,7 +53,6 @@ func init() {
 }
 
 func main() {
-
 	logFile, err := os.OpenFile("./log_file.log", os.O_CREATE|os.O_APPEND|os.O_RDWR, 0644)
 	if err != nil {
 		log.Fatalln(err)
@@ -63,8 +62,15 @@ func main() {
 	group := parallelizer.NewGroup()
 	defer group.Close()
 
-	group.Add(V2rayProcess)
+	// ports: 8070, 10000, 10001, 10002
+	group.Add(func() {
+		err := V2rayProcess().Run()
+		if err != nil {
+			log.Panic("Panic: ", err)
+		}
+	})
 
+	// ports: 8079
 	group.Add(func() {
 		err := RunServer().Run(fmt.Sprintf("%s:%s", SERVER_ADDRESS, SERVER_PORT))
 		if err != nil {
@@ -72,6 +78,7 @@ func main() {
 		}
 	})
 
+	// ports: 80 or 50051
 	group.Add(RunGRPCServer)
 
 	group.Wait()
@@ -85,11 +92,8 @@ func RunGRPCServer() {
 	}
 }
 
-func V2rayProcess() {
-	var cmd = exec.Command(V2RAY, "-config", V2RAY_CONFIG)
-	if err := cmd.Run(); err != nil {
-		log.Panic("Panic: ", err)
-	}
+func V2rayProcess() *exec.Cmd {
+	return exec.Command(V2RAY, "-config", V2RAY_CONFIG)
 }
 
 func RunServer() *gin.Engine {

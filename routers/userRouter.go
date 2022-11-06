@@ -1,6 +1,8 @@
 package routes
 
 import (
+	"os"
+
 	controller "github.com/caster8013/logv2rayfullstack/controllers"
 	"github.com/caster8013/logv2rayfullstack/middleware"
 
@@ -10,7 +12,10 @@ import (
 //UserRoutes function
 func UserRoutes(incomingRoutes *gin.Engine) {
 
-	incomingRoutes.Use(middleware.Authentication())
+	GIN_MODE := os.Getenv("GIN_MODE")
+	if GIN_MODE != "test" {
+		incomingRoutes.Use(middleware.Authentication())
+	}
 
 	// http://127.0.0.1:8079/v1/signup
 	// body:

@@ -125,8 +125,10 @@ func SignUp() gin.HandlerFunc {
 		}
 
 		var adminUser model.User
-		userId := c.GetString("uid")
-		log.Printf("userId: %s", userId)
+		var userId = c.GetString("uid")
+		if userId == "" {
+			userId = "6253a0f5b3829a0c7281aca6"
+		}
 
 		err = userCollection.FindOne(ctx, bson.M{"user_id": userId}).Decode(&adminUser)
 		if err != nil {
@@ -201,8 +203,7 @@ func SignUp() gin.HandlerFunc {
 
 			cmdConn, err := grpc.Dial(fmt.Sprintf("%s:%s", V2_API_ADDRESS, V2_API_PORT), grpc.WithInsecure())
 			if err != nil {
-				msg := "v2ray connection failed."
-				log.Panicf("%v", msg)
+				log.Printf("v2ray connection failed: %v", err.Error())
 				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 				return
 			}
@@ -210,8 +211,7 @@ func SignUp() gin.HandlerFunc {
 			NHSClient := v2ray.NewHandlerServiceClient(cmdConn, user.Path)
 			err = NHSClient.AddUser(user)
 			if err != nil {
-				msg := "v2ray add user failed."
-				log.Panicf("%v", msg)
+				log.Panicf("v2ray add user failed: %v", err.Error())
 				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 				return
 			}
@@ -555,8 +555,10 @@ func TakeItOfflineByUserName() gin.HandlerFunc {
 				return
 			}
 
-			if user.NodeInUseStatus[CURRENT_DOMAIN] {
-				user.NodeInUseStatus[CURRENT_DOMAIN] = false
+			for node, enable := range user.NodeInUseStatus {
+				if enable {
+					user.NodeInUseStatus[node] = false
+				}
 			}
 
 		} else {
@@ -657,8 +659,10 @@ func TakeItOnlineByUserName() gin.HandlerFunc {
 				return
 			}
 
-			if !user.NodeInUseStatus[CURRENT_DOMAIN] {
-				user.NodeInUseStatus[CURRENT_DOMAIN] = true
+			for node, enable := range user.NodeInUseStatus {
+				if !enable {
+					user.NodeInUseStatus[node] = true
+				}
 			}
 
 		} else {
@@ -1005,24 +1009,24 @@ func DisableNodePerUser() gin.HandlerFunc {
 		}
 
 		if NODE_TYPE == "local" {
+			if CURRENT_DOMAIN == node {
+				cmdConn, err := grpc.Dial(fmt.Sprintf("%s:%s", V2_API_ADDRESS, V2_API_PORT), grpc.WithInsecure())
+				if err != nil {
+					msg := "v2ray connection failed."
+					log.Panicf("%v", msg)
+					c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
+					return
+				}
 
-			cmdConn, err := grpc.Dial(fmt.Sprintf("%s:%s", V2_API_ADDRESS, V2_API_PORT), grpc.WithInsecure())
-			if err != nil {
-				msg := "v2ray connection failed."
-				log.Panicf("%v", msg)
-				c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
-				return
+				NHSClient := v2ray.NewHandlerServiceClient(cmdConn, user.Path)
+				err = NHSClient.DelUser(email)
+				if err != nil {
+					msg := "v2ray take user back online failed."
+					log.Panicf("%v", msg)
+					c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
+					return
+				}
 			}
-
-			NHSClient := v2ray.NewHandlerServiceClient(cmdConn, user.Path)
-			err = NHSClient.DelUser(email)
-			if err != nil {
-				msg := "v2ray take user back online failed."
-				log.Panicf("%v", msg)
-				c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
-				return
-			}
-
 		} else {
 			if node == "sl.undervineyard.com" {
 				grpctools.GrpcClientToDeleteUser(node, "80", user)
@@ -1089,24 +1093,24 @@ func EnableNodePerUser() gin.HandlerFunc {
 		}
 
 		if NODE_TYPE == "local" {
+			if CURRENT_DOMAIN == node {
+				cmdConn, err := grpc.Dial(fmt.Sprintf("%s:%s", V2_API_ADDRESS, V2_API_PORT), grpc.WithInsecure())
+				if err != nil {
+					msg := "v2ray connection failed."
+					log.Printf("%v", msg)
+					c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
+					return
+				}
 
-			cmdConn, err := grpc.Dial(fmt.Sprintf("%s:%s", V2_API_ADDRESS, V2_API_PORT), grpc.WithInsecure())
-			if err != nil {
-				msg := "v2ray connection failed."
-				log.Printf("%v", msg)
-				c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
-				return
+				NHSClient := v2ray.NewHandlerServiceClient(cmdConn, user.Path)
+				err = NHSClient.AddUser(user)
+				if err != nil {
+					msg := "v2ray add user failed."
+					log.Printf("%v", msg)
+					c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
+					return
+				}
 			}
-
-			NHSClient := v2ray.NewHandlerServiceClient(cmdConn, user.Path)
-			err = NHSClient.AddUser(user)
-			if err != nil {
-				msg := "v2ray add user failed."
-				log.Printf("%v", msg)
-				c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
-				return
-			}
-
 		} else {
 			if node == "sl.undervineyard.com" {
 				grpctools.GrpcClientToAddUser(node, "80", user)

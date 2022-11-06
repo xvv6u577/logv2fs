@@ -18,8 +18,13 @@ func DBinstance() *mongo.Client {
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 
-	if err := godotenv.Load(".env"); err != nil {
-		log.Panic("Error loading .env file")
+	pwd, err := os.Getwd()
+	if err != nil {
+		log.Panic("Panic: ", err)
+	}
+
+	if err := godotenv.Load(pwd + "/.env"); err != nil {
+		log.Panicf("Error loading .env file: %v", err)
 	}
 	MongoDB := os.Getenv("mongoURI")
 
