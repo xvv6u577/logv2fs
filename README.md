@@ -18,9 +18,7 @@ protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=p
 cd logv2rayfullstack
 
 # 运行程序
-go run . server 
-# or 
-go run ./ s
+go run . 
 
 go build
 go install
