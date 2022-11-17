@@ -26,12 +26,13 @@ go install
 
 以systemd service运行（以ubuntu 18.04为例）
 ```
-sudo mv pre-setup/logv2rayfullstack.service /etc/systemd/system/
+sudo systemctl daemon-reload
 
-sudo systemctl status logv2rayfullstack.service
-sudo systemctl start logv2rayfullstack.service
 sudo systemctl enable logv2rayfullstack.service
+sudo systemctl start logv2rayfullstack.service
+
 sudo systemctl stop logv2rayfullstack.service
+sudo systemctl status logv2rayfullstack.service
 ```
 
 ## Frontend
