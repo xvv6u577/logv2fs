@@ -17,7 +17,6 @@ jobs:
           echo "${{ secrets.CAL_SSH_HOST }}" >> ~/.ssh/known_hosts
           echo "${{ secrets.SL_SSH_HOST }}" >> ~/.ssh/known_hosts
           echo "${{ secrets.SGP_SSH_HOST }}" >> ~/.ssh/known_hosts
-          echo "${{ secrets.HK1_SSH_HOST }}" >> ~/.ssh/known_hosts
       - name: Deploy
         run: |
           echo '--------------------- w8 ---------------------'
@@ -27,6 +26,4 @@ jobs:
           echo '--------------------- sl ---------------------'
           ssh ubuntu@146.56.144.121 "./deploy.sh"
           echo '--------------------- sgp ---------------------'
-          ssh azureuser@20.205.179.89 "./deploy.sh"
-          echo '--------------------- aws hk1 ---------------------'
-          ssh ubuntu@43.198.76.204 "./deploy.sh"
+          ssh azureuser@20.212.235.164 "./deploy.sh"
