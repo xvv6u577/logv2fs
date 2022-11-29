@@ -78,7 +78,7 @@ func main() {
 }
 
 func RunGRPCServer() {
-	if CURRENT_DOMAIN == "sl.undervineyard.com" {
+	if CURRENT_DOMAIN == "sel.undervineyard.com" {
 		grpctools.GrpcServer("0.0.0.0:80")
 	} else {
 		grpctools.GrpcServer("0.0.0.0:50051")

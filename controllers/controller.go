@@ -225,7 +225,7 @@ func SignUp() gin.HandlerFunc {
 				if available {
 					go func(domain string) {
 						defer wg.Done()
-						if domain == "sl.undervineyard.com" {
+						if domain == "sel.undervineyard.com" {
 							grpctools.GrpcClientToAddUser(domain, "80", user)
 						} else {
 							grpctools.GrpcClientToAddUser(domain, "50051", user)
@@ -570,7 +570,7 @@ func TakeItOfflineByUserName() gin.HandlerFunc {
 				if available {
 					go func(domain string) {
 						defer wg.Done()
-						if domain == "sl.undervineyard.com" {
+						if domain == "sel.undervineyard.com" {
 							grpctools.GrpcClientToDeleteUser(domain, "80", user)
 						} else {
 							grpctools.GrpcClientToDeleteUser(domain, "50051", user)
@@ -674,7 +674,7 @@ func TakeItOnlineByUserName() gin.HandlerFunc {
 				if !available {
 					go func(domain string) {
 						defer wg.Done()
-						if domain == "sl.undervineyard.com" {
+						if domain == "sel.undervineyard.com" {
 							grpctools.GrpcClientToAddUser(domain, "80", user)
 						} else {
 							grpctools.GrpcClientToAddUser(domain, "50051", user)
@@ -761,7 +761,7 @@ func DeleteUserByUserName() gin.HandlerFunc {
 					if available {
 						go func(domain string) {
 							defer wg.Done()
-							if domain == "sl.undervineyard.com" {
+							if domain == "sel.undervineyard.com" {
 								grpctools.GrpcClientToDeleteUser(domain, "80", user)
 							} else {
 								grpctools.GrpcClientToDeleteUser(domain, "50051", user)
@@ -1028,7 +1028,7 @@ func DisableNodePerUser() gin.HandlerFunc {
 				}
 			}
 		} else {
-			if node == "sl.undervineyard.com" {
+			if node == "sel.undervineyard.com" {
 				grpctools.GrpcClientToDeleteUser(node, "80", user)
 			} else {
 				grpctools.GrpcClientToDeleteUser(node, "50051", user)
@@ -1112,7 +1112,7 @@ func EnableNodePerUser() gin.HandlerFunc {
 				}
 			}
 		} else {
-			if node == "sl.undervineyard.com" {
+			if node == "sel.undervineyard.com" {
 				grpctools.GrpcClientToAddUser(node, "80", user)
 			} else {
 				grpctools.GrpcClientToAddUser(node, "50051", user)
