@@ -120,7 +120,7 @@ func (u *User) ProduceSuburl() {
 				Remark:  strings.Split(index, ".")[0],
 				Version: "2",
 				Port:    "443",
-				Aid:     "64",
+				Aid:     "4",
 				Net:     "ws",
 				Type:    "none",
 				Tls:     "tls",
