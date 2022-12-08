@@ -136,7 +136,7 @@ func GenerateOne(user User) error {
 			})
 
 			for index, value := range yamlTemplate.ProxyGroups {
-				if value.Name == "manual-select" || value.Name == "auto-select" {
+				if value.Name == "manual-select" || value.Name == "auto-select" || value.Name == "fallback" {
 					yamlTemplate.ProxyGroups[index].Proxies = append(yamlTemplate.ProxyGroups[index].Proxies, nodeFlag)
 				}
 			}

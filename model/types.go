@@ -69,17 +69,48 @@ type Node struct {
 	Method  string `default:"none" json:"method"`
 }
 
+// type YamlTemplate struct {
+// 	Port               int           `yaml:"port"`
+// 	SocksPort          int           `yaml:"socks-port"`
+// 	AllowLan           bool          `yaml:"allow-lan"`
+// 	Mode               string        `yaml:"mode"`
+// 	LogLevel           string        `yaml:"log-level"`
+// 	ExternalController string        `yaml:"external-controller"`
+// 	Proxies            []Proxies     `yaml:"proxies"`
+// 	ProxyGroups        []ProxyGroups `yaml:"proxy-groups"`
+// 	Rules              []string      `yaml:"rules"`
+// }
+
 type YamlTemplate struct {
-	Port               int           `yaml:"port"`
-	SocksPort          int           `yaml:"socks-port"`
+	Port               int           `default:"7890" yaml:"mixed-port"`
 	AllowLan           bool          `yaml:"allow-lan"`
+	BindAddress        string        `yaml:"bind-address"`
 	Mode               string        `yaml:"mode"`
 	LogLevel           string        `yaml:"log-level"`
 	ExternalController string        `yaml:"external-controller"`
+	Dns                Dns           `yaml:"dns"`
 	Proxies            []Proxies     `yaml:"proxies"`
 	ProxyGroups        []ProxyGroups `yaml:"proxy-groups"`
 	Rules              []string      `yaml:"rules"`
 }
+
+type Dns struct {
+	Enable            bool           `yaml:"enable"`
+	Ipv6              bool           `yaml:"ipv6"`
+	DefaultNameserver []string       `yaml:"default-nameserver"`
+	EnhancedMode      string         `yaml:"enhanced-mode"`
+	FakeIpRange       string         `yaml:"fake-ip-range"`
+	UseHosts          bool           `yaml:"use-hosts"`
+	NameServer        []string       `yaml:"nameserver"`
+	Fallback          []string       `yaml:"fallback"`
+	FallbackFilter    FallbackFilter `yaml:"fallback-filter"`
+}
+
+type FallbackFilter struct {
+	Geoip  bool     `yaml:"geoip"`
+	Ipcidr []string `yaml:"ipcidr"`
+}
+
 type Headers struct {
 	Host string `yaml:"Host"`
 }
