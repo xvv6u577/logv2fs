@@ -66,7 +66,7 @@ type Node struct {
 	Type    string `json:"type" `
 	Host    string `default:"none" json:"host"`
 	Tls     string `default:"tls" json:"tls"`
-	Scy     string `default:"none" json:"scy"`
+	Method  string `default:"none" json:"method"`
 }
 
 type YamlTemplate struct {
@@ -125,7 +125,7 @@ func (u *User) ProduceSuburl() {
 				Net:     "ws",
 				Type:    "none",
 				Tls:     "tls",
-				Scy:     "none",
+				Method:  "none",
 			}
 
 			jsonedNode, _ := json.Marshal(node)
