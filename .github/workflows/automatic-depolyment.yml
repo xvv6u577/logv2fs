@@ -20,7 +20,7 @@ jobs:
           echo "${{ secrets.TKY_SSH_HOST }}" >> ~/.ssh/known_hosts
       - name: Deploy
         run: |
-          echo '--------------------- w8 ---------------------'
+          echo '--------------------- w8 ----------------------'
           ssh azureuser@20.212.234.243 "./deploy.sh"
           echo '--------------------- cal ---------------------'
           ssh root@172.93.43.102 -p 28714 "./deploy.sh"
