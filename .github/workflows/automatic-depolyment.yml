@@ -16,17 +16,17 @@ jobs:
           # ssh-keyscan -p 28714 98.142.143.114
           echo "${{ secrets.CAL_SSH_HOST }}" >> ~/.ssh/known_hosts
           echo "${{ secrets.SEL_SSH_HOST }}" >> ~/.ssh/known_hosts
-          echo "${{ secrets.SGP_SSH_HOST }}" >> ~/.ssh/known_hosts
-          echo "${{ secrets.AZHK_SSH_HOST }}" >> ~/.ssh/known_hosts
+          echo "${{ secrets.SGP1_SSH_HOST }}" >> ~/.ssh/known_hosts
+          echo "${{ secrets.TKY_SSH_HOST }}" >> ~/.ssh/known_hosts
       - name: Deploy
         run: |
           echo '--------------------- w8 ---------------------'
-          ssh azureuser@20.212.235.164 "./deploy.sh"
-          echo '--------------------- cal ---------------------'
-          ssh root@98.142.143.114 -p 28714 "./deploy.sh"
-          echo '--------------------- sel ---------------------'
-          ssh ubuntu@131.186.31.156 "./deploy.sh"
-          echo '--------------------- sgp ---------------------'
           ssh azureuser@20.212.234.243 "./deploy.sh"
-          echo '--------------------- azhk ---------------------'
-          ssh azureuser@52.184.89.130 "./deploy.sh"
+          echo '--------------------- cal ---------------------'
+          ssh root@172.93.43.102 -p 28714 "./deploy.sh"
+          echo '--------------------- sel ---------------------'
+          ssh ubuntu@131.186.26.3 "./deploy.sh"
+          echo '--------------------- sgp1 ---------------------'
+          ssh azureuser@52.230.104.42 "./deploy.sh"
+          echo '--------------------- tky ---------------------'
+          ssh ubuntu@43.207.76.168 "./deploy.sh"
