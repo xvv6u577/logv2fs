@@ -1,8 +1,16 @@
 import { useSelector } from "react-redux";
 import TapToCopied from "./tapToCopied";
+import ClashxMac1 from "../images/clashx-mac-1.png";
+import ClashxMac2 from "../images/clashx-mac-2.png";
+import ClashxMac3 from "../images/clashx-mac-3.png";
+import MyLightbox from "./MyLightbox";
 
 function Macos() {
 	const loginState = useSelector((state) => state.login);
+	const img1 = [ClashxMac1];
+	const img2 = [ClashxMac2];
+	const img3 = [ClashxMac3];
+
 
 	return (
 		<div className="xl:container xl:mx-auto px-5 xl:px-20">
@@ -20,16 +28,19 @@ function Macos() {
 			<p className="my-6 text-baseg font-normal text-gray-500 lg:text-base sm:px-16 xl:px-10 dark:text-sky-200">
 				点按标题栏 clashX 图标, 依次选择 Config -{'>'} Remote config -{'>'} Manage -{'>'} Add
 			</p>
+			<MyLightbox  device={'desktop'}  images={img1} />
 			<div className="my-6 text-baseg font-normal text-gray-500 lg:text-base sm:px-16 xl:px-12 dark:text-sky-200">
 				选择 URL, 在 URL 中输入:<br />
 				<TapToCopied>{process.env.REACT_APP_FILE_AND_SUB_URL + "/clash/" + loginState.jwt.Email+".yaml"}</TapToCopied><br />
 				Config Name 可以随意填写, 例如: clashX
 			</div>
+			<MyLightbox  device={'desktop'}  images={img2} />
 			<p className="my-6 text-baseg font-normal text-gray-500 lg:text-xl sm:px-16 xl:px-10 dark:text-gray-400">Step 3: 日常运行设置</p>
 			<p className="my-6 text-baseg font-normal text-gray-500 lg:text-base sm:px-16 xl:px-10 dark:text-sky-200">
 				Proxy Mode, 选择 Rule<br />
 				选中 Enhanced Mode<br />
 			</p>
+			<MyLightbox  device={'desktop'}  images={img3} />
 			<div className="my-6 text-baseg font-normal text-gray-500 lg:text-base sm:px-16 xl:px-10 dark:text-sky-200">
 				打开浏览器，访问 <TapToCopied>https://www.google.com</TapToCopied>，如果能正常访问，说明配置成功。
 			</div>

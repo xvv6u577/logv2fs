@@ -13,6 +13,7 @@ protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=p
 ```
 
 > 环境变量：.env
+> go v1.17.2
 
 ```
 cd logv2rayfullstack

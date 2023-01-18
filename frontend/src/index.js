@@ -5,6 +5,7 @@ import { store } from './store/index';
 import App from './App';
 import * as serviceWorker from './serviceWorker';
 import './index.css';
+import 'react-image-lightbox/style.css';
 
 ReactDOM.render(
   <Provider store={store}>
