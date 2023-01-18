@@ -65,50 +65,66 @@ function Mypanel() {
 					<p>Traffic Used In Total</p>
 				</div>
 			</div>
-
 			<div
-				className="flex flex-col content-between rounded-lg box-border border-4 border-neutral-100 mx-auto md:my-3 md:p-3 md:w-1/2"
+				// className="w-full flex justify-center"
+				className="w-full flex justify-center bg-white border border-gray-200 rounded-lg shadow-md sm:p-6 md:p-8 dark:bg-gray-800 dark:border-gray-700"
 			>
-				<div className="flex md:justify-between">
-					<span className="flex items-center text-sm">用户名:</span>
-					<TapToCopied>{user.email}</TapToCopied>
-				</div>
-				<div className="flex md:justify-between">
-					<span className="flex items-center text-sm">path: </span>
-					<TapToCopied>{user.path}</TapToCopied>
-				</div>
-				<div className="flex md:justify-between">
-					<span className="flex items-center text-sm">uuid: </span>
-					<TapToCopied>{user.uuid}</TapToCopied>
-				</div>
-				<div className="flex md:justify-between">
-					<span className="flex items-center text-sm">SubUrl:</span>
-					<TapToCopied>
-						{process.env.REACT_APP_FILE_AND_SUB_URL + "/static/" + user.email}
-					</TapToCopied>
-				</div>
-				<div className="flex md:justify-between">
-					<span className="flex items-center text-sm">Clash YAML:</span>
-					<TapToCopied>
-						{process.env.REACT_APP_FILE_AND_SUB_URL + "/clash/" + user.email + ".yaml"}
-					</TapToCopied>
-				</div>
+				<form
+					// className="space-y-6" 
+					action="#">
+					<h5 className="text-xl font-medium text-gray-900 dark:text-white">My Info</h5>
+					<div>
+						<label for="email" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">用户名: </label>
+						<TapToCopied>{user.email}</TapToCopied>
+						{/* <input type="email" name="email" id="email" className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white" placeholder="name@company.com" required /> */}
+					</div>
+					<div>
+						<label for="password" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">path:</label>
+						<TapToCopied>{user.path}</TapToCopied>
+						{/* <input type="password" name="password" id="password" placeholder="••••••••" className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white" required /> */}
+					</div>
+					<div>
+						<label for="password" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">uuid:</label>
+						<TapToCopied>{user.uuid}</TapToCopied>
+						{/* <input type="password" name="password" id="password" placeholder="••••••••" className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white" required /> */}
+					</div>
+					<div>
+						<label for="password" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">SubUrl:</label>
+						<TapToCopied>
+							{process.env.REACT_APP_FILE_AND_SUB_URL + "/static/" + user.email}
+						</TapToCopied>
+						{/* <input type="password" name="password" id="password" placeholder="••••••••" className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white" required /> */}
+					</div>
+					<div>
+						<label for="password" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Clash YAML:</label>
+						<TapToCopied>
+							{process.env.REACT_APP_FILE_AND_SUB_URL + "/clash/" + user.email + ".yaml"}
+						</TapToCopied>
+						{/* <input type="password" name="password" id="password" placeholder="••••••••" className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white" required /> */}
+					</div>
+				</form>
 			</div>
 
-			<div className="">
-				<div className="px-3 flex flex-col">
-					<div className="text-4xl my-3 text-center">
-						Monthly Traffic in the Past 1 Year
+			{
+				user.traffic_by_day && user.traffic_by_day.length > 0 && (
+
+					<div className="">
+						<div className="px-3 flex flex-col">
+							<div className="text-4xl my-3 text-center">
+								Monthly Traffic in the Past 1 Year
+							</div>
+							<TrafficTable data={user.traffic_by_month} limit={12} by="月份" />
+						</div>
+						<div className="flex flex-col">
+							<div className="text-4xl my-3 text-center">
+								Daily Traffic in the Past 3 Month
+							</div>
+							<TrafficTable data={user.traffic_by_day} limit={90} by="日期" />
+						</div>
 					</div>
-					<TrafficTable data={user.traffic_by_month} limit={12} by="月份" />
-				</div>
-				<div className="flex flex-col">
-					<div className="text-4xl my-3 text-center">
-						Daily Traffic in the Past 3 Month
-					</div>
-					<TrafficTable data={user.traffic_by_day} limit={90} by="日期" />
-				</div>
-			</div>
+				)
+			}
+
 		</div>
 	);
 }

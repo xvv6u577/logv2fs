@@ -180,7 +180,7 @@ const UserComp = (props) => {
                         />
                         {props.user.status === "plain" ? (
                             <button
-                                className="focus:outline-none text-white bg-red-700 hover:bg-red-800 focus:ring-4 focus:ring-red-300 font-medium rounded-lg text-sm px-2.5 py-2.5 m-1 dark:bg-red-600 dark:hover:bg-red-700 dark:focus:ring-red-900"
+                                className="w-full sm:w-full focus:outline-none text-white bg-red-700 hover:bg-red-800 focus:ring-4 focus:ring-red-300 font-medium rounded-lg text-sm px-2.5 py-2.5 m-1 dark:bg-red-600 dark:hover:bg-red-700 dark:focus:ring-red-900"
                                 type="button"
                                 onClick={() => handleOffline(props.user.email)}
                             >
@@ -192,7 +192,7 @@ const UserComp = (props) => {
 
                         ) : (
                             <button
-                                className="focus:outline-none text-white bg-green-700 hover:bg-green-800 focus:ring-4 focus:ring-green-300 font-medium rounded-lg text-sm px-2.5 py-2.5 m-1 dark:bg-green-600 dark:hover:bg-green-700 dark:focus:ring-green-800"
+                                className="w-full sm:w-full focus:outline-none text-white bg-green-700 hover:bg-green-800 focus:ring-4 focus:ring-green-300 font-medium rounded-lg text-sm px-2.5 py-2.5 m-1 dark:bg-green-600 dark:hover:bg-green-700 dark:focus:ring-green-800"
                                 type="button"
                                 onClick={() => handleOnline(props.user.email)}
                             >
@@ -360,7 +360,7 @@ function EditUser({ btnName, user, editUserFunc }) {
     return (
         <>
             <button
-                className="flex text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-2.5 py-2.5 m-1 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
+                className="w-full sm:w-auto flex text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-2.5 py-2.5 m-1 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
                 type="button"
                 onClick={() => setShow(!show)}
             >
@@ -480,7 +480,7 @@ function ConfirmDelUser({ btnName, deleteUserFunc }) {
     return (
         <>
             <button
-                className="flex text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-2.5 py-2.5 m-1 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
+                className="w-full sm:w-auto  flex text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-2.5 py-2.5 m-1 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
                 type="button"
                 onClick={() => setShow(!show)}
             >

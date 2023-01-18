@@ -46,7 +46,7 @@ const Menu = () => {
 				{loginState.jwt.Role === "admin" && (
 					<>
 						<button
-							className="block text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-2.5 py-2.5 m-1 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
+							className="w-full sm:w-auto block text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-2.5 py-2.5 m-1 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
 							onClick={handleWriteToDB}
 						>
 							<svg xmlns="http://www.w3.org/2000/svg" className="inline-block h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
@@ -60,12 +60,14 @@ const Menu = () => {
 				)}
 				<span className="hover:text-white" href="#">Signed in as: <b>{loginState.jwt.Email}</b></span>
 				<button
-					className="text-gray-900 bg-white hover:bg-gray-100 border border-gray-200 focus:ring-4 focus:outline-none focus:ring-gray-100 font-medium rounded-md text-sm px-3 py-2.5 mx-2 text-center inline-flex items-center dark:focus:ring-gray-600 dark:bg-gray-800 dark:border-gray-700 dark:text-white dark:hover:bg-gray-700"
+					className="w-full sm:w-auto block text-white-900 bg-white hover:bg-gray-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-2.5 py-2.5 m-1 text-center dark:bg-gray-600 dark:hover:bg-gray-800 dark:focus:ring-gray-800"
+					// className="w-full sm:w-auto text-gray-900 bg-white hover:bg-gray-100 border border-gray-200 focus:ring-4 focus:outline-none focus:ring-gray-100 font-medium rounded-md text-sm px-3 py-2.5 mx-2 text-center inline-flex items-center dark:focus:ring-gray-600 dark:bg-gray-800 dark:border-gray-700 dark:text-white dark:hover:bg-gray-700"
 					onClick={handleLogout}
-				>logout
-					<svg fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" className="w-4 h-4 ml-1" viewBox="0 0 24 24">
+				>
+					<svg fill="none" className="inline-block h-4 w-4 mr-1" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24">
 						<path d="M5 12h14M12 5l7 7-7 7"></path>
 					</svg>
+					logout
 				</button>
 			</div>
 

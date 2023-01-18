@@ -21,12 +21,12 @@ jobs:
       - name: Deploy
         run: |
           echo '--------------------- w8 ----------------------'
-          ssh azureuser@20.212.234.243 "./deploy.sh"
+          # ssh azureuser@20.212.234.243 "./deploy.sh"
           echo '--------------------- cal ---------------------'
-          ssh root@172.93.43.102 -p 28714 "./deploy.sh"
+          # ssh root@172.93.43.102 -p 28714 "./deploy.sh"
           echo '--------------------- sel ---------------------'
-          ssh ubuntu@131.186.26.3 "./deploy.sh"
+          # ssh ubuntu@131.186.26.3 "./deploy.sh"
           echo '--------------------- sgp1 ---------------------'
-          ssh azureuser@52.230.104.42 "./deploy.sh"
+          # ssh azureuser@52.230.104.42 "./deploy.sh"
           echo '--------------------- tky ---------------------'
-          ssh ubuntu@43.207.76.168 "./deploy.sh"
+          # ssh ubuntu@43.207.76.168 "./deploy.sh"
