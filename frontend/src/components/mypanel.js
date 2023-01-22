@@ -65,44 +65,34 @@ function Mypanel() {
 					<p>Traffic Used In Total</p>
 				</div>
 			</div>
-			<div
-				// className="w-full flex justify-center"
-				className="w-full flex justify-center bg-white border border-gray-200 rounded-lg shadow-md sm:p-6 md:p-8 dark:bg-gray-800 dark:border-gray-700"
-			>
-				<form
-					// className="space-y-6" 
-					action="#">
-					<h5 className="text-xl font-medium text-gray-900 dark:text-white">My Info</h5>
-					<div>
-						<label for="email" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">用户名: </label>
+			<div className="w-full md:w-1/2 mx-auto flex justify-center bg-white border border-gray-200 rounded-lg shadow-md sm:p-6 md:p-8 dark:bg-gray-800 dark:border-gray-700" >
+				<div>
+					<h5 className="text-xl font-medium text-gray-900 dark:text-white">Basic Info</h5>
+					<div className="py-1 flex justify-between items-center">
+						<pre className="inline text-sm font-medium text-gray-900 dark:text-white">Email: </pre>
 						<TapToCopied>{user.email}</TapToCopied>
-						{/* <input type="email" name="email" id="email" className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white" placeholder="name@company.com" required /> */}
 					</div>
-					<div>
-						<label for="password" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">path:</label>
+					<div className="py-1 flex justify-between items-center">
+						<pre className="inline  text-sm font-medium text-gray-900 dark:text-white">Path:</pre>
 						<TapToCopied>{user.path}</TapToCopied>
-						{/* <input type="password" name="password" id="password" placeholder="••••••••" className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white" required /> */}
 					</div>
-					<div>
-						<label for="password" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">uuid:</label>
+					<div className="py-1 flex justify-between items-center">
+						<pre className="inline  text-sm font-medium text-gray-900 dark:text-white">UUID:</pre>
 						<TapToCopied>{user.uuid}</TapToCopied>
-						{/* <input type="password" name="password" id="password" placeholder="••••••••" className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white" required /> */}
 					</div>
-					<div>
-						<label for="password" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">SubUrl:</label>
+					<div className="py-1 flex justify-between items-center">
+						<pre className="inline  text-sm font-medium text-gray-900 dark:text-white">SubUrl:</pre>
 						<TapToCopied>
 							{process.env.REACT_APP_FILE_AND_SUB_URL + "/static/" + user.email}
 						</TapToCopied>
-						{/* <input type="password" name="password" id="password" placeholder="••••••••" className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white" required /> */}
 					</div>
-					<div>
-						<label for="password" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Clash YAML:</label>
+					<div className="py-1 flex justify-between items-center">
+						<pre className="inline  text-sm font-medium text-gray-900 dark:text-white">Clash YAML:</pre>
 						<TapToCopied>
 							{process.env.REACT_APP_FILE_AND_SUB_URL + "/clash/" + user.email + ".yaml"}
 						</TapToCopied>
-						{/* <input type="password" name="password" id="password" placeholder="••••••••" className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white" required /> */}
 					</div>
-				</form>
+				</div>
 			</div>
 
 			{

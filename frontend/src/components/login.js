@@ -57,13 +57,13 @@ const Login = () => {
 	return (
 		<div className="container px-5 py-24 mx-auto md:w-96">
 			<form onSubmit={handleSubmit}>
-				<h3 className="mb-4 text-xl font-medium text-white-900 dark:text-white">Sign in to our platform</h3>
+				<h3 className="mb-4 text-xl font-medium text-white-900 dark:text-white">Welcome to sign in!</h3>
 				<div className="mb-6">
-					<label htmlFor="email" className="block mb-2 text-sm font-medium text-white-900 dark:text-gray-300">Your email</label>
-					<input type="text" placeholder="Email" onChange={(e) => setName(e.target.value)} className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" required />
+					<label htmlFor="email" className="block mb-2 text-sm font-medium text-white-900 dark:text-gray-300">Username:</label>
+					<input type="text" placeholder="username" onChange={(e) => setName(e.target.value)} className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" required />
 				</div>
 				<div className="mb-6">
-					<label htmlFor="password" className="block mb-2 text-sm font-medium text-white-900 dark:text-gray-300">Your password</label>
+					<label htmlFor="password" className="block mb-2 text-sm font-medium text-white-900 dark:text-gray-300">Password</label>
 					<input type="password" placeholder="********" autoComplete="" onChange={(e) => setPassword(e.target.value)} className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" required="" />
 				</div>
 				

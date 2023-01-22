@@ -125,38 +125,40 @@ const UserComp = (props) => {
             <h2 id={`accordion-collapse-heading-${props.index}`} >
                 <span className="flex flex-col md:flex-row items-center md:justify-between w-full md:px-5 font-medium text-left border border-b-0 border-gray-200 rounded-t-xl focus:ring-4 focus:ring-gray-200 dark:focus:ring-gray-800 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white"
                 >
-                    <span className="md:w-1/3">
-                        <span className="bg-gray-100 text-gray-800 text-xs font-medium inline-flex items-center px-2.5 py-0.5 rounded mr-2 dark:bg-gray-700 dark:text-gray-300">
-                            {props.index + 1}{"."}
-                        </span>
-                        <span className="bg-blue-100 text-blue-800 text-xs font-semibold mr-2 px-2.5 py-0.5 rounded dark:bg-blue-200 dark:text-blue-800" >
-                            {props.user.name}
-                        </span>
-                        {props.user.status === "plain" ? (
-                            <span className="bg-green-100 text-green-800 text-xs font-semibold mr-2 px-2.5 py-0.5 rounded dark:bg-green-200 dark:text-green-900">
-                                online
+                    <span className="flex md:justify-start justify-center w-full md:w-1/3">
+                        <div>
+                            <span className="bg-gray-100 text-gray-800 text-xs font-medium inline-flex items-center px-2.5 py-0.5 rounded mr-2 dark:bg-gray-700 dark:text-gray-300">
+                                {props.index + 1}{"."}
                             </span>
-                        ) : (
-                            <span className="bg-gray-100 text-gray-800 text-sm font-medium mr-2 px-2.5 py-0.5 rounded dark:bg-gray-700 dark:text-gray-300">
-                                offline
+                            <span className="bg-blue-100 text-blue-800 text-xs font-semibold mr-2 px-2.5 py-0.5 rounded dark:bg-blue-200 dark:text-blue-800" >
+                                {props.user.name}
                             </span>
-                        )}
-                        {props.user.role === "admin" ? (
-                            <span className="bg-purple-100 text-purple-800 text-sm font-medium mr-2 px-2.5 py-0.5 rounded dark:bg-purple-200 dark:text-purple-900">
-                                admin
-                            </span>
-                        ) : (
-                            <span className="bg-yellow-100 text-yellow-800 text-xs font-semibold mr-2 px-2.5 py-0.5 rounded dark:bg-yellow-200 dark:text-yellow-900">
-                                user
-                            </span>
-                        )}
-                        {props.user.email === loginState.jwt.Email && (
-                            <span className="bg-pink-100 text-pink-800 text-xs font-semibold mr-2 px-2.5 py-0.5 rounded dark:bg-pink-200 dark:text-pink-900">
-                                Me
-                            </span>
-                        )}
+                            {props.user.status === "plain" ? (
+                                <span className="bg-green-100 text-green-800 text-xs font-semibold mr-2 px-2.5 py-0.5 rounded dark:bg-green-200 dark:text-green-900">
+                                    online
+                                </span>
+                            ) : (
+                                <span className="bg-gray-100 text-gray-800 text-sm font-medium mr-2 px-2.5 py-0.5 rounded dark:bg-gray-700 dark:text-gray-300">
+                                    offline
+                                </span>
+                            )}
+                            {props.user.role === "admin" ? (
+                                <span className="bg-purple-100 text-purple-800 text-sm font-medium mr-2 px-2.5 py-0.5 rounded dark:bg-purple-200 dark:text-purple-900">
+                                    admin
+                                </span>
+                            ) : (
+                                <span className="bg-yellow-100 text-yellow-800 text-xs font-semibold mr-2 px-2.5 py-0.5 rounded dark:bg-yellow-200 dark:text-yellow-900">
+                                    user
+                                </span>
+                            )}
+                            {props.user.email === loginState.jwt.Email && (
+                                <span className="bg-pink-100 text-pink-800 text-xs font-semibold mr-2 px-2.5 py-0.5 rounded dark:bg-pink-200 dark:text-pink-900">
+                                    Me
+                                </span>
+                            )}
+                        </div>
                     </span>
-                    <span className="md:w-1/3"> Today:{" "}
+                    <span className="flex md:justify-start justify-center items-center w-full  md:w-1/3 text-xs"> Today:{" "}
                         <span className="bg-indigo-100 text-indigo-800 text-sm font-medium mr-2 px-2.5 py-0.5 rounded dark:bg-indigo-200 dark:text-indigo-900">
                             {formatBytes(props.user.used_by_current_day.amount)}
                         </span>
@@ -170,7 +172,7 @@ const UserComp = (props) => {
                             {formatBytes(props.user.used)}
                         </span>
                     </span>
-                    <span className="flex flex-row md:w-1/3">
+                    <span className="w-full flex flex-col md:flex-row md:w-1/3">
                         <EditUser
                             btnName="Edit"
                             editUserFunc={() =>
@@ -180,7 +182,8 @@ const UserComp = (props) => {
                         />
                         {props.user.status === "plain" ? (
                             <button
-                                className="w-full sm:w-full focus:outline-none text-white bg-red-700 hover:bg-red-800 focus:ring-4 focus:ring-red-300 font-medium rounded-lg text-sm px-2.5 py-2.5 m-1 dark:bg-red-600 dark:hover:bg-red-700 dark:focus:ring-red-900"
+                                className="focus:outline-none text-white bg-red-700 hover:bg-red-800 focus:ring-4 focus:ring-red-300 font-medium rounded-lg text-sm px-2.5 py-2.5 m-1 text-center dark:bg-red-600 dark:hover:bg-red-700 dark:focus:ring-red-800"
+                                // className="focus:outline-none text-white font-medium rounded-lg text-sm px-2.5 py-1 m-1 text-center dark:bg-red-600 dark:hover:bg-red-700 dark:focus:ring-red-800 w-full md:w-24 md:h-10"
                                 type="button"
                                 onClick={() => handleOffline(props.user.email)}
                             >
@@ -192,7 +195,8 @@ const UserComp = (props) => {
 
                         ) : (
                             <button
-                                className="w-full sm:w-full focus:outline-none text-white bg-green-700 hover:bg-green-800 focus:ring-4 focus:ring-green-300 font-medium rounded-lg text-sm px-2.5 py-2.5 m-1 dark:bg-green-600 dark:hover:bg-green-700 dark:focus:ring-green-800"
+                                className="focus:outline-none text-white bg-green-700 hover:bg-green-800 focus:ring-4 focus:ring-red-300 font-medium rounded-lg text-sm px-2.5 py-2.5 m-1 text-center dark:bg-green-600 dark:hover:bg-green-700 dark:focus:ring-green-800"
+                                // className="focus:outline-none text-white font-medium rounded-lg text-sm px-2.5 py-1 m-1 text-center dark:bg-green-600 dark:hover:bg-green-700 dark:focus:ring-green-800 w-full md:w-24 md:h-10"
                                 type="button"
                                 onClick={() => handleOnline(props.user.email)}
                             >
@@ -208,11 +212,11 @@ const UserComp = (props) => {
                         />
                     </span>
                     <svg
-                        onClick={() => { 
+                        onClick={() => {
                             props.update();
                             props.active && fetchMore();
                         }}
-                        className={`w-6 h-6 shrink-0 dark:hover:bg-gray-600 hover:cursor-pointer ${props.active ? "rotate-180" : "rotate-0"}`}
+                        className={`w-10 h-10 shrink-0 dark:hover:bg-gray-600 hover:cursor-pointer ${props.active ? "rotate-180" : "rotate-0"}`}
                         fill="currentColor"
                         viewBox="0 0 20 20"
                         xmlns="http://www.w3.org/2000/svg">
@@ -225,27 +229,27 @@ const UserComp = (props) => {
                 className={`${props.active ? "hidden " : ""}accordion-collapse-body`}
             >
                 <div className="flex flex-col md:flex-row md:p-5 font-light border border-b-0 border-gray-200 dark:border-gray-700 dark:bg-gray-900">
-                    <div className="flex flex-col justify-between rounded-lg border-4 border-neutral-100 mx-auto my-3 md:p-3 md:w-2/5" >
-                        <div className="flex md:justify-between">
-                            <span className="flex items-center text-sm">用户名:</span>
+                    <div className="flex flex-col content-between rounded-lg border-4 border-neutral-100 mx-auto my-3 md:p-3 md:w-2/5" >
+                        <div className="py-1 flex justify-between items-center">
+                            <pre className="inline text-sm font-medium text-gray-900 dark:text-white">Email: </pre>
                             <TapToCopied>{user.email}</TapToCopied>
                         </div>
-                        <div className="flex md:justify-between">
-                            <span className="flex items-center text-sm">path: </span>
+                        <div className="py-1 flex justify-between items-center">
+                            <pre className="inline  text-sm font-medium text-gray-900 dark:text-white">Path:</pre>
                             <TapToCopied>{user.path}</TapToCopied>
                         </div>
-                        <div className="flex md:justify-between">
-                            <span className="flex items-center text-sm">uuid: </span>
+                        <div className="py-1 flex justify-between items-center">
+                            <pre className="inline  text-sm font-medium text-gray-900 dark:text-white">UUID:</pre>
                             <TapToCopied>{user.uuid}</TapToCopied>
                         </div>
-                        <div className="flex md:justify-between">
-                            <span className="flex items-center text-sm">Shdowrocket:</span>
+                        <div className="py-1 flex justify-between items-center">
+                            <pre className="inline  text-sm font-medium text-gray-900 dark:text-white">SubUrl:</pre>
                             <TapToCopied>
                                 {process.env.REACT_APP_FILE_AND_SUB_URL + "/static/" + user.email}
                             </TapToCopied>
                         </div>
-                        <div className="flex md:justify-between">
-                            <span className="flex items-center text-sm">Clash:</span>
+                        <div className="py-1 flex justify-between items-center">
+                            <pre className="inline  text-sm font-medium text-gray-900 dark:text-white">Clash YAML:</pre>
                             <TapToCopied>
                                 {process.env.REACT_APP_FILE_AND_SUB_URL + "/clash/" + user.email + ".yaml"}
                             </TapToCopied>
@@ -261,7 +265,8 @@ const UserComp = (props) => {
                                         {value ? (
                                             <button
                                                 type="button"
-                                                className="flex text-white bg-red-700 hover:bg-red-800 focus:ring-4 focus:outline-none focus:ring-red-300 font-medium rounded-lg text-sm px-2.5 py-2.5 m-1 text-center dark:bg-red-600 dark:hover:bg-red-700 dark:focus:ring-red-800"
+                                                style={{width: "100px", height: "40px"}}
+                                                className="inline-flex justify-center text-white bg-red-700 hover:bg-red-800 focus:ring-4 focus:outline-none focus:ring-red-300 font-medium rounded-lg text-sm px-2.5 py-2.5 m-1 text-center dark:bg-red-600 dark:hover:bg-red-700 dark:focus:ring-red-800"
                                                 onClick={() =>
                                                     handleDisableNode({
                                                         email: user.email,
@@ -277,7 +282,8 @@ const UserComp = (props) => {
                                         ) : (
                                             <button
                                                 type="button"
-                                                className="flex text-white bg-green-700 hover:bg-green-800 focus:ring-4 focus:outline-none focus:ring-green-300 font-medium rounded-lg text-sm px-2.5 py-2.5 m-1 text-center dark:bg-green-600 dark:hover:bg-green-700 dark:focus:ring-green-800"
+                                                style={{width: "100px", height: "40px"}}
+                                                className="inline-flex justify-center text-white bg-green-700 hover:bg-green-800 focus:ring-4 focus:outline-none focus:ring-green-300 font-medium rounded-lg text-sm px-2.5 py-2.5 m-1 text-center dark:bg-green-600 dark:hover:bg-green-700 dark:focus:ring-green-800"
                                                 onClick={() =>
                                                     handleEnableNode({
                                                         email: user.email,
@@ -360,7 +366,8 @@ function EditUser({ btnName, user, editUserFunc }) {
     return (
         <>
             <button
-                className="w-full sm:w-auto flex text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-2.5 py-2.5 m-1 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
+                className="focus:outline-none text-white bg-green-700 hover:bg-blue-800 focus:ring-4 focus:ring-red-300 font-medium rounded-lg text-sm px-2.5 py-2.5 m-1 text-center dark:bg-green-600 dark:hover:bg-green-700 dark:focus:ring-blue-800"
+                // className="focus:outline-none text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-red-300 font-medium rounded-lg text-sm px-2.5 py-1 m-1 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
                 type="button"
                 onClick={() => setShow(!show)}
             >
@@ -480,7 +487,8 @@ function ConfirmDelUser({ btnName, deleteUserFunc }) {
     return (
         <>
             <button
-                className="w-full sm:w-auto  flex text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-2.5 py-2.5 m-1 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
+                className="focus:outline-none text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-red-300 font-medium rounded-lg text-sm px-2.5 py-2.5 m-1 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
+                // className="w-full sm:w-auto  flex text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-2.5 py-2.5 m-1 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
                 type="button"
                 onClick={() => setShow(!show)}
             >
