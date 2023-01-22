@@ -8,7 +8,7 @@ const TapToCopied = (props) => {
 			<div
 				className="px-2 max-w-sm"
 				style={{
-					maxWidth: "230px",
+					maxWidth: "200px",
 					textOverflow: "ellipsis",
 					whiteSpace: "nowrap",
 					overflow: "hidden",
