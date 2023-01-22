@@ -87,7 +87,7 @@ function Mypanel() {
 						</TapToCopied>
 					</div>
 					<div className="py-1 flex justify-between items-center">
-						<pre className="inline  text-sm font-medium text-gray-900 dark:text-white">Clash YAML:</pre>
+						<pre className="inline  text-sm font-medium text-gray-900 dark:text-white">Clash:</pre>
 						<TapToCopied>
 							{process.env.REACT_APP_FILE_AND_SUB_URL + "/clash/" + user.email + ".yaml"}
 						</TapToCopied>
