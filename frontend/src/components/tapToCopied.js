@@ -1,7 +1,8 @@
-import { v4 as uuidv4 } from 'uuid';
+import React, { useState } from "react";
+import "../style/tapToCopied.css";
 
 const TapToCopied = (props) => {
-	const id = uuidv4();
+	const [tooltipVisible, setTooltipVisible] = useState(false);
 
 	return (
 		<div className="me-3 inline-flex items-center">
@@ -20,27 +21,30 @@ const TapToCopied = (props) => {
 			<span>
 				{" | "}
 			</span>
-			<div className="inline-block mx-1">
+			<div className="inline-block mx-1 relative">
 				<button 
-					data-tooltip-trigger="click"
-					data-tooltip-target={"tooltip-left-"+id} 
-					data-tooltip-placement="left" 
 					type="button" 
 					onClick={() => {
 						navigator.clipboard.writeText(props.children);
-						console.log("Copied to clipboard: " + props.children, "tooltip-left-"+id);
+						setTooltipVisible(true);
+						setTimeout(() => {
+							setTooltipVisible(false);
+						}, 3000);
 					}}
 					className="mb-2 md:mb-0 text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded text-sm px-3 py-1 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
 				>
 					Copy
 				</button>
-				<div 
-					id={"tooltip-left-"+id} 
-					role="tooltip" 
-					className="absolute z-10 invisible inline-block px-3 py-2 text-sm font-medium text-white bg-gray-900 rounded-lg shadow-sm opacity-0 tooltip dark:bg-gray-700">
-					Copied!
-					<div className="tooltip-arrow" data-popper-arrow></div>
-				</div>
+				{tooltipVisible && 
+					<div 
+						style={{
+							bottom: "-15%",
+							right: "110%",
+						}}
+						className="absolute z-1 visible inline-block px-3 py-2 text-sm font-medium text-white bg-gray-900 rounded-lg shadow-sm opacity-1 tooltip dark:bg-gray-700">
+						Copied!
+					</div>
+				}
 			</div>
 		</div>
 	);
