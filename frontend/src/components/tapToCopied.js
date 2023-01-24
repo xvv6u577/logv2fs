@@ -10,9 +10,6 @@ const TapToCopied = (props) => {
 				className="px-2"
 				id="tap-to-copy"
 				style={{
-					// maxWidth: "fit-content",
-					// maxWidth: "288px",
-					// width: "min-content",
 					textOverflow: "ellipsis",
 					whiteSpace: "nowrap",
 					overflow: "hidden",
@@ -32,7 +29,7 @@ const TapToCopied = (props) => {
 						setTooltipVisible(true);
 						setTimeout(() => {
 							setTooltipVisible(false);
-						}, 30000);
+						}, 3000);
 					}}
 					className="mb-2 md:mb-0 text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded text-sm px-3 py-1 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
 				>

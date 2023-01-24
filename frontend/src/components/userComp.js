@@ -127,27 +127,27 @@ const UserComp = (props) => {
                 >
                     <span className="flex md:justify-start justify-center w-full md:w-1/3">
                         <div>
-                            <span className="bg-gray-100 text-gray-800 text-xs font-medium inline-flex items-center px-2.5 py-0.5 rounded mr-2 dark:bg-gray-700 dark:text-gray-300">
+                            <span className="w-10 bg-gray-100 text-gray-800 text-xs font-medium inline-flex items-center px-2.5 py-0.5 rounded mr-2 dark:bg-gray-700 dark:text-gray-300">
                                 {props.index + 1}{"."}
                             </span>
-                            <span className="bg-blue-100 text-blue-800 text-xs font-semibold mr-2 px-2.5 py-0.5 rounded dark:bg-blue-200 dark:text-blue-800" >
+                            <span className="inline-flex w-32 bg-blue-100 text-blue-800 text-xs font-semibold mr-2 px-2.5 py-0.5 rounded dark:bg-blue-200 dark:text-blue-800" >
                                 {props.user.name}
                             </span>
                             {props.user.status === "plain" ? (
-                                <span className="bg-green-100 text-green-800 text-xs font-semibold mr-2 px-2.5 py-0.5 rounded dark:bg-green-200 dark:text-green-900">
+                                <span className="inline-flex w-16 bg-green-100 text-green-800 text-xs font-semibold mr-2 px-2.5 py-0.5 rounded dark:bg-green-200 dark:text-green-900">
                                     online
                                 </span>
                             ) : (
-                                <span className="bg-gray-100 text-gray-800 text-sm font-medium mr-2 px-2.5 py-0.5 rounded dark:bg-gray-700 dark:text-gray-300">
+                                <span className="inline-flex w-16 bg-gray-100 text-gray-800 text-sm font-medium mr-2 px-2.5 py-0.5 rounded dark:bg-gray-700 dark:text-gray-300">
                                     offline
                                 </span>
                             )}
                             {props.user.role === "admin" ? (
-                                <span className="bg-purple-100 text-purple-800 text-sm font-medium mr-2 px-2.5 py-0.5 rounded dark:bg-purple-200 dark:text-purple-900">
+                                <span className="inline-flex w-16 bg-purple-100 text-purple-800 text-sm font-medium mr-2 px-2.5 py-0.5 rounded dark:bg-purple-200 dark:text-purple-900">
                                     admin
                                 </span>
                             ) : (
-                                <span className="bg-yellow-100 text-yellow-800 text-xs font-semibold mr-2 px-2.5 py-0.5 rounded dark:bg-yellow-200 dark:text-yellow-900">
+                                <span className="inline-flex w-16 bg-yellow-100 text-yellow-800 text-xs font-semibold mr-2 px-2.5 py-0.5 rounded dark:bg-yellow-200 dark:text-yellow-900">
                                     user
                                 </span>
                             )}
@@ -159,16 +159,16 @@ const UserComp = (props) => {
                         </div>
                     </span>
                     <span className="flex md:justify-start justify-center items-center w-full  md:w-1/3 text-xs"> Today:{" "}
-                        <span className="bg-indigo-100 text-indigo-800 text-sm font-medium mr-2 px-2.5 py-0.5 rounded dark:bg-indigo-200 dark:text-indigo-900">
+                        <span className="inline-flex w-24 bg-indigo-100 text-indigo-800 text-sm font-medium mr-2 px-2.5 py-0.5 rounded dark:bg-indigo-200 dark:text-indigo-900">
                             {formatBytes(props.user.used_by_current_day.amount)}
                         </span>
                         {" "}
                         This month:{" "}
-                        <span className="bg-indigo-100 text-indigo-800 text-sm font-medium mr-2 px-2.5 py-0.5 rounded dark:bg-indigo-200 dark:text-indigo-900">
+                        <span className="inline-flex w-24 bg-indigo-100 text-indigo-800 text-sm font-medium mr-2 px-2.5 py-0.5 rounded dark:bg-indigo-200 dark:text-indigo-900">
                             {formatBytes(props.user.used_by_current_month.amount)}
                         </span>
                         {" "} Used:{" "}
-                        <span className="bg-indigo-100 text-indigo-800 text-sm font-medium mr-2 px-2.5 py-0.5 rounded dark:bg-indigo-200 dark:text-indigo-900">
+                        <span className="inline-flex w-24 bg-indigo-100 text-indigo-800 text-sm font-medium mr-2 px-2.5 py-0.5 rounded dark:bg-indigo-200 dark:text-indigo-900">
                             {formatBytes(props.user.used)}
                         </span>
                     </span>
@@ -182,8 +182,7 @@ const UserComp = (props) => {
                         />
                         {props.user.status === "plain" ? (
                             <button
-                                className="focus:outline-none text-white bg-red-700 hover:bg-red-800 focus:ring-4 focus:ring-red-300 font-medium rounded-lg text-sm px-2.5 py-2.5 m-1 text-center dark:bg-red-600 dark:hover:bg-red-700 dark:focus:ring-red-800"
-                                // className="focus:outline-none text-white font-medium rounded-lg text-sm px-2.5 py-1 m-1 text-center dark:bg-red-600 dark:hover:bg-red-700 dark:focus:ring-red-800 w-full md:w-24 md:h-10"
+                                className="w-24 focus:outline-none text-white bg-red-700 hover:bg-red-800 focus:ring-4 focus:ring-red-300 font-medium rounded-lg text-sm px-2.5 py-2.5 m-1 text-center dark:bg-red-600 dark:hover:bg-red-700 dark:focus:ring-red-800"
                                 type="button"
                                 onClick={() => handleOffline(props.user.email)}
                             >
@@ -195,8 +194,7 @@ const UserComp = (props) => {
 
                         ) : (
                             <button
-                                className="focus:outline-none text-white bg-green-700 hover:bg-green-800 focus:ring-4 focus:ring-red-300 font-medium rounded-lg text-sm px-2.5 py-2.5 m-1 text-center dark:bg-green-600 dark:hover:bg-green-700 dark:focus:ring-green-800"
-                                // className="focus:outline-none text-white font-medium rounded-lg text-sm px-2.5 py-1 m-1 text-center dark:bg-green-600 dark:hover:bg-green-700 dark:focus:ring-green-800 w-full md:w-24 md:h-10"
+                                className="w-24 focus:outline-none text-white bg-green-700 hover:bg-green-800 focus:ring-4 focus:ring-red-300 font-medium rounded-lg text-sm px-2.5 py-2.5 m-1 text-center dark:bg-green-600 dark:hover:bg-green-700 dark:focus:ring-green-800"
                                 type="button"
                                 onClick={() => handleOnline(props.user.email)}
                             >
@@ -258,11 +256,9 @@ const UserComp = (props) => {
                             ([key, value]) => (
                                 <div className="flex flex-row justify-between" key={key}>
                                     <pre className="inline-flex items-center text-sm font-medium text-gray-900 dark:text-white">{key}</pre>
-                                    {/* <span className="flex items-center text-sm">{key}</span> */}
                                     {value ? (
                                         <button
                                             type="button"
-                                            // style={{width: "100px", height: "40px"}}
                                             className="inline-flex justify-center text-white w-20 bg-red-700 hover:bg-red-800 focus:ring-4 focus:outline-none focus:ring-red-300 font-medium rounded-lg text-sm px-2 py-1 m-1 text-center dark:bg-red-600 dark:hover:bg-red-700 dark:focus:ring-red-800"
                                             onClick={() =>
                                                 handleDisableNode({
@@ -279,7 +275,6 @@ const UserComp = (props) => {
                                     ) : (
                                         <button
                                             type="button"
-                                            // style={{width: "100px", height: "40px"}}
                                             className="inline-flex justify-center text-white w-20 bg-green-700 hover:bg-green-800 focus:ring-4 focus:outline-none focus:ring-green-300 font-medium rounded-lg text-sm px-2 py-1 m-1 text-center dark:bg-green-600 dark:hover:bg-green-700 dark:focus:ring-green-800"
                                             onClick={() =>
                                                 handleEnableNode({
@@ -297,52 +292,6 @@ const UserComp = (props) => {
                                 </div>
                             )
                         )}
-
-                    {/* <div className="flex flex-col content-between rounded-lg border-4 border-neutral-100 md:mx-auto md:my-3 md:p-3 md:w-1/3">
-                        {user && user.node_in_use_status &&
-                            Object.entries(user.node_in_use_status).map(
-                                ([key, value]) => (
-                                    <div className="flex flex-row justify-between" key={key}>
-                                        <span className="flex items-center text-sm">{key}</span>
-                                        {value ? (
-                                            <button
-                                                type="button"
-                                                // style={{width: "100px", height: "40px"}}
-                                                className="inline-flex justify-center text-white bg-red-700 hover:bg-red-800 focus:ring-4 focus:outline-none focus:ring-red-300 font-medium rounded-lg text-sm px-2 py-1 m-1 text-center dark:bg-red-600 dark:hover:bg-red-700 dark:focus:ring-red-800"
-                                                onClick={() =>
-                                                    handleDisableNode({
-                                                        email: user.email,
-                                                        node: key,
-                                                    })
-                                                }
-                                            >
-                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 inline-block mr-1" viewBox="0 0 20 20" fill="currentColor">
-                                                    <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
-                                                </svg>
-                                                Disable
-                                            </button>
-                                        ) : (
-                                            <button
-                                                type="button"
-                                                // style={{width: "100px", height: "40px"}}
-                                                className="inline-flex justify-center text-white bg-green-700 hover:bg-green-800 focus:ring-4 focus:outline-none focus:ring-green-300 font-medium rounded-lg text-sm px-2 py-1 m-1 text-center dark:bg-green-600 dark:hover:bg-green-700 dark:focus:ring-green-800"
-                                                onClick={() =>
-                                                    handleEnableNode({
-                                                        email: user.email,
-                                                        node: key,
-                                                    })
-                                                }
-                                            >
-                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 inline-block mr-1" viewBox="0 0 20 20" fill="currentColor">
-                                                    <path d="M10 2a5 5 0 00-5 5v2a2 2 0 00-2 2v5a2 2 0 002 2h10a2 2 0 002-2v-5a2 2 0 00-2-2H7V7a3 3 0 015.905-.75 1 1 0 001.937-.5A5.002 5.002 0 0010 2z" />
-                                                </svg>
-                                                Enable
-                                            </button>
-                                        )}
-                                    </div>
-                                )
-                            )}
-                    </div> */}
                 </div>
                 <div className="my-4">
                     <div className="pt-2 text-2xl text-center">Monthly Traffic </div>
@@ -408,8 +357,7 @@ function EditUser({ btnName, user, editUserFunc }) {
     return (
         <>
             <button
-                className="focus:outline-none text-white bg-green-700 hover:bg-blue-800 focus:ring-4 focus:ring-red-300 font-medium rounded-lg text-sm px-2.5 py-2.5 m-1 text-center dark:bg-green-600 dark:hover:bg-green-700 dark:focus:ring-blue-800"
-                // className="focus:outline-none text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-red-300 font-medium rounded-lg text-sm px-2.5 py-1 m-1 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
+                className="w-20 focus:outline-none text-white bg-green-700 hover:bg-blue-800 focus:ring-4 focus:ring-red-300 font-medium rounded-lg text-sm px-2.5 py-2.5 m-1 text-center dark:bg-green-600 dark:hover:bg-green-700 dark:focus:ring-blue-800"
                 type="button"
                 onClick={() => setShow(!show)}
             >
@@ -529,8 +477,7 @@ function ConfirmDelUser({ btnName, deleteUserFunc }) {
     return (
         <>
             <button
-                className="focus:outline-none text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-red-300 font-medium rounded-lg text-sm px-2.5 py-2.5 m-1 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
-                // className="w-full sm:w-auto  flex text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-2.5 py-2.5 m-1 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
+                className="w-24 focus:outline-none text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-red-300 font-medium rounded-lg text-sm px-2.5 py-2.5 m-1 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
                 type="button"
                 onClick={() => setShow(!show)}
             >

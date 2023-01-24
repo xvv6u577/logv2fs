@@ -67,7 +67,7 @@ function Mypanel() {
 			</div>
 			<div className="w-full md:w-3/4 mx-auto flex justify-center bg-white border border-gray-200 rounded-lg shadow-md sm:p-6 md:p-8 dark:bg-gray-800 dark:border-gray-700" >
 				<div>
-					<h5 className="text-xl font-medium text-gray-900 dark:text-white">Basic Info</h5>
+					<h5 className="text-xl py-2 font-medium text-gray-900 dark:text-white">Basic Info</h5>
 					<div className="py-1 flex justify-between items-center">
 						<pre className="inline text-sm font-medium text-gray-900 dark:text-white">Email: </pre>
 						<TapToCopied>{user.email}</TapToCopied>
