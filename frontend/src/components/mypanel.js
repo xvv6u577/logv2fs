@@ -65,7 +65,7 @@ function Mypanel() {
 					<p>Traffic Used In Total</p>
 				</div>
 			</div>
-			<div className="w-full md:w-1/2 mx-auto flex justify-center bg-white border border-gray-200 rounded-lg shadow-md sm:p-6 md:p-8 dark:bg-gray-800 dark:border-gray-700" >
+			<div className="w-full md:w-3/4 mx-auto flex justify-center bg-white border border-gray-200 rounded-lg shadow-md sm:p-6 md:p-8 dark:bg-gray-800 dark:border-gray-700" >
 				<div>
 					<h5 className="text-xl font-medium text-gray-900 dark:text-white">Basic Info</h5>
 					<div className="py-1 flex justify-between items-center">

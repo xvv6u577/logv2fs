@@ -228,35 +228,77 @@ const UserComp = (props) => {
                 id={`accordion-collapse-body-${props.index}`}
                 className={`${props.active ? "hidden " : ""}accordion-collapse-body`}
             >
-                <div className="flex flex-col md:flex-row md:p-5 font-light border border-b-0 border-gray-200 dark:border-gray-700 dark:bg-gray-900">
-                    <div className="flex flex-col content-between rounded-lg border-4 border-neutral-100 mx-auto my-3 md:p-3 md:w-2/5" >
-                        <div className="py-1 flex justify-between items-center">
-                            <pre className="inline text-sm font-medium text-gray-900 dark:text-white">Email: </pre>
-                            <TapToCopied>{user.email}</TapToCopied>
-                        </div>
-                        <div className="py-1 flex justify-between items-center">
-                            <pre className="inline  text-sm font-medium text-gray-900 dark:text-white">Path:</pre>
-                            <TapToCopied>{user.path}</TapToCopied>
-                        </div>
-                        <div className="py-1 flex justify-between items-center">
-                            <pre className="inline  text-sm font-medium text-gray-900 dark:text-white">UUID:</pre>
-                            <TapToCopied>{user.uuid}</TapToCopied>
-                        </div>
-                        <div className="py-1 flex justify-between items-center">
-                            <pre className="inline  text-sm font-medium text-gray-900 dark:text-white">SubUrl:</pre>
-                            <TapToCopied>
-                                {process.env.REACT_APP_FILE_AND_SUB_URL + "/static/" + user.email}
-                            </TapToCopied>
-                        </div>
-                        <div className="py-1 flex justify-between items-center">
-                            <pre className="inline  text-sm font-medium text-gray-900 dark:text-white">Clash:</pre>
-                            <TapToCopied>
-                                {process.env.REACT_APP_FILE_AND_SUB_URL + "/clash/" + user.email + ".yaml"}
-                            </TapToCopied>
-                        </div>
+                <div className="w-full flex flex-col md:w-2/3 md:p-5 mx-auto my-3 font-light rounded-lg border-4 border-gray-200 dark:border-gray-700 dark:bg-gray-900">
+                    <div className="py-1 flex justify-between items-center">
+                        <pre className="inline text-sm font-medium text-gray-900 dark:text-white">Email: </pre>
+                        <TapToCopied>{user.email}</TapToCopied>
                     </div>
+                    <div className="py-1 flex justify-between items-center">
+                        <pre className="inline  text-sm font-medium text-gray-900 dark:text-white">Path:</pre>
+                        <TapToCopied>{user.path}</TapToCopied>
+                    </div>
+                    <div className="py-1 flex justify-between items-center">
+                        <pre className="inline  text-sm font-medium text-gray-900 dark:text-white">UUID:</pre>
+                        <TapToCopied>{user.uuid}</TapToCopied>
+                    </div>
+                    <div className="py-1 flex justify-between items-center">
+                        <pre className="inline  text-sm font-medium text-gray-900 dark:text-white">SubUrl:</pre>
+                        <TapToCopied>
+                            {process.env.REACT_APP_FILE_AND_SUB_URL + "/static/" + user.email}
+                        </TapToCopied>
+                    </div>
+                    <div className="py-1 flex justify-between items-center">
+                        <pre className="inline  text-sm font-medium text-gray-900 dark:text-white">Clash:</pre>
+                        <TapToCopied>
+                            {process.env.REACT_APP_FILE_AND_SUB_URL + "/clash/" + user.email + ".yaml"}
+                        </TapToCopied>
+                    </div>
+                    {user && user.node_in_use_status &&
+                        Object.entries(user.node_in_use_status).map(
+                            ([key, value]) => (
+                                <div className="flex flex-row justify-between" key={key}>
+                                    <pre className="inline-flex items-center text-sm font-medium text-gray-900 dark:text-white">{key}</pre>
+                                    {/* <span className="flex items-center text-sm">{key}</span> */}
+                                    {value ? (
+                                        <button
+                                            type="button"
+                                            // style={{width: "100px", height: "40px"}}
+                                            className="inline-flex justify-center text-white w-20 bg-red-700 hover:bg-red-800 focus:ring-4 focus:outline-none focus:ring-red-300 font-medium rounded-lg text-sm px-2 py-1 m-1 text-center dark:bg-red-600 dark:hover:bg-red-700 dark:focus:ring-red-800"
+                                            onClick={() =>
+                                                handleDisableNode({
+                                                    email: user.email,
+                                                    node: key,
+                                                })
+                                            }
+                                        >
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 inline-block mr-1" viewBox="0 0 20 20" fill="currentColor">
+                                                <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+                                            </svg>
+                                            Disable
+                                        </button>
+                                    ) : (
+                                        <button
+                                            type="button"
+                                            // style={{width: "100px", height: "40px"}}
+                                            className="inline-flex justify-center text-white w-20 bg-green-700 hover:bg-green-800 focus:ring-4 focus:outline-none focus:ring-green-300 font-medium rounded-lg text-sm px-2 py-1 m-1 text-center dark:bg-green-600 dark:hover:bg-green-700 dark:focus:ring-green-800"
+                                            onClick={() =>
+                                                handleEnableNode({
+                                                    email: user.email,
+                                                    node: key,
+                                                })
+                                            }
+                                        >
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 inline-block mr-1" viewBox="0 0 20 20" fill="currentColor">
+                                                <path d="M10 2a5 5 0 00-5 5v2a2 2 0 00-2 2v5a2 2 0 002 2h10a2 2 0 002-2v-5a2 2 0 00-2-2H7V7a3 3 0 015.905-.75 1 1 0 001.937-.5A5.002 5.002 0 0010 2z" />
+                                            </svg>
+                                            Enable
+                                        </button>
+                                    )}
+                                </div>
+                            )
+                        )}
 
-                    <div className="flex flex-col content-between rounded-lg border-4 border-neutral-100 md:mx-auto md:my-3 md:p-3 md:w-1/3">
+                    {/* <div className="flex flex-col content-between rounded-lg border-4 border-neutral-100 md:mx-auto md:my-3 md:p-3 md:w-1/3">
                         {user && user.node_in_use_status &&
                             Object.entries(user.node_in_use_status).map(
                                 ([key, value]) => (
@@ -265,8 +307,8 @@ const UserComp = (props) => {
                                         {value ? (
                                             <button
                                                 type="button"
-                                                style={{width: "100px", height: "40px"}}
-                                                className="inline-flex justify-center text-white bg-red-700 hover:bg-red-800 focus:ring-4 focus:outline-none focus:ring-red-300 font-medium rounded-lg text-sm px-2.5 py-2.5 m-1 text-center dark:bg-red-600 dark:hover:bg-red-700 dark:focus:ring-red-800"
+                                                // style={{width: "100px", height: "40px"}}
+                                                className="inline-flex justify-center text-white bg-red-700 hover:bg-red-800 focus:ring-4 focus:outline-none focus:ring-red-300 font-medium rounded-lg text-sm px-2 py-1 m-1 text-center dark:bg-red-600 dark:hover:bg-red-700 dark:focus:ring-red-800"
                                                 onClick={() =>
                                                     handleDisableNode({
                                                         email: user.email,
@@ -282,8 +324,8 @@ const UserComp = (props) => {
                                         ) : (
                                             <button
                                                 type="button"
-                                                style={{width: "100px", height: "40px"}}
-                                                className="inline-flex justify-center text-white bg-green-700 hover:bg-green-800 focus:ring-4 focus:outline-none focus:ring-green-300 font-medium rounded-lg text-sm px-2.5 py-2.5 m-1 text-center dark:bg-green-600 dark:hover:bg-green-700 dark:focus:ring-green-800"
+                                                // style={{width: "100px", height: "40px"}}
+                                                className="inline-flex justify-center text-white bg-green-700 hover:bg-green-800 focus:ring-4 focus:outline-none focus:ring-green-300 font-medium rounded-lg text-sm px-2 py-1 m-1 text-center dark:bg-green-600 dark:hover:bg-green-700 dark:focus:ring-green-800"
                                                 onClick={() =>
                                                     handleEnableNode({
                                                         email: user.email,
@@ -300,7 +342,7 @@ const UserComp = (props) => {
                                     </div>
                                 )
                             )}
-                    </div>
+                    </div> */}
                 </div>
                 <div className="my-4">
                     <div className="pt-2 text-2xl text-center">Monthly Traffic </div>

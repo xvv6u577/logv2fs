@@ -8,3 +8,13 @@
 	border-style: solid;
 	border-color: transparent transparent transparent #555;
 }
+
+#tap-to-copy {
+	max-width: 250px;
+}
+
+@media (min-width: 768px) {
+	#tap-to-copy {
+		max-width: 100%;
+	}
+}
