@@ -182,7 +182,8 @@ const UserComp = (props) => {
                         />
                         {props.user.status === "plain" ? (
                             <button
-                                className="w-full md:w-24 focus:outline-none text-white bg-red-700 hover:bg-red-800 focus:ring-4 focus:ring-red-300 font-medium rounded-lg text-sm px-2.5 py-2.5 m-1 text-center dark:bg-red-600 dark:hover:bg-red-700 dark:focus:ring-red-800"
+                                className="w-auto md:w-24 focus:outline-none text-white bg-red-700 hover:bg-red-800 focus:ring-4 focus:ring-red-300 
+                                    font-medium rounded-lg text-sm px-2.5 py-2.5 m-1 text-center dark:bg-red-600 dark:hover:bg-red-700 dark:focus:ring-red-800"
                                 type="button"
                                 onClick={() => handleOffline(props.user.email)}
                             >
@@ -194,7 +195,10 @@ const UserComp = (props) => {
 
                         ) : (
                             <button
-                                className="w-full md:w-24 focus:outline-none text-white bg-green-700 hover:bg-green-800 focus:ring-4 focus:ring-red-300 font-medium rounded-lg text-sm px-2.5 py-2.5 m-1 text-center dark:bg-green-600 dark:hover:bg-green-700 dark:focus:ring-green-800"
+                                className="w-auto md:w-24 focus:outline-none text-white bg-green-700 hover:bg-green-800 focus:ring-4 focus:ring-red-300 
+                                    font-medium rounded-lg text-sm px-2.5 py-2.5 m-1 text-center dark:bg-green-600 dark:hover:bg-green-700 dark:focus:ring-green-800"
+                            // className="w-ful md:w-24 focus:outline-none text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-red-300 
+                            //      font-medium rounded-lg text-sm px-2.5 py-2.5 m-1 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
                                 type="button"
                                 onClick={() => handleOnline(props.user.email)}
                             >
@@ -226,7 +230,7 @@ const UserComp = (props) => {
                 id={`accordion-collapse-body-${props.index}`}
                 className={`${props.active ? "hidden " : ""}accordion-collapse-body`}
             >
-                <div className="w-full flex flex-col md:w-2/3 md:p-5 mx-auto my-3 font-light rounded-lg border-4 border-gray-200 dark:border-gray-700 dark:bg-gray-900">
+                <div className="w-auto flex flex-col md:w-2/3 md:p-5 mx-auto my-3 px-3 font-light rounded-lg border-4 border-gray-200 dark:border-gray-700 dark:bg-gray-900">
                     <div className="py-1 flex justify-between items-center">
                         <pre className="inline text-sm font-medium text-gray-900 dark:text-white">Email: </pre>
                         <TapToCopied>{user.email}</TapToCopied>
@@ -357,7 +361,7 @@ function EditUser({ btnName, user, editUserFunc }) {
     return (
         <>
             <button
-                className="w-full md:w-20 focus:outline-none text-white bg-green-700 hover:bg-blue-800 focus:ring-4 focus:ring-red-300 font-medium rounded-lg text-sm px-2.5 py-2.5 m-1 text-center dark:bg-green-600 dark:hover:bg-green-700 dark:focus:ring-blue-800"
+                className="w-auto md:w-20 focus:outline-none text-white bg-green-700 hover:bg-blue-800 focus:ring-4 focus:ring-red-300 font-medium rounded-lg text-sm px-2.5 py-2.5 m-1 text-center dark:bg-green-600 dark:hover:bg-green-700 dark:focus:ring-blue-800"
                 type="button"
                 onClick={() => setShow(!show)}
             >
@@ -477,7 +481,7 @@ function ConfirmDelUser({ btnName, deleteUserFunc }) {
     return (
         <>
             <button
-                className="w-ful md:w-24 focus:outline-none text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-red-300 font-medium rounded-lg text-sm px-2.5 py-2.5 m-1 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
+                className="w-auto md:w-24 focus:outline-none text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-red-300 font-medium rounded-lg text-sm px-2.5 py-2.5 m-1 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
                 type="button"
                 onClick={() => setShow(!show)}
             >

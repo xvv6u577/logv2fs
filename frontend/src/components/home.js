@@ -53,7 +53,7 @@ const Home = () => {
 	}, [rerenderSignal, loginState.jwt.Email, loginState.token, dispatch]);
 
 	return (
-		<div className="mb-3">
+		<div className="my-3 px-3">
 			<Alert message={message.content} type={message.type} shown={message.show} close={() => { dispatch(reset({})); }} />
 
 			<div className="flex justify-start">
