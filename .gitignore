@@ -1,18 +1,12 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
-# dependencies
 frontend/node_modules
-
-# testing
-/frontend/coverage
-
-# production
+frontend/coverage
 frontend/build
-
-# misc
 frontend/.env
 frontend/package-lock.json
 frontend/tool
+
 yaml/results/*
 cmd/client
 config
@@ -24,3 +18,6 @@ setup-script
 *.log
 .DS_Store
 *.old
+.dockerignore
+docker-compose.yml
+Dockerfile
