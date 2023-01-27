@@ -40,9 +40,9 @@ proxy-groups:
 rules:
   - "DOMAIN,unicorncloud.club,DIRECT"
   - "DOMAIN-SUFFIX,undervineyard.com,DIRECT"
-  - "DOMAIN-SUFFIX,openai.com,fallback"
-  - "DOMAIN-SUFFIX,kakao.com,fallback"
-  - "DOMAIN-SUFFIX,onedrive.com,fallback"
+  - "DOMAIN-SUFFIX,openai.com,manual-select"
+  - "DOMAIN-SUFFIX,kakao.com,manual-select"
+  - "DOMAIN-SUFFIX,onedrive.com,manual-select"
   - "DOMAIN-SUFFIX,services.googleapis.cn,manual-select"
   - "DOMAIN-SUFFIX,xn--ngstr-lra8j.com,manual-select"
   - "DOMAIN,safebrowsing.urlsec.qq.com,DIRECT"
