@@ -1,0 +1,20 @@
+.tooltip:after {
+	content: "";
+	position: absolute;
+	top: 50%;
+	left: 100%;
+	margin-bottom: -5px;
+	border-width: 3px;
+	border-style: solid;
+	border-color: transparent transparent transparent #555;
+}
+
+#tap-to-copy {
+	max-width: 200px;
+}
+
+@media (min-width: 768px) {
+	#tap-to-copy {
+		max-width: 100%;
+	}
+}

@@ -2,7 +2,13 @@ import { createSlice } from "@reduxjs/toolkit";
 
 const token = JSON.parse(localStorage.getItem("token"));
 
-function jwtVerify(token) {
+interface LoginState {
+	isLogin: boolean;
+jwt: {};
+token: string;
+}
+
+function jwtVerify(token): LoginState {
 
 	if (token === null) {
 		return {isLogin: false, jwt: {}, token: ""}

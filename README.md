@@ -39,8 +39,10 @@ sudo systemctl status logv2rayfullstack.service
 ## Frontend
 
 > 环境变量：frontend/.env
-> nodejs v17.2.0, npm v8.1.4
-> nodejs v18.13.0, npm v8.19.3, yarn v1.22.19
+>
+> npm: nodejs v17.2.0, npm v8.1.4
+>
+> yarn: nodejs v18.13.0, npm v8.19.3, yarn v1.22.19
 
 ### 生成生产环境文件
 ```

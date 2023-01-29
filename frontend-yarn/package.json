@@ -2,7 +2,9 @@
   "name": "frontend-yarn",
   "version": "0.1.0",
   "private": true,
+  "proxy": "http://127.0.0.1:8079",
   "dependencies": {
+    "@reduxjs/toolkit": "^1.9.2",
     "@testing-library/jest-dom": "^5.14.1",
     "@testing-library/react": "^13.0.0",
     "@testing-library/user-event": "^13.2.1",
@@ -10,9 +12,14 @@
     "@types/node": "^16.7.13",
     "@types/react": "^18.0.0",
     "@types/react-dom": "^18.0.0",
+    "axios": "^1.2.6",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "react-image-lightbox": "^5.1.4",
+    "react-redux": "^8.0.5",
+    "react-router-dom": "^6.8.0",
     "react-scripts": "5.0.1",
+    "redux": "^4.2.0",
     "typescript": "^4.4.2",
     "web-vitals": "^2.1.0"
   },
@@ -41,6 +48,8 @@
     ]
   },
   "devDependencies": {
+    "@types/react-redux": "^7.1.25",
+    "@types/redux": "^3.6.0",
     "autoprefixer": "^10.4.13",
     "postcss": "^8.4.21",
     "tailwindcss": "^3.2.4"
