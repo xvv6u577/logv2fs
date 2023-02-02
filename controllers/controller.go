@@ -126,9 +126,9 @@ func SignUp() gin.HandlerFunc {
 
 		var adminUser model.User
 		var userId = c.GetString("uid")
-		if userId == "" {
-			userId = "6253a0f5b3829a0c7281aca6"
-		}
+		// if userId == "" {
+		// 	userId = ""
+		// }
 
 		err = userCollection.FindOne(ctx, bson.M{"user_id": userId}).Decode(&adminUser)
 		if err != nil {

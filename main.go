@@ -63,21 +63,14 @@ func main() {
 	group := parallelizer.NewGroup()
 	defer group.Close()
 
-	group.Add(V2rayProcess)
-
-	group.Add(func() {
-		err := RunServer().Run(fmt.Sprintf("%s:%s", SERVER_ADDRESS, SERVER_PORT))
-		if err != nil {
-			log.Panic("Panic: ", err)
-		}
-	})
-
-	group.Add(RunGRPCServer)
+	group.Add(startV2RayProcess)
+	group.Add(startGRPCServer)
+	group.Add(startHTTPServer)
 
 	group.Wait()
 }
 
-func RunGRPCServer() {
+func startGRPCServer() {
 	if CURRENT_DOMAIN == "sel.undervineyard.com" {
 		grpctools.GrpcServer("0.0.0.0:80")
 	} else {
@@ -85,19 +78,18 @@ func RunGRPCServer() {
 	}
 }
 
-func V2rayProcess() {
+func startV2RayProcess() {
 	var cmd = exec.Command(V2RAY, "-config", V2RAY_CONFIG)
 	if err := cmd.Run(); err != nil {
 		log.Panic("Panic: ", err)
 	}
 }
 
-func RunServer() *gin.Engine {
+func startHTTPServer() {
 	// wait v2ray process to be ready.
 	time.Sleep(time.Second)
 
-	var projections = bson.D{
-		{Key: "_id", Value: 0},
+	var projections = bson.D{{Key: "_id", Value: 0},
 		{Key: "token", Value: 0},
 		{Key: "password", Value: 0},
 		{Key: "refresh_token", Value: 0},
@@ -107,16 +99,20 @@ func RunServer() *gin.Engine {
 		{Key: "traffic_by_day", Value: 0},
 		{Key: "traffic_by_month", Value: 0},
 		{Key: "traffic_by_year", Value: 0},
-		{Key: "suburl", Value: 0},
+		{Key: "suburl", Value: 0}}
+
+	allUsersInDB, err := database.GetPartialInfosForAllUsers(projections)
+	if err != nil {
+		log.Panic(err)
 	}
-	allUsersInDB, _ := database.GetPartialInfosForAllUsers(projections)
+
 	if len(allUsersInDB) != 0 {
 
-		cmdConn, err := grpc.Dial(fmt.Sprintf("%s:%s", V2_API_ADDRESS, V2_API_PORT), grpc.WithInsecure())
+		conn, err := grpc.Dial(fmt.Sprintf("%s:%s", V2_API_ADDRESS, V2_API_PORT), grpc.WithInsecure())
 		if err != nil {
 			log.Panic(err)
 		}
-		defer cmdConn.Close()
+		defer conn.Close()
 
 		var wg sync.WaitGroup
 		wg.Add(len(allUsersInDB))
@@ -125,8 +121,8 @@ func RunServer() *gin.Engine {
 			go func(user User) {
 				defer wg.Done()
 				if user.Status == "plain" && user.NodeInUseStatus[CURRENT_DOMAIN] {
-					NHSClient := v2ray.NewHandlerServiceClient(cmdConn, user.Path)
-					NHSClient.AddUser(user)
+					client := v2ray.NewHandlerServiceClient(conn, user.Path)
+					client.AddUser(user)
 				}
 			}(*user)
 		}
@@ -152,7 +148,10 @@ func RunServer() *gin.Engine {
 		c.JSON(http.StatusNotFound, gin.H{"error": "status: 404! no route found."})
 	})
 
-	return router
+	err = router.Run(fmt.Sprintf("%s:%s", SERVER_ADDRESS, SERVER_PORT))
+	if err != nil {
+		log.Panic("Panic: ", err)
+	}
 }
 
 func recoverFromError(c *gin.Context) {

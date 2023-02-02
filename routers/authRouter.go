@@ -10,16 +10,21 @@ import (
 // login, home, logout, routers for react frontend app
 func AuthRoutes(incomingRoutes *gin.Engine) {
 
-	FRONTEND_PATH := "./frontend/build/"
-	incomingRoutes.Use(static.Serve("/login", static.LocalFile(FRONTEND_PATH, true)))
-	incomingRoutes.Use(static.Serve("/home", static.LocalFile(FRONTEND_PATH, true)))
-	incomingRoutes.Use(static.Serve("/mypanel", static.LocalFile(FRONTEND_PATH, true)))
-	incomingRoutes.Use(static.Serve("/logout", static.LocalFile(FRONTEND_PATH, true)))
-	incomingRoutes.Use(static.Serve("/macos", static.LocalFile(FRONTEND_PATH, true)))
-	incomingRoutes.Use(static.Serve("/windows", static.LocalFile(FRONTEND_PATH, true)))
-	incomingRoutes.Use(static.Serve("/iphone", static.LocalFile(FRONTEND_PATH, true)))
-	incomingRoutes.Use(static.Serve("/android", static.LocalFile(FRONTEND_PATH, true)))
-	incomingRoutes.Use(static.Serve("/", static.LocalFile(FRONTEND_PATH, true)))
+	frontendPath := "./frontend/build/"
+	// incomingRoutes.Use(static.Serve("/login", static.LocalFile(frontendPath, true)))
+	// incomingRoutes.Use(static.Serve("/home", static.LocalFile(frontendPath, true)))
+	// incomingRoutes.Use(static.Serve("/mypanel", static.LocalFile(frontendPath, true)))
+	// incomingRoutes.Use(static.Serve("/logout", static.LocalFile(frontendPath, true)))
+	// incomingRoutes.Use(static.Serve("/macos", static.LocalFile(frontendPath, true)))
+	// incomingRoutes.Use(static.Serve("/windows", static.LocalFile(frontendPath, true)))
+	// incomingRoutes.Use(static.Serve("/iphone", static.LocalFile(frontendPath, true)))
+	// incomingRoutes.Use(static.Serve("/android", static.LocalFile(frontendPath, true)))
+	// incomingRoutes.Use(static.Serve("/", static.LocalFile(frontendPath, true)))
+	routes := []string{"/login", "/home", "/mypanel", "/logout", "/macos", "/windows", "/iphone", "/android", "/"}
+
+	for _, route := range routes {
+		incomingRoutes.Use(static.Serve(route, static.LocalFile(frontendPath, true)))
+	}
 
 	// http://127.0.0.1:8079/v1/login
 	// body:
