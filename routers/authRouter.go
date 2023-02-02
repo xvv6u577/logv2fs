@@ -10,7 +10,7 @@ import (
 // login, home, logout, routers for react frontend app
 func AuthRoutes(incomingRoutes *gin.Engine) {
 
-	frontendPath := "./frontend/build/"
+	frontendPath := "./frontend-yarn/build/"
 	// incomingRoutes.Use(static.Serve("/login", static.LocalFile(frontendPath, true)))
 	// incomingRoutes.Use(static.Serve("/home", static.LocalFile(frontendPath, true)))
 	// incomingRoutes.Use(static.Serve("/mypanel", static.LocalFile(frontendPath, true)))
