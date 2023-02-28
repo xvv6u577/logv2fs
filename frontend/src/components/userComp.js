@@ -311,12 +311,12 @@ const UserComp = (props) => {
 
 // function EditUser({ btnName, user, editUserFunc }) {
 const EditUser = (props) => {
-    const [show, setShow] = useState(false);
 
-    const [{ used, password, name, role, credit }, setState] = useState({
+    const [show, setShow] = useState(false);
+    const [role, setRole] = useState(props.user.role);
+    const [{ used, password, name, credit }, setState] = useState({
         password: props.user.password,
         name: props.user.name,
-        role: props.user.role,
         used: props.user.used,
         credit: props.user.credit,
     });
@@ -325,16 +325,21 @@ const EditUser = (props) => {
         setState({
             password: props.user.password,
             name: props.user.name,
-            role: props.user.role,
             used: props.user.used,
             credit: props.user.credit,
         });
-    })
+        setRole(props.user.role);
+    }, [props.user])
 
     const onChange = (e) => {
         const { name, value } = e.target;
         setState((prevState) => ({ ...prevState, [name]: value }));
     };
+
+    const onChangeRole = (e) => {
+        const { value } = e.target;
+        setRole(value);
+    }
 
     const dispatch = useDispatch();
     const loginState = useSelector((state) => state.login);
@@ -443,7 +448,7 @@ const EditUser = (props) => {
                                         <select
                                             id="userType"
                                             className="block p-2 mb-6 w-full text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-                                            onChange={onChange}
+                                            onChange={onChangeRole}
                                             value={role}
                                         >
                                             <option value="normal">Normal</option>
