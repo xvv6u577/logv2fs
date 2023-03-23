@@ -373,9 +373,9 @@ func AddNode() gin.HandlerFunc {
 		}
 
 		for _, user := range allUsers {
-			if user.Role == "admin" {
-				user.NodeGlobalList = domains
-			}
+			// if user.Role == "admin" {
+			// }
+			user.NodeGlobalList = domains
 
 			user.ProduceNodeInUse(domains)
 			filter := bson.D{primitive.E{Key: "user_id", Value: user.User_id}}
