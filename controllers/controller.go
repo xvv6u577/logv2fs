@@ -156,11 +156,11 @@ func SignUp() gin.HandlerFunc {
 			user.UUID = uuidV4.String()
 		}
 
+		user.NodeGlobalList = adminUser.NodeGlobalList
 		user.ProduceNodeInUse(adminUser.NodeGlobalList)
 		user_role := sanitize.SanitizeStr(user.Role)
-		if user_role == "admin" {
-			user.NodeGlobalList = adminUser.NodeGlobalList
-		}
+		// if user_role == "admin" {
+		// }
 
 		if user.Credittraffic == 0 {
 			credit, _ := strconv.ParseInt(CREDIT, 10, 64)
