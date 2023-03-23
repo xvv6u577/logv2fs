@@ -7,7 +7,7 @@ frontend/.env
 frontend/tool
 
 yaml/results/*
-cmd/client
+cmd
 config
 CA
 setup-script

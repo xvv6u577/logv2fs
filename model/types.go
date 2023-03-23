@@ -2,7 +2,6 @@ package model
 
 import (
 	"encoding/json"
-	"strings"
 	"time"
 
 	b64 "encoding/base64"
@@ -69,18 +68,6 @@ type Node struct {
 	Method  string `default:"none" json:"method"`
 }
 
-// type YamlTemplate struct {
-// 	Port               int           `yaml:"port"`
-// 	SocksPort          int           `yaml:"socks-port"`
-// 	AllowLan           bool          `yaml:"allow-lan"`
-// 	Mode               string        `yaml:"mode"`
-// 	LogLevel           string        `yaml:"log-level"`
-// 	ExternalController string        `yaml:"external-controller"`
-// 	Proxies            []Proxies     `yaml:"proxies"`
-// 	ProxyGroups        []ProxyGroups `yaml:"proxy-groups"`
-// 	Rules              []string      `yaml:"rules"`
-// }
-
 type YamlTemplate struct {
 	Port               int           `default:"7890" yaml:"mixed-port"`
 	AllowLan           bool          `yaml:"allow-lan"`
@@ -140,8 +127,14 @@ type ProxyGroups struct {
 }
 
 func (u *User) ProduceSuburl() {
+
 	var node Node
+	var exchangeMap = map[string]string{}
 	subscription := ""
+
+	for k, v := range u.NodeGlobalList {
+		exchangeMap[v] = k
+	}
 
 	for index, item := range u.NodeInUseStatus {
 		if item {
@@ -149,7 +142,7 @@ func (u *User) ProduceSuburl() {
 				Domain:  index,
 				Path:    "/" + u.Path,
 				UUID:    u.UUID,
-				Remark:  strings.Split(index, ".")[0],
+				Remark:  exchangeMap[index],
 				Version: "2",
 				Port:    "443",
 				Aid:     "4",

@@ -252,7 +252,7 @@ func SignUp() gin.HandlerFunc {
 
 		wg.Wait()
 
-		err = yamlTools.GenerateOne(user)
+		err = yamlTools.GenerateOneYAML(user)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			log.Printf("error occured while generating yaml: %v", err)

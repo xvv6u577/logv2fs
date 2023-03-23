@@ -8,6 +8,7 @@ const AddNode = ({ btnName }) => {
 
 	const [domains, setDomains] = useState({});
 	const [newdomain, updateNewdomain] = useState("");
+	const [newremark, updateNewremark] = useState("");
 	const [showModal, setShowModal] = useState(false);
 
 	const dispatch = useDispatch();
@@ -98,7 +99,7 @@ const AddNode = ({ btnName }) => {
 								</h3>
 							</div>
 							<div className="p-6">
-								<p className="text-sm font-normal text-gray-500 dark:text-gray-400">Attach new node to v2ray cluster.</p>
+								<p className="text-sm font-normal text-gray-500 dark:text-gray-400">Attach New Node to V2ray Cluster.</p>
 								<ul className="my-4 space-y-3">
 									{Object.entries(domains).map(([key, value]) => (
 										<li key={key} >
@@ -119,23 +120,38 @@ const AddNode = ({ btnName }) => {
 								</ul>
 								<form className="space-y-6" onSubmit={handleAddNode}>
 									<div className="relative">
+										<label htmlFor="">Domain:</label>
 										<input
 											type="text"
-											onChange={(e) => updateNewdomain(e.target.value)}
-											value={newdomain} className="block p-4 pl-10 w-full text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" placeholder="New domain" />
+											onChange={(e) => updateNewdomain(e.target.value.replace(/\s/g, ""))}
+											value={newdomain} 
+											className="p-4 pl-10 w-full text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" 
+											placeholder="New domain" 
+											/>
+											<label htmlFor="">Remark:</label>
+										<input
+											type="text"
+											onChange={(e) => updateNewremark(e.target.value.replace(/\s/g, ""))}
+											value={newremark} 
+											className="p-4 pl-10 w-full text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" 
+											placeholder="Remark of New Domain" 
+											/>
 										<button type="button"
 											onClick={() => {
-												if (newdomain.length > 0) {
+												if (newdomain.length > 0 && newremark.length > 0) {
 													setDomains((prevState) => ({
 														...prevState,
-														[newdomain.split(".")[0]]: newdomain,
+														[newremark]: newdomain,
 													}));
+													updateNewdomain("");
+													updateNewremark("");
+												} else {
+													dispatch(alert({ show: true, content: "Either the domain or remark field should be left empty." }));
 												}
-												updateNewdomain("");
 											}}
-											className="text-white absolute right-2.5 bottom-2.5 bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-4 py-2 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
+											className="block text-white absolute right-2.5 bottom-2.5 bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-4 py-2 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
 										>
-											add domain
+											Add Domain
 										</button>
 									</div>
 									<button

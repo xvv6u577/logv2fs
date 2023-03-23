@@ -1,32 +1,41 @@
 package main
 
 import (
+	"github.com/caster8013/logv2rayfullstack/database"
 	"github.com/caster8013/logv2rayfullstack/model"
+	"go.mongodb.org/mongo-driver/bson"
 )
 
-type User = model.User
+var (
+// userCollection *mongo.Collection = database.OpenCollection(database.Client, "USERS")
+// err            error
+)
+
+type (
+	User = model.User
+)
 
 func main() {
-	var input = User{
-		Status: "plain",
-		NodeInUseStatus: map[string]bool{
-			"www.google.com":   true,
-			"www.facebook.com": true,
-			"www.youtube.com":  false,
-		},
-	}
+	// var ctx, cancel = context.WithTimeout(context.Background(), 60*time.Second)
+	// defer cancel()
 
-	var submittedNodes = map[string]string{
-		"google":    "www.google.com",
-		"youtube":   "www.youtube.com",
-		"twitter":   "www.twitter.com",
-		"instagram": "www.instagram.com",
-		"reddit":    "www.reddit.com",
+	var projections = bson.D{
+		{Key: "_id", Value: 0},
+		{Key: "token", Value: 0},
+		{Key: "password", Value: 0},
+		{Key: "refresh_token", Value: 0},
+		{Key: "used_by_current_day", Value: 0},
+		{Key: "used_by_current_month", Value: 0},
+		{Key: "used_by_current_year", Value: 0},
+		{Key: "traffic_by_day", Value: 0},
+		{Key: "traffic_by_month", Value: 0},
+		{Key: "traffic_by_year", Value: 0},
+		{Key: "suburl", Value: 0},
 	}
+	allUsersInDB, _ := database.GetPartialInfosForAllUsers(projections)
 
-	input.ProduceNodeInUse(submittedNodes)
-	// pirnt input.NodeInUseStatus
-	for node, status := range input.NodeInUseStatus {
-		println(node, status)
+	for _, user := range allUsersInDB {
+
+		println("Updated user: " + user.Email)
 	}
 }
