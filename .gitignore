@@ -7,10 +7,11 @@ frontend/.env
 frontend/tool
 
 yaml/results/*
-cmd
+cmd/development/
+cmd/in_progress/
 config
 CA
-setup-script
+setup-script*
 
 .env
 *.sh
