@@ -51,6 +51,8 @@ func main() {
 		Email:    INITUSER,
 		Password: INITUSER,
 		Role:     "admin",
+		Path:     "ray",
+		Status:   "plain",
 		NodeGlobalList: map[string]string{
 			"init": CURRENT_DOMAIN,
 		},
