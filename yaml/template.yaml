@@ -38,9 +38,12 @@ proxy-groups:
       interval: 7200,
     }
 rules:
+  - "DOMAIN-SUFFIX,openai.com,MANUAL-SELECT"
+  - "DOMAIN-SUFFIX,openaiapi-site.azureedge.net,MANUAL-SELECT"
+  - "DOMAIN-SUFFIX,identrust.com,MANUAL-SELECT"
+  - "DOMAIN-SUFFIX,auth0.com,MANUAL-SELECT"
   - "DOMAIN,unicorncloud.club,DIRECT"
   - "DOMAIN-SUFFIX,undervineyard.com,DIRECT"
-  - "DOMAIN-SUFFIX,openai.com,manual-select"
   - "DOMAIN-SUFFIX,kakao.com,manual-select"
   - "DOMAIN-SUFFIX,onedrive.com,manual-select"
   - "DOMAIN-SUFFIX,services.googleapis.cn,manual-select"
