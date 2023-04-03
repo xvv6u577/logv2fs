@@ -23,6 +23,7 @@ dns:
 proxies:
 proxy-groups:
   - { name: manual-select, type: select, proxies: [auto-select, fallback] }
+  - { name: chatGPT, type: select, proxies: [新加坡chatgpt, manual-select] }
   - {
       name: auto-select,
       type: url-test,
@@ -38,10 +39,14 @@ proxy-groups:
       interval: 7200,
     }
 rules:
-  - "DOMAIN-SUFFIX,openai.com,MANUAL-SELECT"
-  - "DOMAIN-SUFFIX,openaiapi-site.azureedge.net,MANUAL-SELECT"
-  - "DOMAIN-SUFFIX,identrust.com,MANUAL-SELECT"
-  - "DOMAIN-SUFFIX,auth0.com,MANUAL-SELECT"
+  - "DOMAIN-SUFFIX,ai.com,chatGPT"
+  - "DOMAIN-SUFFIX,openai.com,chatGPT"
+  - "DOMAIN-SUFFIX,chat.openai.com,chatGPT"
+  - "DOMAIN-SUFFIX,platform.openai.com,chatGPT"
+  - "DOMAIN-SUFFIX,openaiapi-site.azureedge.net,chatGPT"
+  - "DOMAIN-SUFFIX,identrust.com,chatGPT"
+  - "DOMAIN-SUFFIX,auth0.com,chatGPT"
+  - "DOMAIN-SUFFIX,challenges.cloudflare.com,chatGPT"
   - "DOMAIN,unicorncloud.club,DIRECT"
   - "DOMAIN-SUFFIX,undervineyard.com,DIRECT"
   - "DOMAIN-SUFFIX,kakao.com,manual-select"
@@ -267,7 +272,6 @@ rules:
   - "DOMAIN-SUFFIX,aspnetcdn.com,manual-select"
   - "DOMAIN-SUFFIX,att.com,manual-select"
   - "DOMAIN-SUFFIX,awsstatic.com,manual-select"
-  - "DOMAIN-SUFFIX,azureedge.net,manual-select"
   - "DOMAIN-SUFFIX,azurewebsites.net,manual-select"
   - "DOMAIN-SUFFIX,bing.com,manual-select"
   - "DOMAIN-SUFFIX,bintray.com,manual-select"
