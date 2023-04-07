@@ -23,7 +23,7 @@ dns:
 proxies:
 proxy-groups:
   - { name: manual-select, type: select, proxies: [auto-select, fallback] }
-  - { name: chatGPT, type: select, proxies: [新加坡chatgpt, manual-select] }
+  - { name: chatGPT, type: select, proxies: [台湾chatgpt2, 新加坡chatgpt] }
   - {
       name: auto-select,
       type: url-test,
