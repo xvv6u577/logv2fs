@@ -23,11 +23,11 @@ dns:
 proxies:
 proxy-groups:
   - { name: manual-select, type: select, proxies: [auto-select, fallback] }
-  - { name: chatGPT, type: select, proxies: [gpt-auto, 东京tk1gcp, 东京TK2GCP, 新加坡chatgpt2, 新加坡chatgpt] }
+  - { name: chatGPT, type: select, proxies: [gpt-auto, 东京tk1gcp, 东京TK2GCP, 新加坡GPT2, 新加坡chatgpt] }
   - {
       name: gpt-auto,
       type: url-test,
-      proxies: [东京tk1gcp, 东京TK2GCP, 新加坡chatgpt2, 新加坡chatgpt],
+      proxies: [东京tk1gcp, 东京TK2GCP, 新加坡GPT2, 新加坡chatgpt],
       url: "http://www.gstatic.com/generate_204",
       interval: 86400,
     }
