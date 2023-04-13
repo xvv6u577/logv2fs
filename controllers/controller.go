@@ -225,11 +225,7 @@ func SignUp() gin.HandlerFunc {
 				if available {
 					go func(domain string) {
 						defer wg.Done()
-						if domain == "sel.undervineyard.com" {
-							grpctools.GrpcClientToAddUser(domain, "80", user)
-						} else {
-							grpctools.GrpcClientToAddUser(domain, "50051", user)
-						}
+						grpctools.GrpcClientToAddUser(domain, "80", user)
 					}(node)
 				}
 
@@ -570,11 +566,7 @@ func TakeItOfflineByUserName() gin.HandlerFunc {
 				if available {
 					go func(domain string) {
 						defer wg.Done()
-						if domain == "sel.undervineyard.com" {
-							grpctools.GrpcClientToDeleteUser(domain, "80", user)
-						} else {
-							grpctools.GrpcClientToDeleteUser(domain, "50051", user)
-						}
+						grpctools.GrpcClientToDeleteUser(domain, "80", user)
 					}(node)
 					user.NodeInUseStatus[node] = false
 				}
@@ -674,11 +666,7 @@ func TakeItOnlineByUserName() gin.HandlerFunc {
 				if !available {
 					go func(domain string) {
 						defer wg.Done()
-						if domain == "sel.undervineyard.com" {
-							grpctools.GrpcClientToAddUser(domain, "80", user)
-						} else {
-							grpctools.GrpcClientToAddUser(domain, "50051", user)
-						}
+						grpctools.GrpcClientToAddUser(domain, "80", user)
 					}(node)
 					user.NodeInUseStatus[node] = true
 				}
@@ -761,11 +749,7 @@ func DeleteUserByUserName() gin.HandlerFunc {
 					if available {
 						go func(domain string) {
 							defer wg.Done()
-							if domain == "sel.undervineyard.com" {
-								grpctools.GrpcClientToDeleteUser(domain, "80", user)
-							} else {
-								grpctools.GrpcClientToDeleteUser(domain, "50051", user)
-							}
+							grpctools.GrpcClientToDeleteUser(domain, "80", user)
 						}(node)
 					}
 
@@ -1028,11 +1012,7 @@ func DisableNodePerUser() gin.HandlerFunc {
 				}
 			}
 		} else {
-			if node == "sel.undervineyard.com" {
-				grpctools.GrpcClientToDeleteUser(node, "80", user)
-			} else {
-				grpctools.GrpcClientToDeleteUser(node, "50051", user)
-			}
+			grpctools.GrpcClientToDeleteUser(node, "80", user)
 		}
 
 		user.DeleteNodeInUse(node)
@@ -1112,11 +1092,7 @@ func EnableNodePerUser() gin.HandlerFunc {
 				}
 			}
 		} else {
-			if node == "sel.undervineyard.com" {
-				grpctools.GrpcClientToAddUser(node, "80", user)
-			} else {
-				grpctools.GrpcClientToAddUser(node, "50051", user)
-			}
+			grpctools.GrpcClientToAddUser(node, "80", user)
 		}
 
 		user.AddNodeInUse(node)
