@@ -18,6 +18,7 @@ import (
 	"github.com/caster8013/logv2rayfullstack/v2ray"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 var (
@@ -30,13 +31,11 @@ type (
 	User = model.User
 )
 
-// server is used to implement helloworld.GreeterServer.
-type server struct {
+type Server struct {
 	pb.UnimplementedManageV2RayUserBygRPCServer
 }
 
-// SayHello implements helloworld.GreeterServer
-func (s *server) AddUser(ctx context.Context, in *pb.GRPCRequest) (*pb.GRPCReply, error) {
+func (s *Server) AddUser(ctx context.Context, in *pb.GRPCRequest) (*pb.GRPCReply, error) {
 
 	log.Printf("Server AddUser. Received: %v", in.GetName()+", "+in.GetUuid()+", "+in.GetPath())
 
@@ -46,127 +45,127 @@ func (s *server) AddUser(ctx context.Context, in *pb.GRPCRequest) (*pb.GRPCReply
 		Path:  in.GetPath(),
 	}
 
-	cmdConn, err := grpc.Dial(fmt.Sprintf("%s:%s", V2_API_ADDRESS, V2_API_PORT), grpc.WithInsecure())
+	cmdConn, err := grpc.Dial(fmt.Sprintf("%s:%s", V2_API_ADDRESS, V2_API_PORT), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
-		msg := "v2ray connection failed."
-		log.Panicf("%v", msg)
-		return &pb.GRPCReply{SuccesOrNot: msg}, err
+		log.Printf("%v", "v2ray connection failed.")
+		return &pb.GRPCReply{SuccesOrNot: "v2ray connection failed."}, err
 	}
 
 	NHSClient := v2ray.NewHandlerServiceClient(cmdConn, in.GetPath())
 	err = NHSClient.AddUser(user)
 	if err != nil {
-		msg := "v2ray take user back online failed."
-		log.Panicf("%v", msg)
-		return &pb.GRPCReply{SuccesOrNot: msg}, err
+		log.Printf("%v", "v2ray take user back online failed.")
+		return &pb.GRPCReply{SuccesOrNot: "v2ray take user back online failed."}, err
 	}
 
 	log.Println("email: " + in.GetName() + ", uuid: " + in.GetUuid() + ", path: " + in.GetPath() + ". Added in success!")
 	return &pb.GRPCReply{SuccesOrNot: "email: " + in.GetName() + ", uuid: " + in.GetUuid() + ", path: " + in.GetPath() + ". Added in success!"}, nil
 }
 
-func (s *server) DeleteUser(ctx context.Context, in *pb.GRPCRequest) (*pb.GRPCReply, error) {
+func (s *Server) DeleteUser(ctx context.Context, in *pb.GRPCRequest) (*pb.GRPCReply, error) {
 
 	log.Printf("Server DeleteUser. Received: %v", in.GetName()+", "+in.GetUuid()+", "+in.GetPath())
 
-	cmdConn, err := grpc.Dial(fmt.Sprintf("%s:%s", V2_API_ADDRESS, V2_API_PORT), grpc.WithInsecure())
+	cmdConn, err := grpc.Dial(fmt.Sprintf("%s:%s", V2_API_ADDRESS, V2_API_PORT), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
-		msg := "v2ray connection failed."
-		log.Panicf("%v", msg)
-		return &pb.GRPCReply{SuccesOrNot: msg}, err
+		log.Printf("%v", "v2ray connection failed!")
+		return &pb.GRPCReply{SuccesOrNot: "v2ray connection failed!"}, err
 	}
 
 	NHSClient := v2ray.NewHandlerServiceClient(cmdConn, in.GetPath())
 	err = NHSClient.DelUser(in.GetName())
 	if err != nil {
-		msg := "v2ray take user back online failed."
-		log.Panicf("%v", msg)
-		return &pb.GRPCReply{SuccesOrNot: msg}, err
+		log.Printf("%v", "v2ray take user back online failed!")
+		return &pb.GRPCReply{SuccesOrNot: "v2ray take user back online failed!"}, err
 	}
 
 	log.Println("email: " + in.GetName() + ", uuid: " + in.GetUuid() + ", path: " + in.GetPath() + ". Deleted in success!")
 	return &pb.GRPCReply{SuccesOrNot: "email: " + in.GetName() + ", uuid: " + in.GetUuid() + ", path: " + in.GetPath() + ". Deleted in success!"}, nil
 }
 
-func GrpcServer(addr string) {
-	flag.Parse()
+func GrpcServer(addr string, enableTLS bool) error {
 
 	lis, err := net.Listen("tcp", fmt.Sprintf("%v", addr))
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
+		return err
 	}
 
-	// read ca's cert, verify to client's certificate
-	caPem, err := ioutil.ReadFile("CA/ca-cert.pem")
-	if err != nil {
-		log.Fatal(err)
+	var grpcServer *grpc.Server
+	serverOptions := []grpc.ServerOption{}
+
+	if enableTLS {
+		tlsCredentials, err := GetServerSideTlsCredential(false)
+		if err != nil {
+			log.Fatalf("failed to getServerSideTlsCredential: %v", err)
+			return err
+		}
+
+		serverOptions = append(serverOptions, grpc.Creds(tlsCredentials))
 	}
 
-	// create cert pool and append ca's cert
-	certPool := x509.NewCertPool()
-	if !certPool.AppendCertsFromPEM(caPem) {
-		log.Fatal(err)
-	}
+	grpcServer = grpc.NewServer(serverOptions...)
+	pb.RegisterManageV2RayUserBygRPCServer(grpcServer, &Server{})
 
-	// read server cert & key
-	serverCert, err := tls.LoadX509KeyPair("CA/server-cert.pem", "CA/server-key.pem")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// configuration of the certificate what we want to
-	conf := &tls.Config{
-		Certificates: []tls.Certificate{serverCert},
-		ClientAuth:   tls.RequireAndVerifyClientCert,
-		ClientCAs:    certPool,
-	}
-
-	// create tls certificate
-	creds := credentials.NewTLS(conf)
-
-	grpcServer := grpc.NewServer(grpc.Creds(creds))
-	pb.RegisterManageV2RayUserBygRPCServer(grpcServer, &server{})
-	log.Printf("server listening at %v", lis.Addr())
+	log.Printf("GRPC server listening at %v", lis.Addr())
 	if err := grpcServer.Serve(lis); err != nil {
 		log.Fatalf("failed to serve: %v", err)
+		return err
 	}
+
+	return nil
 }
 
-func GrpcClientToAddUser(domain string, port string, user User) error {
+func GrpcClientToAddUser(domain string, port string, user User, enableTLS bool) error {
 
-	// create client
-	tlsCredential := getTlsCredential()
+	transportOption := grpc.WithTransportCredentials(insecure.NewCredentials())
+	if enableTLS {
+		tlsCredentials, err := GetClientSideTlsCredential()
+		if err != nil {
+			log.Printf("Warn: %v could not load credential %v\nErr:%v", sanitize.SanitizeStr(domain), sanitize.SanitizeStr(user.Email), err)
+			return err
+		}
 
-	conn, err := grpc.Dial(fmt.Sprintf("%s:%s", domain, port), grpc.WithTransportCredentials(tlsCredential))
+		transportOption = grpc.WithTransportCredentials(tlsCredentials)
+	}
+
+	conn, err := grpc.Dial(fmt.Sprintf("%s:%s", domain, port), transportOption)
 	if err != nil {
-		log.Panicf("%v. Did not connect: %v", sanitize.SanitizeStr(domain), err)
+		log.Printf("%v. Did not connect: %v", sanitize.SanitizeStr(domain), err)
 		return err
 	}
 	defer conn.Close()
 
 	client := pb.NewManageV2RayUserBygRPCClient(conn)
 
-	// Contact the server and print out its response.
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 	r, err := client.AddUser(ctx, &pb.GRPCRequest{Uuid: user.UUID, Path: user.Path, Name: user.Email})
 	if err != nil {
-		log.Panicf("%v could not add user %v: %v", sanitize.SanitizeStr(user.Email), sanitize.SanitizeStr(domain), err)
+		log.Printf("Warn: %v could not add user %v\nErr: %v", sanitize.SanitizeStr(domain), sanitize.SanitizeStr(user.Email), err)
 		return err
 	}
 
-	log.Printf("Info: %s, %s", sanitize.SanitizeStr(domain), r.GetSuccesOrNot())
+	log.Printf("Info: %s added in %s!", sanitize.SanitizeStr(domain), r.GetSuccesOrNot())
 	return nil
 }
 
-func GrpcClientToDeleteUser(domain string, port string, user User) error {
+func GrpcClientToDeleteUser(domain string, port string, user User, enableTLS bool) error {
 
-	// create client
-	tlsCredential := getTlsCredential()
+	transportOption := grpc.WithTransportCredentials(insecure.NewCredentials())
+	if enableTLS {
+		tlsCredentials, err := GetClientSideTlsCredential()
+		if err != nil {
+			log.Printf("Warn: %v could not load credential %v\nErr:%v", sanitize.SanitizeStr(domain), sanitize.SanitizeStr(user.Email), err)
+			return err
+		}
 
-	conn, err := grpc.Dial(fmt.Sprintf("%s:%s", domain, port), grpc.WithTransportCredentials(tlsCredential))
+		transportOption = grpc.WithTransportCredentials(tlsCredentials)
+	}
+
+	conn, err := grpc.Dial(fmt.Sprintf("%s:%s", domain, port), transportOption)
 	if err != nil {
-		log.Panicf("%v. Did not connect: %v", sanitize.SanitizeStr(domain), err)
+		log.Printf("Warn: %v. Did not connect: %v", sanitize.SanitizeStr(domain), err)
 		return err
 	}
 	defer conn.Close()
@@ -178,34 +177,71 @@ func GrpcClientToDeleteUser(domain string, port string, user User) error {
 	defer cancel()
 	r, err := client.DeleteUser(ctx, &pb.GRPCRequest{Uuid: user.UUID, Path: user.Path, Name: user.Email})
 	if err != nil {
-		log.Panicf("%v could not delete user %v: %v", sanitize.SanitizeStr(user.Email), sanitize.SanitizeStr(domain), err)
+		log.Printf("Warn: %v could not delete user %v\nErr:%v", sanitize.SanitizeStr(domain), sanitize.SanitizeStr(user.Email), err)
 		return err
 	}
 
-	log.Printf("Info: %s, %s", sanitize.SanitizeStr(domain), r.GetSuccesOrNot())
+	log.Printf("Info: %s deleted in %s!", sanitize.SanitizeStr(domain), r.GetSuccesOrNot())
 
 	return nil
 }
 
-func getTlsCredential() credentials.TransportCredentials {
-	flag.Parse()
+func GetServerSideTlsCredential(authRequired bool) (credentials.TransportCredentials, error) {
 
+	if !authRequired {
+		authRequired = false
+	}
 	// read ca's cert
 	caCert, err := ioutil.ReadFile("CA/ca-cert.pem")
 	if err != nil {
-		log.Panic(caCert)
+		return nil, err
 	}
 
 	// create cert pool and append ca's cert
 	certPool := x509.NewCertPool()
 	if ok := certPool.AppendCertsFromPEM(caCert); !ok {
-		log.Panic(err)
+		return nil, fmt.Errorf("failed to append ca's cert")
+	}
+
+	//read client cert
+	serverCert, err := tls.LoadX509KeyPair("CA/server-cert.pem", "CA/server-key.pem")
+	if err != nil {
+		return nil, err
+	}
+
+	clientAuth := tls.NoClientCert
+	if authRequired {
+		clientAuth = tls.RequireAndVerifyClientCert
+	}
+
+	config := &tls.Config{
+		Certificates: []tls.Certificate{serverCert},
+		ClientAuth:   clientAuth,
+		RootCAs:      certPool,
+	}
+
+	return credentials.NewTLS(config), nil
+}
+
+func GetClientSideTlsCredential() (credentials.TransportCredentials, error) {
+	flag.Parse()
+
+	// read ca's cert
+	caCert, err := ioutil.ReadFile("CA/ca-cert.pem")
+	if err != nil {
+		return nil, err
+	}
+
+	// create cert pool and append ca's cert
+	certPool := x509.NewCertPool()
+	if ok := certPool.AppendCertsFromPEM(caCert); !ok {
+		return nil, fmt.Errorf("failed to append ca's cert")
 	}
 
 	//read client cert
 	clientCert, err := tls.LoadX509KeyPair("CA/client-cert.pem", "CA/client-key.pem")
 	if err != nil {
-		log.Panic(err)
+		return nil, err
 	}
 
 	config := &tls.Config{
@@ -213,5 +249,5 @@ func getTlsCredential() credentials.TransportCredentials {
 		RootCAs:      certPool,
 	}
 
-	return credentials.NewTLS(config)
+	return credentials.NewTLS(config), nil
 }

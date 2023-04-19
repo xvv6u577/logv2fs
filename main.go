@@ -78,7 +78,9 @@ func main() {
 }
 
 func RunGRPCServer() {
-	grpctools.GrpcServer("0.0.0.0:50051")
+	if err := grpctools.GrpcServer("0.0.0.0:50051", false); err != nil {
+		log.Panic("GrpcServer panic: ", err)
+	}
 }
 
 func V2rayProcess() {
