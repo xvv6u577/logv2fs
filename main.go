@@ -66,6 +66,7 @@ func main() {
 	group.Add(V2rayProcess)
 
 	group.Add(func() {
+		log.Printf("Server runs at %s:%s", SERVER_ADDRESS, SERVER_PORT)
 		err := RunServer().Run(fmt.Sprintf("%s:%s", SERVER_ADDRESS, SERVER_PORT))
 		if err != nil {
 			log.Panic("Panic: ", err)
@@ -84,6 +85,7 @@ func RunGRPCServer() {
 }
 
 func V2rayProcess() {
+	log.Printf("V2ray process runs at 8070, 10000, 10001, 10002")
 	var cmd = exec.Command(V2RAY, "-config", V2RAY_CONFIG)
 	if err := cmd.Run(); err != nil {
 		log.Panic("Panic: ", err)
