@@ -1,7 +1,7 @@
 install:
 	go build; go install;
 
-start: 
+backend: 
 	go run ./main.go
 
 certs:
@@ -10,7 +10,7 @@ certs:
 v2ray-local:
 	./config/v2ray-macos-v4.23.4/v2ray -config ./config/local/config.json
 
-dev:
+web:
 	cd frontend; npm start;
 
 link:
