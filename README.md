@@ -8,8 +8,10 @@
 
 > Open Ports: 80、443、50051
 
-```
-protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative proto/myproto.proto
+```bash
+protoc --go_out=. --go_opt=paths=source_relative \
+    --go-grpc_out=. --go-grpc_opt=paths=source_relative \
+    proto/myproto.proto
 ```
 
 > 环境变量：.env
