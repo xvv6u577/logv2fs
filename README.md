@@ -6,7 +6,7 @@
 
 #### gRPC
 
-> Open Ports: 80、443、50051
+> Open Ports: 80、443
 
 ```bash
 protoc --go_out=. --go_opt=paths=source_relative \
