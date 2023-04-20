@@ -42,6 +42,7 @@ var (
 	NODE_TYPE                        = os.Getenv("NODE_TYPE")
 	CURRENT_DOMAIN                   = os.Getenv("CURRENT_DOMAIN")
 	MIXED_PORT                       = os.Getenv("MIXED_PORT")
+	ADMINUSERID                      = os.Getenv("ADMINUSERID")
 )
 
 type (
@@ -127,7 +128,7 @@ func SignUp() gin.HandlerFunc {
 		var adminUser model.User
 		var userId = c.GetString("uid")
 		if userId == "" {
-			userId = "6253a0f5b3829a0c7281aca6"
+			userId = ADMINUSERID
 		}
 
 		err = userCollection.FindOne(ctx, bson.M{"user_id": userId}).Decode(&adminUser)
