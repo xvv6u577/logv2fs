@@ -3,7 +3,7 @@ module github.com/caster8013/logv2rayfullstack
 go 1.17
 
 require (
-	github.com/gin-gonic/gin v1.7.4
+	github.com/gin-gonic/gin v1.7.7
 	github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d
 	github.com/v2fly/v2ray-core/v4 v4.44.0
 	go.mongodb.org/mongo-driver v1.9.1
