@@ -50,7 +50,7 @@ func GenerateOneByQuery(email string) error {
 		return err
 	}
 
-	err = GenerateOne(user)
+	err = GenerateOneYAML(user)
 	if err != nil {
 		log.Printf("Error: %v\n", err)
 		return err
@@ -93,14 +93,19 @@ func GenerateAllClashxConfig() error {
 	}
 
 	for _, user := range allUsers {
-		GenerateOne(*user)
+		GenerateOneYAML(*user)
 	}
 
 	log.Println("generate all user yaml file Done!")
 	return nil
 }
 
-func GenerateOne(user User) error {
+func GenerateOneYAML(user User) error {
+
+	var exchangeMap = map[string]string{}
+	for k, v := range user.NodeGlobalList {
+		exchangeMap[v] = k
+	}
 
 	yamlFile, err := os.ReadFile(CurrentPath() + "/yaml/template.yaml")
 	if err != nil {
@@ -116,10 +121,10 @@ func GenerateOne(user User) error {
 	}
 
 	for node, status := range user.NodeInUseStatus {
-		nodeFlag := strings.Split(node, ".")[0]
+
 		if status {
 			yamlTemplate.Proxies = append(yamlTemplate.Proxies, Proxies{
-				Name:           nodeFlag,
+				Name:           exchangeMap[node],
 				Server:         node,
 				Port:           443,
 				Type:           "vmess",
@@ -137,7 +142,7 @@ func GenerateOne(user User) error {
 
 			for index, value := range yamlTemplate.ProxyGroups {
 				if value.Name == "manual-select" || value.Name == "auto-select" || value.Name == "fallback" {
-					yamlTemplate.ProxyGroups[index].Proxies = append(yamlTemplate.ProxyGroups[index].Proxies, nodeFlag)
+					yamlTemplate.ProxyGroups[index].Proxies = append(yamlTemplate.ProxyGroups[index].Proxies, exchangeMap[node])
 				}
 			}
 		}

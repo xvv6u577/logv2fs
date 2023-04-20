@@ -156,11 +156,11 @@ func SignUp() gin.HandlerFunc {
 			user.UUID = uuidV4.String()
 		}
 
+		user.NodeGlobalList = adminUser.NodeGlobalList
 		user.ProduceNodeInUse(adminUser.NodeGlobalList)
 		user_role := sanitize.SanitizeStr(user.Role)
-		if user_role == "admin" {
-			user.NodeGlobalList = adminUser.NodeGlobalList
-		}
+		// if user_role == "admin" {
+		// }
 
 		if user.Credittraffic == 0 {
 			credit, _ := strconv.ParseInt(CREDIT, 10, 64)
@@ -252,7 +252,7 @@ func SignUp() gin.HandlerFunc {
 
 		wg.Wait()
 
-		err = yamlTools.GenerateOne(user)
+		err = yamlTools.GenerateOneYAML(user)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			log.Printf("error occured while generating yaml: %v", err)
@@ -373,9 +373,9 @@ func AddNode() gin.HandlerFunc {
 		}
 
 		for _, user := range allUsers {
-			if user.Role == "admin" {
-				user.NodeGlobalList = domains
-			}
+			// if user.Role == "admin" {
+			// }
+			user.NodeGlobalList = domains
 
 			user.ProduceNodeInUse(domains)
 			filter := bson.D{primitive.E{Key: "user_id", Value: user.User_id}}
