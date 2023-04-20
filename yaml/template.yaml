@@ -23,6 +23,14 @@ dns:
 proxies:
 proxy-groups:
   - { name: manual-select, type: select, proxies: [auto-select, fallback] }
+  - { name: chatGPT, type: select, proxies: [gpt-auto, 东京tk1gcp, 东京TK2GCP, 新加坡GPT2, 新加坡chatgpt] }
+  - {
+      name: gpt-auto,
+      type: url-test,
+      proxies: [东京tk1gcp, 东京TK2GCP, 新加坡GPT2, 新加坡chatgpt],
+      url: "http://www.gstatic.com/generate_204",
+      interval: 86400,
+    }
   - {
       name: auto-select,
       type: url-test,
@@ -38,9 +46,16 @@ proxy-groups:
       interval: 7200,
     }
 rules:
+  - "DOMAIN-SUFFIX,ai.com,chatGPT"
+  - "DOMAIN-SUFFIX,openai.com,chatGPT"
+  - "DOMAIN-SUFFIX,chat.openai.com,chatGPT"
+  - "DOMAIN-SUFFIX,platform.openai.com,chatGPT"
+  - "DOMAIN-SUFFIX,openaiapi-site.azureedge.net,chatGPT"
+  - "DOMAIN-SUFFIX,identrust.com,chatGPT"
+  - "DOMAIN-SUFFIX,auth0.com,chatGPT"
+  - "DOMAIN-SUFFIX,challenges.cloudflare.com,chatGPT"
   - "DOMAIN,unicorncloud.club,DIRECT"
   - "DOMAIN-SUFFIX,undervineyard.com,DIRECT"
-  - "DOMAIN-SUFFIX,openai.com,manual-select"
   - "DOMAIN-SUFFIX,kakao.com,manual-select"
   - "DOMAIN-SUFFIX,onedrive.com,manual-select"
   - "DOMAIN-SUFFIX,services.googleapis.cn,manual-select"
@@ -264,7 +279,6 @@ rules:
   - "DOMAIN-SUFFIX,aspnetcdn.com,manual-select"
   - "DOMAIN-SUFFIX,att.com,manual-select"
   - "DOMAIN-SUFFIX,awsstatic.com,manual-select"
-  - "DOMAIN-SUFFIX,azureedge.net,manual-select"
   - "DOMAIN-SUFFIX,azurewebsites.net,manual-select"
   - "DOMAIN-SUFFIX,bing.com,manual-select"
   - "DOMAIN-SUFFIX,bintray.com,manual-select"

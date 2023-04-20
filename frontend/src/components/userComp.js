@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { alert, success } from "../store/message";
 import { formatBytes } from "../service/service";
@@ -26,7 +26,6 @@ const UserComp = (props) => {
             })
             .catch((err) => {
                 dispatch(alert({ show: true, content: err.toString() }));
-                console.log(err.toString());
             });
     };
 
@@ -197,8 +196,6 @@ const UserComp = (props) => {
                             <button
                                 className="w-auto md:w-24 focus:outline-none text-white bg-green-700 hover:bg-green-800 focus:ring-4 focus:ring-red-300 
                                     font-medium rounded-lg text-sm px-2.5 py-2.5 m-1 text-center dark:bg-green-600 dark:hover:bg-green-700 dark:focus:ring-green-800"
-                            // className="w-ful md:w-24 focus:outline-none text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-red-300 
-                            //      font-medium rounded-lg text-sm px-2.5 py-2.5 m-1 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
                                 type="button"
                                 onClick={() => handleOnline(props.user.email)}
                             >
@@ -310,21 +307,37 @@ const UserComp = (props) => {
     )
 }
 
-function EditUser({ btnName, user, editUserFunc }) {
-    const [show, setShow] = useState(false);
+// function EditUser({ btnName, user, editUserFunc }) {
+const EditUser = (props) => {
 
-    const [{ used, password, name, role, credit }, setState] = useState({
-        used: user.used,
-        password: user.password,
-        name: user.name,
-        role: user.role,
-        credit: user.credit,
+    const [show, setShow] = useState(false);
+    const [role, setRole] = useState(props.user.role);
+    const [{ used, password, name, credit }, setState] = useState({
+        password: props.user.password,
+        name: props.user.name,
+        used: props.user.used,
+        credit: props.user.credit,
     });
+
+    useEffect(() => {
+        setState({
+            password: props.user.password,
+            name: props.user.name,
+            used: props.user.used,
+            credit: props.user.credit,
+        });
+        setRole(props.user.role);
+    }, [props.user])
 
     const onChange = (e) => {
         const { name, value } = e.target;
         setState((prevState) => ({ ...prevState, [name]: value }));
     };
+
+    const onChangeRole = (e) => {
+        const { value } = e.target;
+        setRole(value);
+    }
 
     const dispatch = useDispatch();
     const loginState = useSelector((state) => state.login);
@@ -334,20 +347,20 @@ function EditUser({ btnName, user, editUserFunc }) {
         setShow(!show);
         axios({
             method: "post",
-            url: process.env.REACT_APP_API_HOST + "edit/" + user.email,
+            url: process.env.REACT_APP_API_HOST + "edit/" + props.user.email,
             headers: { token: loginState.token },
             data: {
-                role,
-                email: user.email,
+                email: props.user.email,
                 password,
                 name,
+                role,
                 used: parseInt(used),
                 credit: parseInt(credit),
             },
         })
             .then((response) => {
                 dispatch(success({ show: true, content: "user info updated!" }));
-                editUserFunc();
+                props.editUserFunc();
             })
             .catch((err) => {
                 if (err.response) {
@@ -368,7 +381,7 @@ function EditUser({ btnName, user, editUserFunc }) {
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 inline-block mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                 </svg>
-                {btnName}
+                {props.btnName}
             </button>
 
             {show ?
@@ -389,9 +402,9 @@ function EditUser({ btnName, user, editUserFunc }) {
                             </button>
                             <div className="py-6 px-6 lg:px-8">
                                 <h3 className="mb-4 text-xl font-medium text-gray-900 dark:text-white">Edit User</h3>
-                                <div><span>User Status: <b>{user.status}</b></span></div>
-                                <div><span>UUID: <b>{user.uuid}</b></span></div>
-                                <div><span>Path:  <b>{user.path}</b></span></div>
+                                <div><span>User Status: <b>{props.user.status}</b></span></div>
+                                <div><span>UUID: <b>{props.user.uuid}</b></span></div>
+                                <div><span>Path:  <b>{props.user.path}</b></span></div>
                                 <form className="space-y-6" onSubmit={handleEditUser}>
                                     <div>
                                         <label htmlFor="email" className="block mb-2 text-sm font-medium text-gray-900 dark:text-gray-300">Email</label>
@@ -399,8 +412,8 @@ function EditUser({ btnName, user, editUserFunc }) {
                                             type="input"
                                             id="email"
                                             name="email"
-                                            placeholder={user.email}
-                                            value={user.email}
+                                            placeholder={props.user.email}
+                                            value={props.user.email}
                                             className="bg-gray-5ˀ0 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white"
                                             disabled />
                                     </div>
@@ -423,7 +436,7 @@ function EditUser({ btnName, user, editUserFunc }) {
                                             id="name"
                                             name="name"
                                             onChange={onChange}
-                                            placeholder={user.name}
+                                            placeholder={name}
                                             value={name}
                                             className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white"
                                         />
@@ -433,7 +446,7 @@ function EditUser({ btnName, user, editUserFunc }) {
                                         <select
                                             id="userType"
                                             className="block p-2 mb-6 w-full text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-                                            onChange={onChange}
+                                            onChange={onChangeRole}
                                             value={role}
                                         >
                                             <option value="normal">Normal</option>
@@ -446,7 +459,7 @@ function EditUser({ btnName, user, editUserFunc }) {
                                             type="number"
                                             name="used"
                                             onChange={onChange}
-                                            placeholder={user.used}
+                                            placeholder={used}
                                             value={used}
                                             className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white"
                                         />
@@ -457,7 +470,7 @@ function EditUser({ btnName, user, editUserFunc }) {
                                             type="number"
                                             name="credit"
                                             onChange={onChange}
-                                            placeholder={user.credit}
+                                            placeholder={credit}
                                             value={credit}
                                             className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white"
                                         />
@@ -475,7 +488,8 @@ function EditUser({ btnName, user, editUserFunc }) {
     );
 }
 
-function ConfirmDelUser({ btnName, deleteUserFunc }) {
+// function ConfirmDelUser({ btnName, deleteUserFunc }) {
+const ConfirmDelUser = (props) => {
     const [show, setShow] = useState(false);
 
     return (
@@ -488,7 +502,7 @@ function ConfirmDelUser({ btnName, deleteUserFunc }) {
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1 inline-block" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                 </svg>
-                {btnName}
+                {props.btnName}
             </button>
             {show ?
                 <div className="overflow-y-auto overflow-x-hidden fixed top-0 right-0 left-0 z-50 md:inset-0 h-modal md:h-full justify-center items-center flex" >
@@ -507,7 +521,7 @@ function ConfirmDelUser({ btnName, deleteUserFunc }) {
                                     type="button"
                                     onClick={() => {
                                         setShow(!show);
-                                        deleteUserFunc();
+                                        props.deleteUserFunc();
                                     }}
                                     className="text-white bg-red-600 hover:bg-red-800 focus:ring-4 focus:outline-none focus:ring-red-300 dark:focus:ring-red-800 font-medium rounded-lg text-sm inline-flex items-center px-5 py-2.5 text-center mr-2">
                                     Yes, I'm sure
