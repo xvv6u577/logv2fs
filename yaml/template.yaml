@@ -23,11 +23,15 @@ dns:
 proxies:
 proxy-groups:
   - { name: manual-select, type: select, proxies: [auto-select, fallback] }
-  - { name: chatGPT, type: select, proxies: [gpt-auto, 新加坡GPT2, 新加坡chatgpt] }
+  - {
+      name: chatGPT,
+      type: select,
+      proxies: [gpt-auto, 日本chatgpt, 新加坡Chatgpt2, 日本jp1az],
+    }
   - {
       name: gpt-auto,
       type: url-test,
-      proxies: [新加坡GPT2, 新加坡chatgpt],
+      proxies: [日本chatgpt, 新加坡Chatgpt2, 日本jp1az],
       url: "http://www.gstatic.com/generate_204",
       interval: 86400,
     }
