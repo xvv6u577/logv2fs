@@ -182,7 +182,7 @@ const UserComp = (props) => {
                         {props.user.status === "plain" ? (
                             <button
                                 className="w-auto md:w-24 focus:outline-none text-white bg-red-700 hover:bg-red-800 focus:ring-4 focus:ring-red-300 
-                                    font-medium rounded-lg text-sm px-2.5 py-2.5 m-1 text-center dark:bg-red-600 dark:hover:bg-red-700 dark:focus:ring-red-800"
+                                    font-medium rounded-lg text-sm px-1.5 py-1 m-1 text-center dark:bg-red-600 dark:hover:bg-red-700 dark:focus:ring-red-800"
                                 type="button"
                                 onClick={() => handleOffline(props.user.email)}
                             >
@@ -195,7 +195,7 @@ const UserComp = (props) => {
                         ) : (
                             <button
                                 className="w-auto md:w-24 focus:outline-none text-white bg-green-700 hover:bg-green-800 focus:ring-4 focus:ring-red-300 
-                                    font-medium rounded-lg text-sm px-2.5 py-2.5 m-1 text-center dark:bg-green-600 dark:hover:bg-green-700 dark:focus:ring-green-800"
+                                    font-medium rounded-lg text-sm px-1.5 py-1 m-1 text-center dark:bg-green-600 dark:hover:bg-green-700 dark:focus:ring-green-800"
                                 type="button"
                                 onClick={() => handleOnline(props.user.email)}
                             >
@@ -374,7 +374,7 @@ const EditUser = (props) => {
     return (
         <>
             <button
-                className="w-auto md:w-20 focus:outline-none text-white bg-green-700 hover:bg-blue-800 focus:ring-4 focus:ring-red-300 font-medium rounded-lg text-sm px-2.5 py-2.5 m-1 text-center dark:bg-green-600 dark:hover:bg-green-700 dark:focus:ring-blue-800"
+                className="w-auto md:w-20 focus:outline-none text-white bg-green-700 hover:bg-blue-800 focus:ring-4 focus:ring-red-300 font-medium rounded-lg text-sm px-1.5 py-1 m-1 text-center dark:bg-green-600 dark:hover:bg-green-700 dark:focus:ring-blue-800"
                 type="button"
                 onClick={() => setShow(!show)}
             >
@@ -495,7 +495,7 @@ const ConfirmDelUser = (props) => {
     return (
         <>
             <button
-                className="w-auto md:w-24 focus:outline-none text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-red-300 font-medium rounded-lg text-sm px-2.5 py-2.5 m-1 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
+                className="w-auto md:w-24 focus:outline-none text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-red-300 font-medium rounded-lg text-sm px-1.5 py-1 m-1 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
                 type="button"
                 onClick={() => setShow(!show)}
             >
