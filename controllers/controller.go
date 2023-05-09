@@ -537,10 +537,9 @@ func TakeItOfflineByUserName() gin.HandlerFunc {
 		}
 
 		var wg sync.WaitGroup
-		var waitQueueLength = 2
 
 		if NODE_TYPE == "local" {
-			wg.Add(waitQueueLength + 1)
+			wg.Add(1)
 			go func() {
 				defer wg.Done()
 				err = grpctools.GrpcClientToDeleteUser("0.0.0.0", MIXED_PORT, user, true)
@@ -558,7 +557,7 @@ func TakeItOfflineByUserName() gin.HandlerFunc {
 				}
 			}()
 		} else {
-			wg.Add(waitQueueLength + helper.CountNodesInUse(user.NodeInUseStatus))
+			wg.Add(helper.CountNodesInUse(user.NodeInUseStatus))
 			for node, available := range user.NodeInUseStatus {
 				if available {
 					go func(domain string) {
@@ -569,32 +568,26 @@ func TakeItOfflineByUserName() gin.HandlerFunc {
 				}
 			}
 		}
-
-		go func() {
-			defer wg.Done()
-			user.ProduceSuburl()
-			filter := bson.D{primitive.E{Key: "email", Value: name}}
-			update := bson.M{"$set": bson.M{"status": v2ray.DELETE, "node_in_use_status": user.NodeInUseStatus, "suburl": user.Suburl}}
-			_, err = userCollection.UpdateOne(ctx, filter, update)
-			if err != nil {
-				msg := "database user info update failed."
-				c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
-				log.Printf("%s", msg)
-				return
-			}
-		}()
-
-		go func() {
-			defer wg.Done()
-			err = yamlTools.GenerateOneYAML(user)
-			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-				log.Printf("error occured while generating yaml: %v", err)
-				return
-			}
-		}()
-
 		wg.Wait()
+
+		user.ProduceSuburl()
+		filter := bson.D{primitive.E{Key: "email", Value: name}}
+		update := bson.M{"$set": bson.M{"status": v2ray.DELETE, "node_in_use_status": user.NodeInUseStatus, "suburl": user.Suburl}}
+		_, err = userCollection.UpdateOne(ctx, filter, update)
+		if err != nil {
+			msg := "database user info update failed."
+			c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
+			log.Printf("%s", msg)
+			return
+		}
+
+		err = yamlTools.GenerateOneYAML(user)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			log.Printf("error occured while generating yaml: %v", err)
+			return
+		}
+
 		log.Printf("user %s is offline", user.Name)
 		c.JSON(http.StatusOK, gin.H{"message": "User " + user.Name + " is offline!"})
 	}
@@ -632,10 +625,9 @@ func TakeItOnlineByUserName() gin.HandlerFunc {
 		}
 
 		var wg sync.WaitGroup
-		var waitQueueLength = 2
 
 		if NODE_TYPE == "local" {
-			wg.Add(waitQueueLength + 1)
+			wg.Add(1)
 			go func() {
 				defer wg.Done()
 				err = grpctools.GrpcClientToAddUser("0.0.0.0", MIXED_PORT, user, true)
@@ -652,8 +644,7 @@ func TakeItOnlineByUserName() gin.HandlerFunc {
 				}
 			}()
 		} else {
-
-			wg.Add(waitQueueLength + helper.CountNodesInUse(user.NodeInUseStatus))
+			wg.Add(helper.CountNodesInUse(user.NodeInUseStatus))
 			for node, available := range user.NodeInUseStatus {
 				if !available {
 					go func(domain string) {
@@ -664,33 +655,27 @@ func TakeItOnlineByUserName() gin.HandlerFunc {
 				}
 			}
 		}
-
-		go func() {
-			defer wg.Done()
-			user.ProduceSuburl()
-			filter := bson.D{primitive.E{Key: "email", Value: name}}
-			update := bson.M{"$set": bson.M{"status": v2ray.PLAIN, "node_in_use_status": user.NodeInUseStatus, "suburl": user.Suburl}}
-
-			_, err = userCollection.UpdateOne(ctx, filter, update)
-			if err != nil {
-				msg := "database user info update failed."
-				c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
-				log.Printf("%s", msg)
-				return
-			}
-		}()
-
-		go func() {
-			defer wg.Done()
-			err = yamlTools.GenerateOneYAML(user)
-			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-				log.Printf("error occured while generating yaml: %v", err)
-				return
-			}
-		}()
-
 		wg.Wait()
+
+		user.ProduceSuburl()
+		filter := bson.D{primitive.E{Key: "email", Value: name}}
+		update := bson.M{"$set": bson.M{"status": v2ray.PLAIN, "node_in_use_status": user.NodeInUseStatus, "suburl": user.Suburl}}
+
+		_, err = userCollection.UpdateOne(ctx, filter, update)
+		if err != nil {
+			msg := "database user info update failed."
+			c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
+			log.Printf("%s", msg)
+			return
+		}
+
+		err = yamlTools.GenerateOneYAML(user)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			log.Printf("error occured while generating yaml: %v", err)
+			return
+		}
+
 		log.Printf("user %s is online", user.Name)
 		c.JSON(http.StatusOK, gin.H{"message": "User " + user.Name + " is online!"})
 	}
