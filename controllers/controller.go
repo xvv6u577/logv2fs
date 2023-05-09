@@ -536,30 +536,24 @@ func TakeItOfflineByUserName() gin.HandlerFunc {
 			return
 		}
 
-		var wg sync.WaitGroup
-
 		if NODE_TYPE == "local" {
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
-				err = grpctools.GrpcClientToDeleteUser("0.0.0.0", MIXED_PORT, user, true)
-				if err != nil {
-					msg := "v2ray take user back online failed."
-					log.Panicf("%v", msg)
-					c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
-					return
+			err = grpctools.GrpcClientToDeleteUser("0.0.0.0", MIXED_PORT, user, true)
+			if err != nil {
+				msg := "v2ray take user back online failed."
+				log.Panicf("%v", msg)
+				c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
+				return
+			}
+			for node, enable := range user.NodeInUseStatus {
+				if enable {
+					user.NodeInUseStatus[node] = false
 				}
-
-				for node, enable := range user.NodeInUseStatus {
-					if enable {
-						user.NodeInUseStatus[node] = false
-					}
-				}
-			}()
+			}
 		} else {
-			wg.Add(helper.CountNodesInUse(user.NodeInUseStatus))
+			var wg sync.WaitGroup
 			for node, available := range user.NodeInUseStatus {
 				if available {
+					wg.Add(1)
 					go func(domain string) {
 						defer wg.Done()
 						grpctools.GrpcClientToDeleteUser(domain, MIXED_PORT, user, true)
@@ -567,8 +561,8 @@ func TakeItOfflineByUserName() gin.HandlerFunc {
 					user.NodeInUseStatus[node] = false
 				}
 			}
+			wg.Wait()
 		}
-		wg.Wait()
 
 		user.ProduceSuburl()
 		filter := bson.D{primitive.E{Key: "email", Value: name}}
@@ -624,38 +618,33 @@ func TakeItOnlineByUserName() gin.HandlerFunc {
 			return
 		}
 
-		var wg sync.WaitGroup
-
 		if NODE_TYPE == "local" {
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
-				err = grpctools.GrpcClientToAddUser("0.0.0.0", MIXED_PORT, user, true)
-				if err != nil {
-					msg := "v2ray take user back online failed."
-					log.Panicf("%v", msg)
-					c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
-					return
+			err = grpctools.GrpcClientToAddUser("0.0.0.0", MIXED_PORT, user, true)
+			if err != nil {
+				msg := "v2ray take user back online failed."
+				log.Panicf("%v", msg)
+				c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
+				return
+			}
+			for node, enable := range user.NodeInUseStatus {
+				if !enable {
+					user.NodeInUseStatus[node] = true
 				}
-				for node, enable := range user.NodeInUseStatus {
-					if !enable {
-						user.NodeInUseStatus[node] = true
-					}
-				}
-			}()
+			}
 		} else {
-			wg.Add(helper.CountNodesInUse(user.NodeInUseStatus))
+			var wg sync.WaitGroup
 			for node, available := range user.NodeInUseStatus {
 				if !available {
+					wg.Add(1)
 					go func(domain string) {
 						defer wg.Done()
-						grpctools.GrpcClientToAddUser(domain, MIXED_PORT, user, true)
+						grpctools.GrpcClientToAddUser(node, MIXED_PORT, user, true)
 					}(node)
 					user.NodeInUseStatus[node] = true
 				}
 			}
+			wg.Wait()
 		}
-		wg.Wait()
 
 		user.ProduceSuburl()
 		filter := bson.D{primitive.E{Key: "email", Value: name}}
@@ -669,7 +658,7 @@ func TakeItOnlineByUserName() gin.HandlerFunc {
 			return
 		}
 
-		err = yamlTools.GenerateOneByQuery(user.Email)
+		err = yamlTools.GenerateOneYAML(user)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			log.Printf("error occured while generating yaml: %v", err)
@@ -701,61 +690,42 @@ func DeleteUserByUserName() gin.HandlerFunc {
 			return
 		}
 
-		var wg sync.WaitGroup
-		var waitQueueLength = 2
-
 		if user.Status == "plain" {
 			if NODE_TYPE == "local" {
-				wg.Add(waitQueueLength + 1)
-				go func() {
-					defer wg.Done()
-					err = grpctools.GrpcClientToDeleteUser("0.0.0.0", MIXED_PORT, user, true)
-					if err != nil {
-						msg := "v2ray take user offline failed."
-						log.Panicf("%v", msg)
-						c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
-						return
+				err = grpctools.GrpcClientToDeleteUser("0.0.0.0", MIXED_PORT, user, true)
+				if err != nil {
+					msg := "v2ray take user offline failed."
+					log.Panicf("%v", msg)
+					c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
+					return
+				}
+				for node, enable := range user.NodeInUseStatus {
+					if enable {
+						user.NodeInUseStatus[node] = false
 					}
-					for node, enable := range user.NodeInUseStatus {
-						if enable {
-							user.NodeInUseStatus[node] = false
-						}
-					}
-				}()
+				}
 			} else {
-				wg.Add(waitQueueLength + helper.CountNodesInUse(user.NodeInUseStatus))
 				for node, available := range user.NodeInUseStatus {
 					if available {
-						go func(domain string) {
-							defer wg.Done()
-							grpctools.GrpcClientToDeleteUser(domain, MIXED_PORT, user, true)
-						}(node)
+						grpctools.GrpcClientToDeleteUser(node, MIXED_PORT, user, true)
 					}
 				}
 			}
 		}
 
-		go func() {
-			defer wg.Done()
-			err = database.DeleteUserByName(name)
-			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-				log.Printf("DeleteUserByUserName: %s", err.Error())
-				return
-			}
-		}()
+		err = database.DeleteUserByName(name)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			log.Printf("DeleteUserByUserName: %s", err.Error())
+			return
+		}
 
-		go func() {
-			defer wg.Done()
-			err = yamlTools.RemoveOne(user.Name)
-			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-				log.Printf("Remove yaml file by user name: %s", err.Error())
-				return
-			}
-		}()
-
-		wg.Wait()
+		err = yamlTools.RemoveOne(user.Name)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			log.Printf("Remove yaml file by user name: %s", err.Error())
+			return
+		}
 
 		log.Printf("Delete user %s successfully!", user.Name)
 		c.JSON(http.StatusOK, gin.H{"message": "Delete user " + user.Name + " successfully!"})
