@@ -158,17 +158,15 @@ func RunServer() *gin.Engine {
 func recoverFromError(c *gin.Context) {
 	defer func() {
 		if r := recover(); r != nil {
-
-			// 打印错误堆栈信息
+			// Print error stack information
 			log.Panicf("Panic: %v\n", r)
 			debug.PrintStack()
 
-			// 用json封装信息返回
+			// Return information wrapped in json
 			c.JSON(200, gin.H{"code": 4444, "message": "Server internal error!"})
 		}
 	}()
 
-	// 加载完defer recover, 继续后续接口调用
+	// Continue with subsequent interface calls after loading defer recover
 	c.Next()
-
 }
