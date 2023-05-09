@@ -669,7 +669,7 @@ func TakeItOnlineByUserName() gin.HandlerFunc {
 			return
 		}
 
-		err = yamlTools.GenerateOneYAML(user)
+		err = yamlTools.GenerateOneByQuery(user.Email)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			log.Printf("error occured while generating yaml: %v", err)
