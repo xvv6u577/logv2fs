@@ -119,16 +119,15 @@ func RunServer() *gin.Engine {
 		defer cmdConn.Close()
 
 		var wg sync.WaitGroup
-		wg.Add(len(allUsersInDB))
-
 		for _, user := range allUsersInDB {
-			go func(user User) {
-				defer wg.Done()
-				if user.Status == "plain" && user.NodeInUseStatus[CURRENT_DOMAIN] {
+			if user.Status == "plain" && user.NodeInUseStatus[CURRENT_DOMAIN] {
+				wg.Add(1)
+				go func(user User) {
+					defer wg.Done()
 					NHSClient := v2ray.NewHandlerServiceClient(cmdConn, user.Path)
 					NHSClient.AddUser(user)
-				}
-			}(*user)
+				}(*user)
+			}
 		}
 		wg.Wait()
 	}
