@@ -43,7 +43,7 @@ function Android() {
 				<TapToCopied >{process.env.REACT_APP_FILE_AND_SUB_URL + "/clash/" + loginState.jwt.Email + ".yaml"}</TapToCopied>
 			</p>
 			<p className="my-6 text-base font-normal text-gray-500 lg:text-base sm:px-16 xl:px-10 dark:text-sky-200">
-				名称填写: clash, 自动更新填写(一周): 10080
+				名称填写: clash, 自动更新填写(半天): 720
 			</p>
 			<p className="my-6 text-base font-normal text-gray-500 lg:text-base sm:px-16 xl:px-10 dark:text-sky-200">
 				点按右上角图标，保存配置 <br />

@@ -107,7 +107,7 @@ function Mypanel() {
 						</div>
 						<div className="flex flex-col">
 							<div className="text-4xl my-3 text-center">
-								Daily Traffic in the Past 3 Month
+								Daily Traffic in the Past 3 Months
 							</div>
 							<TrafficTable data={user.traffic_by_day} limit={90} by="日期" />
 						</div>
