@@ -30,7 +30,7 @@ function Ihpone() {
 			<p className="my-6 text-baseg font-normal text-gray-500 lg:text-base sm:px-16 xl:px-10 dark:text-sky-200">
 				<code>
 					Apple ID: <TapToCopied>warley8013@gmail.com</TapToCopied><br />
-					Password: <TapToCopied>Google#2006</TapToCopied><br />
+					Password: <TapToCopied>Google#2020</TapToCopied><br />
 				</code>
 				<code className="text-sm py-5">
 					Notice: <br />
