@@ -397,7 +397,7 @@ func AddNode() gin.HandlerFunc {
 			}
 		}
 
-		c.JSON(http.StatusOK, gin.H{"message": "node added successfully"})
+		c.JSON(http.StatusOK, gin.H{"message": "Congrats! Nodes updated in success!"})
 	}
 }
 
