@@ -8,7 +8,7 @@ frontend/tool
 
 yaml/results/*
 cmd/development/
-cmd/in_progress/
+# cmd/in_progress/
 config
 CA
 setup-script*

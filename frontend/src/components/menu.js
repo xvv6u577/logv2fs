@@ -35,7 +35,10 @@ const Menu = () => {
 				</a>
 				<nav className="md:mr-auto md:ml-4 md:py-1 md:pl-4 md:border-l md:border-gray-700	flex flex-wrap items-center text-base justify-center">
 					{loginState.jwt.Role === "admin" && (
-						<a className="mr-5 hover:text-white" href="/home">User Management</a>
+						<>
+							<a className="mr-5 hover:text-white" href="/home">User</a>
+							<a className="mr-5 hover:text-white" href="/domain">Domain</a>
+						</>
 					)}
 					<a className="mr-5 hover:text-white" href="/mypanel">My Panel</a>
 					<a className="mr-5 hover:text-white" href="/macos">MacOS</a>

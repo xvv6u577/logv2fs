@@ -11,6 +11,7 @@ import Iphone from "./components/iphone";
 import Android from "./components/android";
 import Footer from "./components/footer";
 import Mypanel from "./components/mypanel";
+import Domain from "./components/domain";
 
 function RequireAuth({ children }) {
 	const loginState = useSelector((state) => state.login);
@@ -35,6 +36,18 @@ function App() {
 							<div className="flex-1 flex flex-col md:container md:mx-auto" fluid="true">
 								<Menu />
 								<Mypanel />
+								<Footer />
+							</div>
+						</RequireAuth>
+					}
+				></Route>
+				<Route
+					path="/domain"
+					element={
+						<RequireAuth>
+							<div className="flex-1 flex flex-col md:container md:mx-auto" fluid="true">
+								<Menu />
+								<Domain />
 								<Footer />
 							</div>
 						</RequireAuth>

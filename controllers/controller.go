@@ -2,8 +2,10 @@ package controllers
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"log"
+	"net"
 	"os"
 	"strconv"
 	"sync"
@@ -36,6 +38,7 @@ import (
 
 var (
 	userCollection *mongo.Collection = database.OpenCollection(database.Client, "USERS")
+	nodeCollection *mongo.Collection = database.OpenCollection(database.Client, "NODES")
 	validate                         = validator.New()
 	V2_API_ADDRESS                   = os.Getenv("V2_API_ADDRESS")
 	V2_API_PORT                      = os.Getenv("V2_API_PORT")
@@ -54,7 +57,17 @@ type (
 	Headers         = model.Headers
 	WsOpts          = model.WsOpts
 	ProxyGroups     = model.ProxyGroups
+	CurrentNode     = model.CurrentNode
+	NodeAtPeriod    = model.NodeAtPeriod
+	GlobalVariable  = model.GlobalVariable
 )
+
+type DomainInfo struct {
+	Domain       string `json:"domain"`
+	ExpiredDate  string `json:"expired_date"`
+	DaysToExpire int    `json:"days_to_expire"`
+	IsInUVP      bool   `json:"is_in_uvp"`
+}
 
 //HashPassword is used to encrypt the password before it is stored in the DB
 func HashPassword(password string) string {
@@ -348,6 +361,7 @@ func AddNode() gin.HandlerFunc {
 
 		var ctx, cancel = context.WithTimeout(context.Background(), 60*time.Second)
 		defer cancel()
+		// var current = time.Now()
 		var domains map[string]string
 
 		if err := c.BindJSON(&domains); err != nil {
@@ -355,6 +369,47 @@ func AddNode() gin.HandlerFunc {
 			log.Printf("error: %v", err)
 			return
 		}
+
+		// search domain in NODES collection, if not exist, add it.
+		// for domain := range domains {
+		// 	var foundNode model.Node
+		// 	err := nodeCollection.FindOne(ctx, bson.M{"domain": domain}).Decode(&foundNode)
+		// 	if err != nil {
+		// 		if err.Error() == "mongo: no documents in result" {
+		// 			var node CurrentNode
+		// 			node.Domain = domain
+		// 			node.Status = "active"
+		// 			node.NodeAtCurrentYear = NodeAtPeriod{
+		// 				Period:              current.Local().Format("2006"),
+		// 				Amount:              0,
+		// 				UserTrafficAtPeriod: map[string]int64{},
+		// 			}
+		// 			node.NodeAtCurrentMonth = NodeAtPeriod{
+		// 				Period:              current.Local().Format("200601"),
+		// 				Amount:              0,
+		// 				UserTrafficAtPeriod: map[string]int64{},
+		// 			}
+		// 			node.NodeAtCurrentDay = NodeAtPeriod{
+		// 				Period:              current.Local().Format("20060102"),
+		// 				Amount:              0,
+		// 				UserTrafficAtPeriod: map[string]int64{},
+		// 			}
+		// 			node.NodeByYear = []NodeAtPeriod{}
+		// 			node.NodeByMonth = []NodeAtPeriod{}
+		// 			node.NodeByDay = []NodeAtPeriod{}
+		// 			node.CreatedAt = current
+		// 			node.UpdatedAt = current
+
+		// 			_, err = nodeCollection.InsertOne(ctx, node)
+		// 			if err != nil {
+		// 				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		// 				log.Printf("error occured while inserting node: %v", err)
+		// 				return
+		// 			}
+
+		// 		}
+		// 	}
+		// }
 
 		var projections = bson.D{
 			{Key: "used_by_current_year", Value: 0},
@@ -1052,5 +1107,130 @@ func EnableNodePerUser() gin.HandlerFunc {
 
 		log.Printf("Enable user: %v, node: %v by hand!", sanitize.SanitizeStr(email), sanitize.SanitizeStr(node))
 		c.JSON(http.StatusOK, gin.H{"message": "Enable user: " + email + " at node: " + node + " successfully!"})
+	}
+}
+
+func GetDomainInfo() gin.HandlerFunc {
+	return func(c *gin.Context) {
+
+		err := helper.CheckUserType(c, "admin")
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		var ctx, cancel = context.WithTimeout(context.Background(), 60*time.Second)
+		defer cancel()
+
+		// query GlobalVariable
+		var domainInfos = []DomainInfo{}
+		var foundGlobal GlobalVariable
+		var filter = bson.D{primitive.E{Key: "name", Value: "GLOBAL"}}
+		err = userCollection.FindOne(ctx, filter).Decode(&foundGlobal)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			log.Printf("FindOne error: %v", err)
+			return
+		}
+		tempArray, err := buildDomainInfo(foundGlobal.DomainList, false)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			log.Printf("error occured while parsing domain info: %v", err)
+			return
+		}
+		domainInfos = append(domainInfos, tempArray...)
+
+		// query user
+		var adminUser model.User
+		var userId = ADMINUSERID
+		err = userCollection.FindOne(ctx, bson.M{"user_id": userId}).Decode(&adminUser)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			log.Printf("FindOne error: %v", err)
+			return
+		}
+		tempArray, err = buildDomainInfo(adminUser.NodeGlobalList, true)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			log.Printf("error occured while parsing domain info: %v", err)
+			return
+		}
+		domainInfos = append(domainInfos, tempArray...)
+
+		c.JSON(http.StatusOK, domainInfos)
+	}
+}
+
+func buildDomainInfo(domains map[string]string, isInUvp bool) ([]DomainInfo, error) {
+
+	var minorDomainInfos []DomainInfo
+	var port = "443"
+	var conf = &tls.Config{
+		// InsecureSkipVerify: true,
+	}
+
+	for _, domain := range domains {
+		if domain == "localhost" {
+			continue
+		}
+
+		conn, err := tls.DialWithDialer(&net.Dialer{Timeout: 5 * time.Second}, "tcp", domain+":"+port, conf)
+		if err != nil {
+			log.Printf("error occured while parsing domain info: %v", err)
+			return nil, err
+		}
+		err = conn.VerifyHostname(domain)
+		if err != nil {
+			log.Printf("error occured while parsing domain info: %v", err)
+			return nil, err
+		}
+		expiry := conn.ConnectionState().PeerCertificates[0].NotAfter
+
+		minorDomainInfos = append(minorDomainInfos, DomainInfo{
+			IsInUVP:      isInUvp,
+			Domain:       domain,
+			ExpiredDate:  expiry.Local().Format("2006-01-02 15:04:05"),
+			DaysToExpire: int(time.Until(expiry).Hours() / 24),
+		})
+		defer conn.Close()
+	}
+
+	return minorDomainInfos, nil
+}
+
+func UpdateDomainInfo() gin.HandlerFunc {
+	return func(c *gin.Context) {
+
+		err := helper.CheckUserType(c, "admin")
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		var tempDomainList map[string]string
+		err = c.BindJSON(&tempDomainList)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			log.Printf("BindJSON error: %v", err)
+			return
+		}
+
+		// replace domain_list in GlobalVariable in userCollection with tempDomainList
+		var ctx, cancel = context.WithTimeout(context.Background(), 60*time.Second)
+		defer cancel()
+
+		var replacedDocument GlobalVariable
+		err = userCollection.FindOneAndUpdate(ctx,
+			bson.M{"name": "GLOBAL"},
+			bson.M{"$set": bson.M{"domain_list": tempDomainList}},
+			options.FindOneAndUpdate().SetReturnDocument(1),
+		).Decode(&replacedDocument)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			log.Printf("FindOneAndUpdate error: %v", err)
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{"message": "Update GLOBAL domain list successfully!"})
 	}
 }

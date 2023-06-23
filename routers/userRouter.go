@@ -53,4 +53,7 @@ func UserRoutes(incomingRoutes *gin.Engine) {
 	incomingRoutes.PUT("/v1/addnode", controller.AddNode())
 	incomingRoutes.GET("/v1/disanodeperusr", controller.DisableNodePerUser())
 	incomingRoutes.GET("/v1/enanodeperusr", controller.EnableNodePerUser())
+
+	incomingRoutes.GET("/v1/domaininfo", controller.GetDomainInfo())
+	incomingRoutes.PUT("/v1/updatedomaininfo", controller.UpdateDomainInfo())
 }

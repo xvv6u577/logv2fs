@@ -41,33 +41,33 @@ function Mypanel() {
 			<Alert message={message.content} type={message.type} shown={message.show} close={() => { dispatch(reset({})); }} />
 			<div className="flex flex-col md:flex-row">
 				<div className="grow p-6 m-3 bg-white rounded-lg border border-gray-200 shadow-md hover:bg-gray-100 dark:bg-gray-800 dark:border-gray-700 dark:hover:bg-gray-700">
-					<div className="h3">
+					<h4 className="text-3xl font-extrabold dark:text-white">
 						{user.used_by_current_day &&
 							formatBytes(user.used_by_current_day.amount)}
-					</div>
+					</h4>
 					<p>
 						Traffic Used Today (
 						{user.used_by_current_day && user.used_by_current_day.period})
 					</p>
 				</div>
 				<div className="grow p-6 m-3 md:mx-2 bg-white rounded-lg border border-gray-200 shadow-md hover:bg-gray-100 dark:bg-gray-800 dark:border-gray-700 dark:hover:bg-gray-700">
-					<div className="h3">
+					<h4 className="text-3xl font-extrabold dark:text-white">
 						{user.used_by_current_month &&
 							formatBytes(user.used_by_current_month.amount)}
-					</div>
+					</h4>
 					<p>
 						Traffic Used This Month (
 						{user.used_by_current_month && user.used_by_current_month.period})
 					</p>
 				</div>
 				<div className="grow p-6 m-3 bg-white rounded-lg border border-gray-200 shadow-md hover:bg-gray-100 dark:bg-gray-800 dark:border-gray-700 dark:hover:bg-gray-700">
-					<div className="h3">{user && formatBytes(user.used)}</div>
+					<h4 className="text-3xl font-extrabold dark:text-white">{user && formatBytes(user.used)}</h4>
 					<p>Traffic Used In Total</p>
 				</div>
 			</div>
 			<div className="w-full md:w-3/4 mx-auto flex justify-center bg-white border border-gray-200 rounded-lg shadow-md sm:p-6 md:p-8 dark:bg-gray-800 dark:border-gray-700" >
 				<div>
-					<h5 className="text-xl py-2 font-medium text-gray-900 dark:text-white">Basic Info</h5>
+					<h5 className="text-4xl py-2 font-extrabold text-gray-900 dark:text-white">Basic Info</h5>
 					<div className="py-1 flex justify-between items-center">
 						<pre className="inline text-sm font-medium text-gray-900 dark:text-white">Email: </pre>
 						<TapToCopied>{user.email}</TapToCopied>
