@@ -15,12 +15,19 @@ function Domain() {
     const rerenderSignal = useSelector((state) => state.rerender);
 
     useEffect(() => {
+        if (message.show === true) {
+            setTimeout(() => {
+                dispatch(alert({ show: false }));
+            }, 5000);
+        }
+    }, [message, dispatch]);
+
+    useEffect(() => {
         axios
-            .get(process.env.REACT_APP_API_HOST + "/domaininfo", {
+            .get(process.env.REACT_APP_API_HOST + "domaininfo", {
                 headers: { token: loginState.token },
             })
             .then((response) => {
-                console.log(response.data);
                 setDomains(response.data);
             })
             .catch((err) => {
@@ -37,7 +44,6 @@ function Domain() {
                 tempDomainList[domain.domain] = domain.domain;
             }
         })
-        console.log(tempDomainList);
 
         axios({
             method: "put",

@@ -13,6 +13,7 @@ func AuthRoutes(incomingRoutes *gin.Engine) {
 	FRONTEND_PATH := "./frontend/build/"
 	incomingRoutes.Use(static.Serve("/login", static.LocalFile(FRONTEND_PATH, true)))
 	incomingRoutes.Use(static.Serve("/home", static.LocalFile(FRONTEND_PATH, true)))
+	incomingRoutes.Use(static.Serve("/domain", static.LocalFile(FRONTEND_PATH, true)))
 	incomingRoutes.Use(static.Serve("/mypanel", static.LocalFile(FRONTEND_PATH, true)))
 	incomingRoutes.Use(static.Serve("/logout", static.LocalFile(FRONTEND_PATH, true)))
 	incomingRoutes.Use(static.Serve("/macos", static.LocalFile(FRONTEND_PATH, true)))
