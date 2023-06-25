@@ -906,9 +906,9 @@ func GetAllUsers() gin.HandlerFunc {
 			{Key: "credit", Value: 1},
 			{Key: "created_at", Value: 1},
 			{Key: "updated_at", Value: 1},
-			{Key: "used_by_current_day", Value: 0},
-			{Key: "used_by_current_month", Value: 0},
-			{Key: "used_by_current_year", Value: 0},
+			{Key: "used_by_current_day", Value: 1},
+			{Key: "used_by_current_month", Value: 1},
+			{Key: "used_by_current_year", Value: 1},
 		}
 
 		allUsers, err := database.GetPartialInfosForAllUsers(projections)
