@@ -10,7 +10,7 @@ import (
 )
 
 var (
-	userCollection *mongo.Collection = database.OpenCollection(database.Client, "USERS")
+	globalCollection *mongo.Collection = database.OpenCollection(database.Client, "GLOBAL")
 )
 
 type (
@@ -29,7 +29,7 @@ func main() {
 	}
 
 	// insert into database
-	_, err := userCollection.InsertOne(ctx, global)
+	_, err := globalCollection.InsertOne(ctx, global)
 	if err != nil {
 		panic(err)
 	}

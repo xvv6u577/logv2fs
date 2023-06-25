@@ -38,14 +38,15 @@ import (
 
 var (
 	userCollection *mongo.Collection = database.OpenCollection(database.Client, "USERS")
-	nodeCollection *mongo.Collection = database.OpenCollection(database.Client, "NODES")
-	validate                         = validator.New()
-	V2_API_ADDRESS                   = os.Getenv("V2_API_ADDRESS")
-	V2_API_PORT                      = os.Getenv("V2_API_PORT")
-	NODE_TYPE                        = os.Getenv("NODE_TYPE")
-	CURRENT_DOMAIN                   = os.Getenv("CURRENT_DOMAIN")
-	MIXED_PORT                       = os.Getenv("MIXED_PORT")
-	ADMINUSERID                      = os.Getenv("ADMINUSERID")
+	// nodeCollection *mongo.Collection = database.OpenCollection(database.Client, "NODES")
+	globalCollection *mongo.Collection = database.OpenCollection(database.Client, "GLOBAL")
+	validate                           = validator.New()
+	V2_API_ADDRESS                     = os.Getenv("V2_API_ADDRESS")
+	V2_API_PORT                        = os.Getenv("V2_API_PORT")
+	NODE_TYPE                          = os.Getenv("NODE_TYPE")
+	CURRENT_DOMAIN                     = os.Getenv("CURRENT_DOMAIN")
+	MIXED_PORT                         = os.Getenv("MIXED_PORT")
+	ADMINUSERID                        = os.Getenv("ADMINUSERID")
 )
 
 type (
@@ -293,8 +294,8 @@ func Login() gin.HandlerFunc {
 			return
 		}
 
-		boundUser_email := sanitize.SanitizeStr(boundUser.Email)
-		err := userCollection.FindOne(ctx, bson.M{"email": boundUser_email}).Decode(&foundUser)
+		sanitized_email := sanitize.SanitizeStr(boundUser.Email)
+		err := userCollection.FindOne(ctx, bson.M{"email": sanitized_email}).Decode(&foundUser)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			log.Printf("error: %v", err)
@@ -308,11 +309,10 @@ func Login() gin.HandlerFunc {
 			return
 		}
 
-		token, refreshToken, _ := helper.GenerateAllTokens(boundUser_email, foundUser.UUID, foundUser.Path, foundUser.Role, foundUser.User_id)
+		token, refreshToken, _ := helper.GenerateAllTokens(sanitized_email, foundUser.UUID, foundUser.Path, foundUser.Role, foundUser.User_id)
 
 		helper.UpdateAllTokens(token, refreshToken, foundUser.User_id)
 		var projections = bson.D{
-			{Key: "_id", Value: 0},
 			{Key: "token", Value: 1},
 		}
 
@@ -337,7 +337,12 @@ func GetUserSimpleInfo() gin.HandlerFunc {
 			name = c.Param("name")
 		}
 
-		var projections = bson.D{}
+		var projections = bson.D{
+			{Key: "email", Value: 1},
+			{Key: "uuid", Value: 1},
+			{Key: "path", Value: 1},
+			{Key: "node_in_use_status", Value: 1},
+		}
 		user, err := database.GetUserByName(name, projections)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -412,15 +417,12 @@ func AddNode() gin.HandlerFunc {
 		// }
 
 		var projections = bson.D{
-			{Key: "used_by_current_year", Value: 0},
-			{Key: "used_by_current_month", Value: 0},
-			{Key: "used_by_current_day", Value: 0},
-			{Key: "traffic_by_year", Value: 0},
-			{Key: "traffic_by_month", Value: 0},
-			{Key: "traffic_by_day", Value: 0},
-			{Key: "password", Value: 0},
-			{Key: "refresh_token", Value: 0},
-			{Key: "token", Value: 0},
+			{Key: "node_global_list", Value: 1},
+			{Key: "node_in_use_status", Value: 1},
+			{Key: "suburl", Value: 1},
+			{Key: "role", Value: 1},
+			{Key: "email", Value: 1},
+			{Key: "user_id", Value: 1},
 		}
 		allUsers, err := database.GetPartialInfosForAllUsers(projections)
 		if err != nil {
@@ -574,14 +576,20 @@ func TakeItOfflineByUserName() gin.HandlerFunc {
 
 		name := sanitize.SanitizeStr(c.Param("name"))
 		var projections = bson.D{
-			{Key: "used_by_current_year", Value: 0},
-			{Key: "used_by_current_month", Value: 0},
-			{Key: "used_by_current_day", Value: 0},
-			{Key: "traffic_by_year", Value: 0},
-			{Key: "traffic_by_month", Value: 0},
-			{Key: "password", Value: 0},
-			{Key: "refresh_token", Value: 0},
-			{Key: "token", Value: 0},
+			{Key: "email", Value: 1},
+			{Key: "path", Value: 1},
+			{Key: "name", Value: 1},
+			{Key: "node_in_use_status", Value: 1},
+			{Key: "uuid", Value: 1},
+			{Key: "role", Value: 1},
+			{Key: "status", Value: 1},
+			{Key: "suburl", Value: 1},
+			{Key: "user_id", Value: 1},
+			{Key: "node_global_list", Value: 1},
+			{Key: "used", Value: 1},
+			{Key: "credit", Value: 1},
+			{Key: "created_at", Value: 1},
+			{Key: "updated_at", Value: 1},
 		}
 		user, err := database.GetUserByName(name, projections)
 		if err != nil {
@@ -655,14 +663,20 @@ func TakeItOnlineByUserName() gin.HandlerFunc {
 		defer cancel()
 		name := sanitize.SanitizeStr(c.Param("name"))
 		var projections = bson.D{
-			{Key: "used_by_current_year", Value: 0},
-			{Key: "used_by_current_month", Value: 0},
-			{Key: "used_by_current_day", Value: 0},
-			{Key: "traffic_by_year", Value: 0},
-			{Key: "traffic_by_month", Value: 0},
-			{Key: "password", Value: 0},
-			{Key: "refresh_token", Value: 0},
-			{Key: "token", Value: 0},
+			{Key: "email", Value: 1},
+			{Key: "path", Value: 1},
+			{Key: "name", Value: 1},
+			{Key: "node_in_use_status", Value: 1},
+			{Key: "uuid", Value: 1},
+			{Key: "role", Value: 1},
+			{Key: "status", Value: 1},
+			{Key: "suburl", Value: 1},
+			{Key: "user_id", Value: 1},
+			{Key: "node_global_list", Value: 1},
+			{Key: "used", Value: 1},
+			{Key: "credit", Value: 1},
+			{Key: "created_at", Value: 1},
+			{Key: "updated_at", Value: 1},
 		}
 
 		user, err := database.GetUserByName(name, projections)
@@ -735,7 +749,22 @@ func DeleteUserByUserName() gin.HandlerFunc {
 		}
 
 		name := c.Param("name")
-		var projections = bson.D{}
+		var projections = bson.D{
+			{Key: "email", Value: 1},
+			{Key: "path", Value: 1},
+			{Key: "name", Value: 1},
+			{Key: "node_in_use_status", Value: 1},
+			{Key: "uuid", Value: 1},
+			{Key: "role", Value: 1},
+			{Key: "status", Value: 1},
+			{Key: "suburl", Value: 1},
+			{Key: "user_id", Value: 1},
+			{Key: "node_global_list", Value: 1},
+			{Key: "used", Value: 1},
+			{Key: "credit", Value: 1},
+			{Key: "created_at", Value: 1},
+			{Key: "updated_at", Value: 1},
+		}
 
 		user, err := database.GetUserByName(name, projections)
 		if err != nil {
@@ -863,13 +892,23 @@ func GetAllUsers() gin.HandlerFunc {
 		}
 
 		var projections = bson.D{
-			{Key: "_id", Value: 0},
-			{Key: "token", Value: 0},
-			{Key: "password", Value: 0},
-			{Key: "refresh_token", Value: 0},
-			{Key: "traffic_by_year", Value: 0},
-			{Key: "traffic_by_month", Value: 0},
-			{Key: "traffic_by_day", Value: 0},
+			{Key: "email", Value: 1},
+			{Key: "path", Value: 1},
+			{Key: "name", Value: 1},
+			{Key: "node_in_use_status", Value: 1},
+			{Key: "uuid", Value: 1},
+			{Key: "role", Value: 1},
+			{Key: "status", Value: 1},
+			{Key: "suburl", Value: 1},
+			{Key: "user_id", Value: 1},
+			{Key: "node_global_list", Value: 1},
+			{Key: "used", Value: 1},
+			{Key: "credit", Value: 1},
+			{Key: "created_at", Value: 1},
+			{Key: "updated_at", Value: 1},
+			{Key: "used_by_current_day", Value: 0},
+			{Key: "used_by_current_month", Value: 0},
+			{Key: "used_by_current_year", Value: 0},
 		}
 
 		allUsers, err := database.GetPartialInfosForAllUsers(projections)
@@ -920,7 +959,6 @@ func GetUserByName() gin.HandlerFunc {
 			{Key: "name", Value: 1},
 			{Key: "node_global_list", Value: 1},
 			{Key: "node_in_use_status", Value: 1},
-			{Key: "_id", Value: 0},
 		}
 		user, err := database.GetUserByName(name, projections)
 		if err != nil {
@@ -937,7 +975,9 @@ func GetSubscripionURL() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		name := c.Param("name")
 
-		var projections = bson.D{}
+		var projections = bson.D{
+			{Key: "suburl", Value: 1},
+		}
 		user, err := database.GetUserByName(name, projections)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -986,14 +1026,21 @@ func DisableNodePerUser() gin.HandlerFunc {
 		node := sanitize.SanitizeStr(c.Request.URL.Query().Get("node"))
 
 		var projections = bson.D{
-			{Key: "used_by_current_year", Value: 0},
-			{Key: "used_by_current_month", Value: 0},
-			{Key: "used_by_current_day", Value: 0},
-			{Key: "traffic_by_year", Value: 0},
-			{Key: "traffic_by_month", Value: 0},
-			{Key: "password", Value: 0},
-			{Key: "refresh_token", Value: 0},
 			{Key: "token", Value: 0},
+			{Key: "email", Value: 1},
+			{Key: "path", Value: 1},
+			{Key: "name", Value: 1},
+			{Key: "node_in_use_status", Value: 1},
+			{Key: "uuid", Value: 1},
+			{Key: "role", Value: 1},
+			{Key: "status", Value: 1},
+			{Key: "suburl", Value: 1},
+			{Key: "user_id", Value: 1},
+			{Key: "node_global_list", Value: 1},
+			{Key: "used", Value: 1},
+			{Key: "credit", Value: 1},
+			{Key: "created_at", Value: 1},
+			{Key: "updated_at", Value: 1},
 		}
 		user, err := database.GetUserByName(email, projections)
 		if err != nil {
@@ -1057,14 +1104,21 @@ func EnableNodePerUser() gin.HandlerFunc {
 		node := sanitize.SanitizeStr(c.Request.URL.Query().Get("node"))
 
 		var projections = bson.D{
-			{Key: "used_by_current_year", Value: 0},
-			{Key: "used_by_current_month", Value: 0},
-			{Key: "used_by_current_day", Value: 0},
-			{Key: "traffic_by_year", Value: 0},
-			{Key: "traffic_by_month", Value: 0},
-			{Key: "password", Value: 0},
-			{Key: "refresh_token", Value: 0},
 			{Key: "token", Value: 0},
+			{Key: "email", Value: 1},
+			{Key: "path", Value: 1},
+			{Key: "name", Value: 1},
+			{Key: "node_in_use_status", Value: 1},
+			{Key: "uuid", Value: 1},
+			{Key: "role", Value: 1},
+			{Key: "status", Value: 1},
+			{Key: "suburl", Value: 1},
+			{Key: "user_id", Value: 1},
+			{Key: "node_global_list", Value: 1},
+			{Key: "used", Value: 1},
+			{Key: "credit", Value: 1},
+			{Key: "created_at", Value: 1},
+			{Key: "updated_at", Value: 1},
 		}
 		user, err := database.GetUserByName(email, projections)
 		if err != nil {
@@ -1126,7 +1180,7 @@ func GetDomainInfo() gin.HandlerFunc {
 		var domainInfos = []DomainInfo{}
 		var foundGlobal GlobalVariable
 		var filter = bson.D{primitive.E{Key: "name", Value: "GLOBAL"}}
-		err = userCollection.FindOne(ctx, filter).Decode(&foundGlobal)
+		err = globalCollection.FindOne(ctx, filter).Decode(&foundGlobal)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			log.Printf("FindOne error: %v", err)
@@ -1215,12 +1269,12 @@ func UpdateDomainInfo() gin.HandlerFunc {
 			return
 		}
 
-		// replace domain_list in GlobalVariable in userCollection with tempDomainList
+		// replace domain_list in GlobalVariable in globalCollection with tempDomainList
 		var ctx, cancel = context.WithTimeout(context.Background(), 60*time.Second)
 		defer cancel()
 
 		var replacedDocument GlobalVariable
-		err = userCollection.FindOneAndUpdate(ctx,
+		err = globalCollection.FindOneAndUpdate(ctx,
 			bson.M{"name": "GLOBAL"},
 			bson.M{"$set": bson.M{"domain_list": tempDomainList}},
 			options.FindOneAndUpdate().SetReturnDocument(1),

@@ -97,18 +97,29 @@ func RunServer() *gin.Engine {
 	time.Sleep(time.Second)
 
 	var projections = bson.D{
-		{Key: "_id", Value: 0},
-		{Key: "token", Value: 0},
-		{Key: "password", Value: 0},
-		{Key: "refresh_token", Value: 0},
-		{Key: "used_by_current_day", Value: 0},
-		{Key: "used_by_current_month", Value: 0},
-		{Key: "used_by_current_year", Value: 0},
-		{Key: "traffic_by_day", Value: 0},
-		{Key: "traffic_by_month", Value: 0},
-		{Key: "traffic_by_year", Value: 0},
-		{Key: "suburl", Value: 0},
+		{Key: "email", Value: 1},
+		{Key: "name", Value: 1},
+		{Key: "path", Value: 1},
+		{Key: "status", Value: 1},
+		{Key: "uuid", Value: 1},
+		{Key: "node_in_use_status", Value: 1},
+		{Key: "role", Value: 1},
+		{Key: "used", Value: 1},
+		{Key: "credit", Value: 1},
 	}
+	// var projections = bson.D{
+	// 	{Key: "_id", Value: 0},
+	// 	{Key: "token", Value: 0},
+	// 	{Key: "password", Value: 0},
+	// 	{Key: "refresh_token", Value: 0},
+	// 	{Key: "used_by_current_day", Value: 0},
+	// 	{Key: "used_by_current_month", Value: 0},
+	// 	{Key: "used_by_current_year", Value: 0},
+	// 	{Key: "traffic_by_day", Value: 0},
+	// 	{Key: "traffic_by_month", Value: 0},
+	// 	{Key: "traffic_by_year", Value: 0},
+	// 	{Key: "suburl", Value: 0},
+	// }
 	allUsersInDB, _ := database.GetPartialInfosForAllUsers(projections)
 	if len(allUsersInDB) != 0 {
 
@@ -120,7 +131,7 @@ func RunServer() *gin.Engine {
 
 		var wg sync.WaitGroup
 		for _, user := range allUsersInDB {
-			if user.Status == "plain" && user.NodeInUseStatus[CURRENT_DOMAIN] {
+			if user.Name != "GLOBAL" && user.Status == "plain" && user.NodeInUseStatus[CURRENT_DOMAIN] {
 				wg.Add(1)
 				go func(user User) {
 					defer wg.Done()
