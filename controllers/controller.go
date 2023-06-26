@@ -423,6 +423,7 @@ func AddNode() gin.HandlerFunc {
 			{Key: "role", Value: 1},
 			{Key: "email", Value: 1},
 			{Key: "user_id", Value: 1},
+			{Key: "status", Value: 1},
 		}
 		allUsers, err := database.GetPartialInfosForAllUsers(projections)
 		if err != nil {
