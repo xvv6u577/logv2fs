@@ -1026,7 +1026,6 @@ func DisableNodePerUser() gin.HandlerFunc {
 		node := sanitize.SanitizeStr(c.Request.URL.Query().Get("node"))
 
 		var projections = bson.D{
-			{Key: "token", Value: 0},
 			{Key: "email", Value: 1},
 			{Key: "path", Value: 1},
 			{Key: "name", Value: 1},
@@ -1104,7 +1103,6 @@ func EnableNodePerUser() gin.HandlerFunc {
 		node := sanitize.SanitizeStr(c.Request.URL.Query().Get("node"))
 
 		var projections = bson.D{
-			{Key: "token", Value: 0},
 			{Key: "email", Value: 1},
 			{Key: "path", Value: 1},
 			{Key: "name", Value: 1},
