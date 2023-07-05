@@ -46,7 +46,7 @@ function Mypanel() {
 							formatBytes(user.used_by_current_day.amount)}
 					</h4>
 					<p>
-						Traffic Used Today (
+						Used Today (
 						{user.used_by_current_day && user.used_by_current_day.period})
 					</p>
 				</div>
@@ -56,13 +56,13 @@ function Mypanel() {
 							formatBytes(user.used_by_current_month.amount)}
 					</h4>
 					<p>
-						Traffic Used This Month (
+						Used This Month (
 						{user.used_by_current_month && user.used_by_current_month.period})
 					</p>
 				</div>
 				<div className="grow p-6 m-3 bg-white rounded-lg border border-gray-200 shadow-md hover:bg-gray-100 dark:bg-gray-800 dark:border-gray-700 dark:hover:bg-gray-700">
 					<h4 className="text-3xl font-extrabold dark:text-white">{user && formatBytes(user.used)}</h4>
-					<p>Traffic Used In Total</p>
+					<p>Used In Total</p>
 				</div>
 			</div>
 			<div className="w-full md:w-3/4 mx-auto flex justify-center bg-white border border-gray-200 rounded-lg shadow-md sm:p-6 md:p-8 dark:bg-gray-800 dark:border-gray-700" >
@@ -101,13 +101,13 @@ function Mypanel() {
 					<div className="">
 						<div className="px-3 flex flex-col">
 							<div className="text-4xl my-3 text-center">
-								Monthly Traffic in the Past 1 Year
+								Monthly Used in the Past 1 Year
 							</div>
 							<TrafficTable data={user.traffic_by_month} limit={12} by="月份" />
 						</div>
 						<div className="flex flex-col">
 							<div className="text-4xl my-3 text-center">
-								Daily Traffic in the Past 3 Months
+								Daily Used in the Past 3 Months
 							</div>
 							<TrafficTable data={user.traffic_by_day} limit={90} by="日期" />
 						</div>

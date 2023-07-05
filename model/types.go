@@ -51,6 +51,7 @@ type TrafficInDB struct {
 	CreatedAt time.Time `json:"created_at" bson:"created_at"`
 	Total     int64     `json:"total" bson:"total"`
 	Domain    string    `json:"domain" bson:"domain"`
+	Email     string    `json:"email" bson:"email"`
 }
 
 type Node struct {
