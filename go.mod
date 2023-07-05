@@ -7,7 +7,7 @@ require (
 	github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d
 	github.com/v2fly/v2ray-core/v4 v4.44.0
 	go.mongodb.org/mongo-driver v1.9.1
-	google.golang.org/grpc v1.41.0
+	google.golang.org/grpc v1.53.0
 )
 
 require (
@@ -20,7 +20,7 @@ require (
 	github.com/robfig/cron v1.2.0
 	github.com/shomali11/parallelizer v0.0.0-20210506023428-ed2dd4732c78
 	golang.org/x/crypto v0.1.0
-	google.golang.org/protobuf v1.27.1
+	google.golang.org/protobuf v1.28.1
 	gopkg.in/yaml.v2 v2.4.0
 )
 
@@ -52,5 +52,5 @@ require (
 	golang.org/x/sync v0.0.0-20220722155255-886fb9371eb4 // indirect
 	golang.org/x/sys v0.5.0 // indirect
 	golang.org/x/text v0.7.0 // indirect
-	google.golang.org/genproto v0.0.0-20200526211855-cb27e3aa2013 // indirect
+	google.golang.org/genproto v0.0.0-20230110181048-76db0878b65f // indirect
 )
