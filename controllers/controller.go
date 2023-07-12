@@ -37,8 +37,8 @@ import (
 )
 
 var (
-	userCollection *mongo.Collection = database.OpenCollection(database.Client, "USERS")
-	// nodeCollection *mongo.Collection = database.OpenCollection(database.Client, "NODES")
+	userCollection   *mongo.Collection = database.OpenCollection(database.Client, "USERS")
+	nodeCollection   *mongo.Collection = database.OpenCollection(database.Client, "NODES")
 	globalCollection *mongo.Collection = database.OpenCollection(database.Client, "GLOBAL")
 	validate                           = validator.New()
 	V2_API_ADDRESS                     = os.Getenv("V2_API_ADDRESS")
@@ -366,7 +366,7 @@ func AddNode() gin.HandlerFunc {
 
 		var ctx, cancel = context.WithTimeout(context.Background(), 60*time.Second)
 		defer cancel()
-		// var current = time.Now()
+		var current = time.Now().Local()
 		var domains map[string]string
 
 		if err := c.BindJSON(&domains); err != nil {
@@ -375,46 +375,99 @@ func AddNode() gin.HandlerFunc {
 			return
 		}
 
-		// search domain in NODES collection, if not exist, add it.
-		// for domain := range domains {
-		// 	var foundNode model.Node
-		// 	err := nodeCollection.FindOne(ctx, bson.M{"domain": domain}).Decode(&foundNode)
-		// 	if err != nil {
-		// 		if err.Error() == "mongo: no documents in result" {
-		// 			var node CurrentNode
-		// 			node.Domain = domain
-		// 			node.Status = "active"
-		// 			node.NodeAtCurrentYear = NodeAtPeriod{
-		// 				Period:              current.Local().Format("2006"),
-		// 				Amount:              0,
-		// 				UserTrafficAtPeriod: map[string]int64{},
-		// 			}
-		// 			node.NodeAtCurrentMonth = NodeAtPeriod{
-		// 				Period:              current.Local().Format("200601"),
-		// 				Amount:              0,
-		// 				UserTrafficAtPeriod: map[string]int64{},
-		// 			}
-		// 			node.NodeAtCurrentDay = NodeAtPeriod{
-		// 				Period:              current.Local().Format("20060102"),
-		// 				Amount:              0,
-		// 				UserTrafficAtPeriod: map[string]int64{},
-		// 			}
-		// 			node.NodeByYear = []NodeAtPeriod{}
-		// 			node.NodeByMonth = []NodeAtPeriod{}
-		// 			node.NodeByDay = []NodeAtPeriod{}
-		// 			node.CreatedAt = current
-		// 			node.UpdatedAt = current
+		// query all nodes by projections, combine domain and status into a map
+		var allNodes = map[string]string{}
+		var nodeProjections = bson.D{
+			{Key: "domain", Value: 1},
+			{Key: "status", Value: 1},
+		}
 
-		// 			_, err = nodeCollection.InsertOne(ctx, node)
-		// 			if err != nil {
-		// 				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		// 				log.Printf("error occured while inserting node: %v", err)
-		// 				return
-		// 			}
+		cursor, err := nodeCollection.Find(ctx, bson.M{}, options.Find().SetProjection(nodeProjections))
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			log.Printf("error occured while finding nodes")
+			return
+		}
 
-		// 		}
-		// 	}
-		// }
+		for cursor.Next(ctx) {
+			var t CurrentNode
+			err := cursor.Decode(&t)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				log.Printf("error occured while decoding nodes")
+				return
+			}
+			allNodes[t.Domain] = t.Status
+		}
+
+		for _, domain := range domains {
+
+			// if it is a local mode, only localhost is checked; if it is a remote(main/attached) mode, all remote domain are checked.
+			if NODE_TYPE == "local" && domain != "localhost" {
+				continue
+			}
+
+			// check if domain is in allNodes, if not, insert new one into nodeCollection; if yes, check if it is inactive, if yes, enable it.
+			if _, ok := allNodes[domain]; !ok {
+				var node CurrentNode
+				node.Domain = domain
+				node.Status = "active"
+				node.NodeAtCurrentYear = NodeAtPeriod{
+					Period:              current.Local().Format("2006"),
+					Amount:              0,
+					UserTrafficAtPeriod: map[string]int64{},
+				}
+				node.NodeAtCurrentMonth = NodeAtPeriod{
+					Period:              current.Local().Format("200601"),
+					Amount:              0,
+					UserTrafficAtPeriod: map[string]int64{},
+				}
+				node.NodeAtCurrentDay = NodeAtPeriod{
+					Period:              current.Local().Format("20060102"),
+					Amount:              0,
+					UserTrafficAtPeriod: map[string]int64{},
+				}
+				node.NodeByYear = []NodeAtPeriod{}
+				node.NodeByMonth = []NodeAtPeriod{}
+				node.NodeByDay = []NodeAtPeriod{}
+				node.CreatedAt = current
+				node.UpdatedAt = current
+
+				_, err = nodeCollection.InsertOne(ctx, node)
+				if err != nil {
+					c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+					log.Printf("error occured while inserting node: %v", err)
+					return
+				}
+
+			}
+
+			if allNodes[domain] == "inactive" {
+				filter := bson.D{primitive.E{Key: "domain", Value: domain}}
+				update := bson.M{"$set": bson.M{"status": "active", "updated_at": time.Now().Local()}}
+				_, err = nodeCollection.UpdateOne(ctx, filter, update)
+				if err != nil {
+					c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+					log.Printf("error occured while updating node: %v", err)
+					return
+				}
+			}
+
+		}
+
+		// for node in allNodes, if it is not in domains, set it to inactive.
+		for node := range allNodes {
+			if _, ok := domains[node]; !ok {
+				filter := bson.D{primitive.E{Key: "domain", Value: node}}
+				update := bson.M{"$set": bson.M{"status": "inactive", "updated_at": time.Now().Local()}}
+				_, err = nodeCollection.UpdateOne(ctx, filter, update)
+				if err != nil {
+					c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+					log.Printf("error occured while updating node: %v", err)
+					return
+				}
+			}
+		}
 
 		var projections = bson.D{
 			{Key: "node_global_list", Value: 1},
@@ -442,7 +495,7 @@ func AddNode() gin.HandlerFunc {
 
 			user.ProduceNodeInUse(domains)
 			filter := bson.D{primitive.E{Key: "user_id", Value: user.User_id}}
-			update := bson.M{"$set": bson.M{"updated_at": time.Now(), "node_in_use_status": user.NodeInUseStatus, "suburl": user.Suburl, "node_global_list": user.NodeGlobalList}}
+			update := bson.M{"$set": bson.M{"updated_at": time.Now().Local(), "node_in_use_status": user.NodeInUseStatus, "suburl": user.Suburl, "node_global_list": user.NodeGlobalList}}
 			_, err = userCollection.UpdateOne(ctx, filter, update)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})

@@ -1,17 +1,17 @@
-install:
-	go build; go install;
-
 backend: 
 	go run ./main.go
+
+web:
+	cd frontend; npm start;
+
+install:
+	go build; go install;
 
 certs:
 	./setup-script-w8/generateCert.sh
 
 v2ray-local:
 	./config/v2ray-macos-v4.23.4/v2ray -config ./config/local/config.json
-
-web:
-	cd frontend; npm start;
 
 link:
 	ln -s /Users/guestuser/go/src/github/logv2rayfullstack/config/nginx/grpc_nginx_80.conf /opt/homebrew/etc/nginx/servers;
