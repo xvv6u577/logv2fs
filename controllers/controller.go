@@ -368,11 +368,17 @@ func AddNode() gin.HandlerFunc {
 		defer cancel()
 		var current = time.Now().Local()
 		var domains map[string]string
+		var keyValueExchangedDomains = map[string]string{}
 
 		if err := c.BindJSON(&domains); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			log.Printf("error: %v", err)
 			return
+		}
+
+		// exchange remark and domain in domains
+		for remark, domain := range domains {
+			keyValueExchangedDomains[domain] = remark
 		}
 
 		// query all nodes by projections, combine domain and status into a map
@@ -457,7 +463,7 @@ func AddNode() gin.HandlerFunc {
 
 		// for node in allNodes, if it is not in domains, set it to inactive.
 		for node := range allNodes {
-			if _, ok := domains[node]; !ok {
+			if _, ok := keyValueExchangedDomains[node]; !ok {
 				filter := bson.D{primitive.E{Key: "domain", Value: node}}
 				update := bson.M{"$set": bson.M{"status": "inactive", "updated_at": time.Now().Local()}}
 				_, err = nodeCollection.UpdateOne(ctx, filter, update)
@@ -491,6 +497,7 @@ func AddNode() gin.HandlerFunc {
 		for _, user := range allUsers {
 			// if user.Role == "admin" {
 			// }
+			fmt.Println(user.Email)
 			user.NodeGlobalList = domains
 
 			user.ProduceNodeInUse(domains)

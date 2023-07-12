@@ -26,12 +26,12 @@ proxy-groups:
   - {
       name: chatGPT,
       type: select,
-      proxies: [gpt-auto, 日本jp1az, 韩国首尔kr1az],
+      proxies: [gpt-auto, 日本jp1az],
     }
   - {
       name: gpt-auto,
       type: url-test,
-      proxies: [日本jp1az, 韩国首尔kr1az],
+      proxies: [日本jp1az],
       url: "http://www.gstatic.com/generate_204",
       interval: 86400,
     }

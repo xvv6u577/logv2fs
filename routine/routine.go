@@ -50,8 +50,8 @@ func CronLoggingByUser(traffic Traffic) {
 
 	var projections = bson.D{
 		{Key: "email", Value: 1},
-		{Key: "credittraffic", Value: 1},
-		{Key: "usedtraffic", Value: 1},
+		{Key: "credit", Value: 1},
+		{Key: "used", Value: 1},
 		{Key: "path", Value: 1},
 		{Key: "status", Value: 1},
 		{Key: "used_by_current_day", Value: 1},
@@ -121,20 +121,9 @@ func CronLoggingByUser(traffic Traffic) {
 		ReturnDocument: &after,
 		Upsert:         &upsert,
 	}
-	// if user.UsedByCurrentDay.UsedByDomain is nil, make it.
-	if user.UsedByCurrentDay.UsedByDomain == nil {
-		user.UsedByCurrentDay.UsedByDomain = make(map[string]int64)
-	}
+
 	user.UsedByCurrentDay.UsedByDomain[CURRENT_DOMAIN] += traffic.Total
-	// if user.UsedByCurrentMonth.UsedByDomain is nil, make it.
-	if user.UsedByCurrentMonth.UsedByDomain == nil {
-		user.UsedByCurrentMonth.UsedByDomain = make(map[string]int64)
-	}
 	user.UsedByCurrentMonth.UsedByDomain[CURRENT_DOMAIN] += traffic.Total
-	// if user.UsedByCurrentYear.UsedByDomain is nil, make it.
-	if user.UsedByCurrentYear.UsedByDomain == nil {
-		user.UsedByCurrentYear.UsedByDomain = make(map[string]int64)
-	}
 	user.UsedByCurrentYear.UsedByDomain[CURRENT_DOMAIN] += traffic.Total
 
 	var update = bson.D{primitive.E{Key: "$set", Value: bson.D{
@@ -157,7 +146,7 @@ func CronLoggingByUser(traffic Traffic) {
 		primitive.E{Key: "updated_at", Value: current},
 	}}}
 
-	if traffic.Total+int64(user.Usedtraffic) > int64(user.Credittraffic) {
+	if traffic.Total+user.Usedtraffic > user.Credittraffic {
 		cmdConn, err := grpc.Dial(fmt.Sprintf("%s:%s", V2_API_ADDRESS, V2_API_PORT), grpc.WithInsecure())
 		if err != nil {
 			log.Panic("Panic: ", err)
@@ -165,27 +154,7 @@ func CronLoggingByUser(traffic Traffic) {
 		NHSClient := v2ray.NewHandlerServiceClient(cmdConn, user.Path)
 		NHSClient.DelUser(user.Email)
 
-		// set status to overdue to variable update.
-		update = bson.D{primitive.E{Key: "$set", Value: bson.D{
-			primitive.E{Key: "used_by_current_day", Value: primitive.D{
-				primitive.E{Key: "amount", Value: traffic.Total + int64(user.UsedByCurrentDay.Amount)},
-				primitive.E{Key: "period", Value: current_day},
-				primitive.E{Key: "used_by_domain", Value: user.UsedByCurrentDay.UsedByDomain},
-			}},
-			primitive.E{Key: "used_by_current_month", Value: primitive.D{
-				primitive.E{Key: "amount", Value: traffic.Total + int64(user.UsedByCurrentMonth.Amount)},
-				primitive.E{Key: "period", Value: current_month},
-				primitive.E{Key: "used_by_domain", Value: user.UsedByCurrentMonth.UsedByDomain},
-			}},
-			primitive.E{Key: "used_by_current_year", Value: primitive.D{
-				primitive.E{Key: "amount", Value: traffic.Total + int64(user.UsedByCurrentYear.Amount)},
-				primitive.E{Key: "period", Value: current_year},
-				primitive.E{Key: "used_by_domain", Value: user.UsedByCurrentYear.UsedByDomain},
-			}},
-			primitive.E{Key: "used", Value: traffic.Total + int64(user.Usedtraffic)},
-			primitive.E{Key: "status", Value: "overdue"},
-			primitive.E{Key: "updated_at", Value: current},
-		}}}
+		update[0].Value.(primitive.D)[4] = primitive.E{Key: "status", Value: "overdue"}
 	}
 
 	result := userCollection.FindOneAndUpdate(ctx, filter, update, &opt)
@@ -212,6 +181,8 @@ func CronLoggingByNode(traffics []Traffic) {
 		{Key: "node_by_year", Value: 1},
 		{Key: "node_by_month", Value: 1},
 		{Key: "node_by_day", Value: 1},
+		{Key: "domain", Value: 1},
+		{Key: "status", Value: 1},
 	}
 	var queriedNode CurrentNode
 	err := nodesCollection.FindOne(ctx, filter, options.FindOne().SetProjection(projection)).Decode(&queriedNode)
@@ -219,7 +190,6 @@ func CronLoggingByNode(traffics []Traffic) {
 		log.Panic("Panic: ", err)
 	}
 
-	// merge currentNodeAtPeriod into NodeAtCurrentDay, NodeAtCurrentMonth, NodeAtCurrentYear of queriedNode
 	for _, traffic := range traffics {
 		queriedNode.UpdatedAt = current
 		queriedNode.NodeAtCurrentDay.Period = current_day
@@ -240,13 +210,13 @@ func CronLoggingByNode(traffics []Traffic) {
 		ReturnDocument: &after,
 		Upsert:         &upsert,
 	}
-	filter = bson.D{primitive.E{Key: "domain", Value: CURRENT_DOMAIN}}
 	update := bson.D{primitive.E{Key: "$set", Value: bson.D{
 		primitive.E{Key: "node_at_current_day", Value: queriedNode.NodeAtCurrentDay},
 		primitive.E{Key: "node_at_current_month", Value: queriedNode.NodeAtCurrentMonth},
 		primitive.E{Key: "node_at_current_year", Value: queriedNode.NodeAtCurrentYear},
 		primitive.E{Key: "updated_at", Value: current},
 	}}}
+
 	result := nodesCollection.FindOneAndUpdate(ctx, filter, update, &opt)
 	if result.Err() != nil {
 		log.Printf("Error: %v", result.Err())
