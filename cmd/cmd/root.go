@@ -17,13 +17,15 @@ var (
 	trafficCollection *mongo.Collection = database.OpenCollection(database.Client, "TRAFFIC")
 	nodesCollection   *mongo.Collection = database.OpenCollection(database.Client, "NODES")
 	userCollection    *mongo.Collection = database.OpenCollection(database.Client, "USERS")
+	globalCOLLECTIONS *mongo.Collection = database.OpenCollection(database.Client, "GLOBAL")
 )
 
 type (
-	User         = model.User
-	CurrentNode  = model.CurrentNode
-	TrafficInDB  = model.TrafficInDB
-	NodeAtPeriod = model.NodeAtPeriod
+	User           = model.User
+	CurrentNode    = model.CurrentNode
+	TrafficInDB    = model.TrafficInDB
+	NodeAtPeriod   = model.NodeAtPeriod
+	GlobalVariable = model.GlobalVariable
 )
 
 // rootCmd represents the base command when called without any subcommands

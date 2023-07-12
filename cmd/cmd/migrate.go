@@ -21,7 +21,7 @@ var migrateCmd = &cobra.Command{
 	Use:   "migrate",
 	Short: "init TRAFFIC collection in database",
 	Run: func(cmd *cobra.Command, args []string) {
-		var ctx, cancel = context.WithTimeout(context.Background(), 60*time.Second)
+		var ctx, cancel = context.WithTimeout(context.Background(), 5*time.Minute)
 		defer cancel()
 
 		var projections = bson.D{
@@ -55,8 +55,8 @@ var migrateCmd = &cobra.Command{
 			}
 
 			for _, traffic := range TrafficInDBArray {
-				// compare with time.Date(2022, 6, 25, 0, 0, 0, 0, time.UTC), if traffic.CreatedAt is before this time, then skip
-				if traffic.CreatedAt.Before(time.Date(2022, 6, 25, 0, 0, 0, 0, time.UTC)) {
+				// compare with time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC), if traffic.CreatedAt is before this time, then skip
+				if traffic.CreatedAt.Before(time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC)) {
 					continue
 				}
 
