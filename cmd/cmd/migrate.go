@@ -24,6 +24,11 @@ var migrateCmd = &cobra.Command{
 		var ctx, cancel = context.WithTimeout(context.Background(), 5*time.Minute)
 		defer cancel()
 
+		var current = time.Now().Local()
+		var current_year = current.Format("2006")
+		var current_month = current.Format("200601")
+		var current_day = current.Format("20060102")
+
 		var projections = bson.D{
 			{Key: "email", Value: 1},
 		}
@@ -33,23 +38,28 @@ var migrateCmd = &cobra.Command{
 		}
 
 		var nodeArray []*CurrentNode
-		var current = time.Now().Local()
-		var current_year = current.Format("2006")
-		var current_month = current.Format("200601")
-		var current_day = current.Format("20060102")
+		// query all in nodeCollection, and put them into nodeArray
+		var nodeFilter = bson.D{{}}
+		var nodeProjections = bson.D{}
+		cursor, err := nodesCollection.Find(ctx, nodeFilter, options.Find().SetProjection(nodeProjections))
+		if err != nil {
+			panic(err)
+		}
+		if err = cursor.All(ctx, &nodeArray); err != nil {
+			panic(err)
+		}
 
 		for _, user := range users {
+
 			var myTraffic *mongo.Collection = database.OpenCollection(database.Client, user.Email)
 			var TrafficInDBArray []*TrafficInDB
 
 			var filter = bson.D{{}}
 			var myProjections = bson.D{}
-
 			cursor, err := myTraffic.Find(ctx, filter, options.Find().SetProjection(myProjections))
 			if err != nil {
 				panic(err)
 			}
-
 			if err = cursor.All(ctx, &TrafficInDBArray); err != nil {
 				panic(err)
 			}
@@ -66,7 +76,6 @@ var migrateCmd = &cobra.Command{
 					CreatedAt: traffic.CreatedAt,
 					Total:     traffic.Total,
 				}
-
 				if _, err = trafficCollection.InsertOne(ctx, trafficInfo); err != nil {
 					panic(err)
 				}
@@ -88,20 +97,37 @@ var migrateCmd = &cobra.Command{
 
 				if !found {
 					var node = &CurrentNode{
-						Status:    "inactive",
-						Domain:    traffic.Domain,
-						CreatedAt: time.Now().Local(),
-						UpdatedAt: time.Now().Local(),
+						Status: "inactive",
+						Domain: traffic.Domain,
+						Remark: traffic.Domain,
+						NodeAtCurrentDay: NodeAtPeriod{
+							Period:              current_day,
+							Amount:              0,
+							UserTrafficAtPeriod: map[string]int64{},
+						},
+						NodeAtCurrentMonth: NodeAtPeriod{
+							Period:              current_month,
+							Amount:              0,
+							UserTrafficAtPeriod: map[string]int64{},
+						},
+						NodeAtCurrentYear: NodeAtPeriod{
+							Period:              current_year,
+							Amount:              0,
+							UserTrafficAtPeriod: map[string]int64{},
+						},
+						NodeByDay:   []NodeAtPeriod{},
+						NodeByMonth: []NodeAtPeriod{},
+						NodeByYear:  []NodeAtPeriod{},
+						CreatedAt:   time.Now().Local(),
+						UpdatedAt:   time.Now().Local(),
 					}
-					// if node_at_current_year equals to current_year, then add traffic.Total to node_at_current_year.Amount
-					// else, add it to node.NodeByYear.
-					if node.NodeAtCurrentYear.Period == current_year {
+
+					if node.NodeAtCurrentYear.Period == year {
 						node.NodeAtCurrentYear.Amount += traffic.Total
-						node.NodeAtCurrentYear.Period = current_year
 						node.NodeAtCurrentYear.UserTrafficAtPeriod[user.Email] += traffic.Total
 					} else {
 						node.NodeByYear = append(node.NodeByYear, NodeAtPeriod{
-							Period: current_year,
+							Period: year,
 							Amount: traffic.Total,
 							UserTrafficAtPeriod: map[string]int64{
 								user.Email: traffic.Total,
@@ -109,15 +135,12 @@ var migrateCmd = &cobra.Command{
 						})
 					}
 
-					// if node_at_current_month equals to current_month, then add traffic.Total to node_at_current_month.Amount
-					// else, add it to node.NodeByMonth.
-					if node.NodeAtCurrentMonth.Period == current_month {
+					if node.NodeAtCurrentMonth.Period == month {
 						node.NodeAtCurrentMonth.Amount += traffic.Total
-						node.NodeAtCurrentMonth.Period = current_month
 						node.NodeAtCurrentMonth.UserTrafficAtPeriod[user.Email] += traffic.Total
 					} else {
 						node.NodeByMonth = append(node.NodeByMonth, NodeAtPeriod{
-							Period: current_month,
+							Period: month,
 							Amount: traffic.Total,
 							UserTrafficAtPeriod: map[string]int64{
 								user.Email: traffic.Total,
@@ -125,28 +148,25 @@ var migrateCmd = &cobra.Command{
 						})
 					}
 
-					// if node_at_current_day equals to current_day, then add traffic.Total to node_at_current_day.Amount
-					// else, add it to node.NodeByDay.
-					if node.NodeAtCurrentDay.Period == current_day {
+					if node.NodeAtCurrentDay.Period == day {
 						node.NodeAtCurrentDay.Amount += traffic.Total
-						node.NodeAtCurrentDay.Period = current_day
 						node.NodeAtCurrentDay.UserTrafficAtPeriod[user.Email] += traffic.Total
 					} else {
 						node.NodeByDay = append(node.NodeByDay, NodeAtPeriod{
-							Period: current_day,
+							Period: day,
 							Amount: traffic.Total,
 							UserTrafficAtPeriod: map[string]int64{
 								user.Email: traffic.Total,
 							},
 						})
 					}
+
 					nodeArray = append(nodeArray, node)
 				} else {
 					// if node_at_current_year equals to current_year, then add traffic.Total to node_at_current_year.Amount
 					// else, add it to node.NodeByYear.
-					if foundNode.NodeAtCurrentYear.Period == current_year {
+					if foundNode.NodeAtCurrentYear.Period == year {
 						foundNode.NodeAtCurrentYear.Amount += traffic.Total
-						foundNode.NodeAtCurrentYear.Period = current_year
 						foundNode.NodeAtCurrentYear.UserTrafficAtPeriod[user.Email] += traffic.Total
 					} else {
 						// chek period in array node.NodeByYear, if found, then add traffic.Total to node.NodeByYear.Amount, else, append it to node.NodeByYear
@@ -176,9 +196,8 @@ var migrateCmd = &cobra.Command{
 
 					// if node_at_current_month equals to current_month, then add traffic.Total to node_at_current_month.Amount
 					// else, add it to node.NodeByMonth.
-					if foundNode.NodeAtCurrentMonth.Period == current_month {
+					if foundNode.NodeAtCurrentMonth.Period == month {
 						foundNode.NodeAtCurrentMonth.Amount += traffic.Total
-						foundNode.NodeAtCurrentMonth.Period = current_month
 						foundNode.NodeAtCurrentMonth.UserTrafficAtPeriod[user.Email] += traffic.Total
 					} else {
 						// chek period in array node.NodeByMonth, if found, then add traffic.Total to node.NodeByMonth.Amount, else, append it to node.NodeByMonth
@@ -208,9 +227,8 @@ var migrateCmd = &cobra.Command{
 
 					// if node_at_current_day equals to current_day, then add traffic.Total to node_at_current_day.Amount
 					// else, add it to node.NodeByDay.
-					if foundNode.NodeAtCurrentDay.Period == current_day {
+					if foundNode.NodeAtCurrentDay.Period == day {
 						foundNode.NodeAtCurrentDay.Amount += traffic.Total
-						foundNode.NodeAtCurrentDay.Period = current_day
 						foundNode.NodeAtCurrentDay.UserTrafficAtPeriod[user.Email] += traffic.Total
 					} else {
 						// chek period in array node.NodeByDay, if found, then add traffic.Total to node.NodeByDay.Amount, else, append it to node.NodeByDay
@@ -237,48 +255,24 @@ var migrateCmd = &cobra.Command{
 							})
 						}
 					}
+
 				}
 
 			}
 
 		}
 
-		// insert nodeArray to NODES collection.
-		// at first, check domain if it is in adminUser.NodeGlobalList, if itis , set status to "active", else, set status to "inactive"
-		// then, insert it.
-		var adminUser *User
-		var filter = bson.D{
-			{Key: "role", Value: "admin"},
-		}
-		var adminProjections = bson.D{
-			{Key: "email", Value: 1},
-			{Key: "node_global_list", Value: 1},
-		}
-
-		if err := userCollection.FindOne(ctx, filter, options.FindOne().SetProjection(adminProjections)).Decode(&adminUser); err != nil {
-			panic(err)
-		}
-
+		// upsert nodeArray to NODES collection.
 		for _, node := range nodeArray {
-			var found = false
-			for _, domain := range adminUser.NodeGlobalList {
-				if node.Domain == domain {
-					found = true
-					break
-				}
+			var filter = bson.D{{Key: "domain", Value: node.Domain}}
+			var update = bson.D{
+				{Key: "$set", Value: node},
 			}
-
-			if found {
-				node.Status = "active"
-			} else {
-				node.Status = "inactive"
-			}
-
-			if _, err := nodesCollection.InsertOne(ctx, node); err != nil {
+			var upsert = true
+			if _, err = nodesCollection.UpdateOne(ctx, filter, update, &options.UpdateOptions{Upsert: &upsert}); err != nil {
 				panic(err)
 			}
 		}
-
 	},
 }
 

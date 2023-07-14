@@ -22,12 +22,19 @@ This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
 
-		var a NodeAtPeriod
+		var test = map[string]int64{
+			"dark":      9533,
+			"done":      8737,
+			"save":      5976,
+			"concerned": 4107,
+		}
 
-		a.UserTrafficAtPeriod = make(map[string]int64)
-		a.UserTrafficAtPeriod["a"] = 1
+		for k, v := range test {
+			fmt.Println(k, v)
+		}
 
-		fmt.Println(a)
+		test["white"] += 1000
+		fmt.Println(test["white"])
 
 	},
 }

@@ -5,6 +5,7 @@ import "time"
 type CurrentNode struct {
 	Status             string         `json:"status" bson:"status" validate:"required,eq=active|eq=inactive"` // status: "active", "inactive"
 	Domain             string         `json:"domain" bson:"domain" validate:"required,min=2,max=100"`
+	Remark             string         `json:"remark" bson:"remark"`
 	NodeAtCurrentYear  NodeAtPeriod   `json:"node_at_current_year" bson:"node_at_current_year"`
 	NodeAtCurrentMonth NodeAtPeriod   `json:"node_at_current_month" bson:"node_at_current_month"`
 	NodeAtCurrentDay   NodeAtPeriod   `json:"node_at_current_day" bson:"node_at_current_day"`
@@ -21,7 +22,9 @@ type NodeAtPeriod struct {
 	UserTrafficAtPeriod map[string]int64 `json:"user_traffic_at_period" bson:"user_traffic_at_period"`
 }
 
+// var nodeGlobalList = NodeGlobalList{"domain": "remark"}
 type GlobalVariable struct {
-	Name       string            `json:"name" bson:"name" validate:"required,min=2,max=100"`
-	DomainList map[string]string `json:"domain_list" bson:"domain_list"`
+	Name           string            `json:"name" bson:"name" validate:"required,min=2,max=100"`
+	DomainList     map[string]string `json:"domain_list" bson:"domain_list"`
+	NodeGlobalList map[string]string `json:"node_global_list" bson:"node_global_list"`
 }

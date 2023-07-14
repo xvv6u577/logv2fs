@@ -419,17 +419,17 @@ func AddNode() gin.HandlerFunc {
 				node.Domain = domain
 				node.Status = "active"
 				node.NodeAtCurrentYear = NodeAtPeriod{
-					Period:              current.Local().Format("2006"),
+					Period:              current.Format("2006"),
 					Amount:              0,
 					UserTrafficAtPeriod: map[string]int64{},
 				}
 				node.NodeAtCurrentMonth = NodeAtPeriod{
-					Period:              current.Local().Format("200601"),
+					Period:              current.Format("200601"),
 					Amount:              0,
 					UserTrafficAtPeriod: map[string]int64{},
 				}
 				node.NodeAtCurrentDay = NodeAtPeriod{
-					Period:              current.Local().Format("20060102"),
+					Period:              current.Format("20060102"),
 					Amount:              0,
 					UserTrafficAtPeriod: map[string]int64{},
 				}
@@ -497,7 +497,6 @@ func AddNode() gin.HandlerFunc {
 		for _, user := range allUsers {
 			// if user.Role == "admin" {
 			// }
-			fmt.Println(user.Email)
 			user.NodeGlobalList = domains
 
 			user.ProduceNodeInUse(domains)
