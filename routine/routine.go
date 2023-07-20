@@ -215,18 +215,18 @@ func Cron_loggingJobs(c *cron.Cron) {
 		log.Printf("Written by hour: %v", time.Now().Local().Format("2006010215"))
 	})
 
-	if NODE_TYPE == "main" || NODE_TYPE == "local" {
+	c.AddFunc(CRON_INTERVAL_BY_DAY, func() {
+		var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
+		defer cancel()
 
-		c.AddFunc(CRON_INTERVAL_BY_DAY, func() {
-			var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
-			defer cancel()
+		var current = time.Now()
+		var next = current.Add(2 * time.Minute)
+		// var current_month = current.Local().Format("200601")
+		var next_day = next.Local().Format("20060102")
+		var filter bson.D
 
-			var current = time.Now()
-			var next = current.Add(2 * time.Minute)
-			// var current_month = current.Local().Format("200601")
-			var next_day = next.Local().Format("20060102")
-
-			filter := bson.D{{}}
+		if NODE_TYPE == "main" || NODE_TYPE == "local" {
+			filter = bson.D{{}}
 			userCollection := database.OpenCollection(database.Client, "USERS")
 			cursor, err := userCollection.Find(ctx, filter)
 			if err != nil {
@@ -274,65 +274,68 @@ func Cron_loggingJobs(c *cron.Cron) {
 			}
 
 			cursor.Close(ctx)
+		}
 
-			// query the node by domain
-			filter = bson.D{primitive.E{Key: "domain", Value: CURRENT_DOMAIN}}
-			projection := bson.D{
-				// {Key: "node_at_current_year", Value: 1},
-				// {Key: "node_at_current_month", Value: 1},
-				{Key: "node_at_current_day", Value: 1},
-				// {Key: "node_by_year", Value: 1},
-				// {Key: "node_by_month", Value: 1},
-				{Key: "node_by_day", Value: 1},
-			}
-			var queriedNode CurrentNode
-			err = nodesCollection.FindOne(ctx, filter, options.FindOne().SetProjection(projection)).Decode(&queriedNode)
-			if err != nil {
-				log.Panic("Panic: ", err)
-			}
+		// query the node by domain
+		filter = bson.D{primitive.E{Key: "domain", Value: CURRENT_DOMAIN}}
+		projection := bson.D{
+			// {Key: "node_at_current_year", Value: 1},
+			// {Key: "node_at_current_month", Value: 1},
+			{Key: "node_at_current_day", Value: 1},
+			// {Key: "node_by_year", Value: 1},
+			// {Key: "node_by_month", Value: 1},
+			{Key: "node_by_day", Value: 1},
+		}
+		var queriedNode CurrentNode
+		err := nodesCollection.FindOne(ctx, filter, options.FindOne().SetProjection(projection)).Decode(&queriedNode)
+		if err != nil {
+			log.Panic("Panic: ", err)
+		}
 
-			// append NodeAtCurrentDay to NodeByDay, then empty NodeAtCurrentDay.
-			queriedNode.NodeByDay = append(queriedNode.NodeByDay, queriedNode.NodeAtCurrentDay)
-			queriedNode.NodeAtCurrentDay = NodeAtPeriod{
-				Period:              next_day,
-				Amount:              0,
-				UserTrafficAtPeriod: map[string]int64{},
-			}
+		// append NodeAtCurrentDay to NodeByDay, then empty NodeAtCurrentDay.
+		queriedNode.NodeByDay = append(queriedNode.NodeByDay, queriedNode.NodeAtCurrentDay)
+		queriedNode.NodeAtCurrentDay = NodeAtPeriod{
+			Period:              next_day,
+			Amount:              0,
+			UserTrafficAtPeriod: map[string]int64{},
+		}
 
-			// upsert the queriedNode into nodesCollection
-			upsert := true
-			after := options.After
-			opt := options.FindOneAndUpdateOptions{
-				ReturnDocument: &after,
-				Upsert:         &upsert,
-			}
-			filter = bson.D{primitive.E{Key: "domain", Value: CURRENT_DOMAIN}}
-			update := bson.D{primitive.E{Key: "$set", Value: bson.D{
-				primitive.E{Key: "node_at_current_day", Value: queriedNode.NodeAtCurrentDay},
-				primitive.E{Key: "node_by_day", Value: queriedNode.NodeByDay},
-				primitive.E{Key: "updated_at", Value: current},
-			}}}
-			result := nodesCollection.FindOneAndUpdate(ctx, filter, update, &opt)
-			if result.Err() != nil {
-				log.Printf("Error: %v", result.Err())
-			}
+		// upsert the queriedNode into nodesCollection
+		upsert := true
+		after := options.After
+		opt := options.FindOneAndUpdateOptions{
+			ReturnDocument: &after,
+			Upsert:         &upsert,
+		}
+		filter = bson.D{primitive.E{Key: "domain", Value: CURRENT_DOMAIN}}
+		update := bson.D{primitive.E{Key: "$set", Value: bson.D{
+			primitive.E{Key: "node_at_current_day", Value: queriedNode.NodeAtCurrentDay},
+			primitive.E{Key: "node_by_day", Value: queriedNode.NodeByDay},
+			primitive.E{Key: "updated_at", Value: current},
+		}}}
+		result := nodesCollection.FindOneAndUpdate(ctx, filter, update, &opt)
+		if result.Err() != nil {
+			log.Printf("Error: %v", result.Err())
+		}
 
-			log.Printf("Written by day: %v", next_day)
-		})
+		log.Printf("Written by day: %v", next_day)
+	})
 
-		c.AddFunc(CRON_INTERVAL_BY_MONTH, func() {
+	c.AddFunc(CRON_INTERVAL_BY_MONTH, func() {
 
-			var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
-			defer cancel()
+		var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
+		defer cancel()
 
-			// 2022-01-01 00:01:00 +0800 CST
-			var current = time.Now()
-			// 2021-12-31 23:59:00 +0800 CST
-			var last = current.Add(-2 * time.Minute)
-			// var last_year = last.Local().Format("2006")
-			var current_month = current.Local().Format("200601")
+		// 2022-01-01 00:01:00 +0800 CST
+		var current = time.Now()
+		// 2021-12-31 23:59:00 +0800 CST
+		var last = current.Add(-2 * time.Minute)
+		// var last_year = last.Local().Format("2006")
+		var current_month = current.Local().Format("200601")
+		var filter bson.D
 
-			filter := bson.D{{}}
+		if NODE_TYPE == "main" || NODE_TYPE == "local" {
+			filter = bson.D{{}}
 			userCollection := database.OpenCollection(database.Client, "USERS")
 			cursor, err := userCollection.Find(ctx, filter)
 			if err != nil {
@@ -376,63 +379,66 @@ func Cron_loggingJobs(c *cron.Cron) {
 				}
 			}
 			cursor.Close(ctx)
+		}
 
-			// query the node by domain
-			filter = bson.D{primitive.E{Key: "domain", Value: CURRENT_DOMAIN}}
-			projection := bson.D{
-				// {Key: "node_at_current_year", Value: 1},
-				{Key: "node_at_current_month", Value: 1},
-				// {Key: "node_at_current_day", Value: 1},
-				// {Key: "node_by_year", Value: 1},
-				{Key: "node_by_month", Value: 1},
-				// {Key: "node_by_day", Value: 1},
-			}
-			var queriedNode CurrentNode
-			err = nodesCollection.FindOne(ctx, filter, options.FindOne().SetProjection(projection)).Decode(&queriedNode)
-			if err != nil {
-				log.Panic("Panic: ", err)
-			}
+		// query the node by domain
+		filter = bson.D{primitive.E{Key: "domain", Value: CURRENT_DOMAIN}}
+		projection := bson.D{
+			// {Key: "node_at_current_year", Value: 1},
+			{Key: "node_at_current_month", Value: 1},
+			// {Key: "node_at_current_day", Value: 1},
+			// {Key: "node_by_year", Value: 1},
+			{Key: "node_by_month", Value: 1},
+			// {Key: "node_by_day", Value: 1},
+		}
+		var queriedNode CurrentNode
+		err := nodesCollection.FindOne(ctx, filter, options.FindOne().SetProjection(projection)).Decode(&queriedNode)
+		if err != nil {
+			log.Panic("Panic: ", err)
+		}
 
-			// append NodeAtCurrentMonth to NodeByMonth, then empty NodeAtCurrentMonth.
-			queriedNode.NodeByMonth = append(queriedNode.NodeByMonth, queriedNode.NodeAtCurrentMonth)
-			queriedNode.NodeAtCurrentMonth = NodeAtPeriod{
-				Period:              current_month,
-				Amount:              0,
-				UserTrafficAtPeriod: map[string]int64{},
-			}
+		// append NodeAtCurrentMonth to NodeByMonth, then empty NodeAtCurrentMonth.
+		queriedNode.NodeByMonth = append(queriedNode.NodeByMonth, queriedNode.NodeAtCurrentMonth)
+		queriedNode.NodeAtCurrentMonth = NodeAtPeriod{
+			Period:              current_month,
+			Amount:              0,
+			UserTrafficAtPeriod: map[string]int64{},
+		}
 
-			// upsert the queriedNode into nodesCollection
-			upsert := true
-			after := options.After
-			opt := options.FindOneAndUpdateOptions{
-				ReturnDocument: &after,
-				Upsert:         &upsert,
-			}
-			filter = bson.D{primitive.E{Key: "domain", Value: CURRENT_DOMAIN}}
-			update := bson.D{primitive.E{Key: "$set", Value: bson.D{
-				primitive.E{Key: "node_at_current_month", Value: queriedNode.NodeAtCurrentMonth},
-				primitive.E{Key: "node_by_month", Value: queriedNode.NodeByMonth},
-				primitive.E{Key: "updated_at", Value: current},
-			}}}
-			result := nodesCollection.FindOneAndUpdate(ctx, filter, update, &opt)
-			if result.Err() != nil {
-				log.Printf("Error: %v", result.Err())
-			}
+		// upsert the queriedNode into nodesCollection
+		upsert := true
+		after := options.After
+		opt := options.FindOneAndUpdateOptions{
+			ReturnDocument: &after,
+			Upsert:         &upsert,
+		}
+		filter = bson.D{primitive.E{Key: "domain", Value: CURRENT_DOMAIN}}
+		update := bson.D{primitive.E{Key: "$set", Value: bson.D{
+			primitive.E{Key: "node_at_current_month", Value: queriedNode.NodeAtCurrentMonth},
+			primitive.E{Key: "node_by_month", Value: queriedNode.NodeByMonth},
+			primitive.E{Key: "updated_at", Value: current},
+		}}}
+		result := nodesCollection.FindOneAndUpdate(ctx, filter, update, &opt)
+		if result.Err() != nil {
+			log.Printf("Error: %v", result.Err())
+		}
 
-			log.Printf("Written by month: %v", current_month)
-		})
+		log.Printf("Written by month: %v", current_month)
+	})
 
-		c.AddFunc(CRON_INTERVAL_BY_YEAR, func() {
-			var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
-			defer cancel()
+	c.AddFunc(CRON_INTERVAL_BY_YEAR, func() {
+		var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
+		defer cancel()
 
-			// 2022-01-01 00:01:30 +0800 CST
-			var current = time.Now()
-			// 2021-12-31 23:59:30 +0800 CST
-			var last = current.Add(-2 * time.Minute)
-			var current_year = current.Local().Format("2006")
+		// 2022-01-01 00:01:30 +0800 CST
+		var current = time.Now()
+		// 2021-12-31 23:59:30 +0800 CST
+		var last = current.Add(-2 * time.Minute)
+		var current_year = current.Local().Format("2006")
+		var filter bson.D
 
-			filter := bson.D{{}}
+		if NODE_TYPE == "main" || NODE_TYPE == "local" {
+			filter = bson.D{{}}
 			userCollection := database.OpenCollection(database.Client, "USERS")
 			cursor, err := userCollection.Find(ctx, filter)
 			if err != nil {
@@ -462,51 +468,49 @@ func Cron_loggingJobs(c *cron.Cron) {
 			}
 
 			cursor.Close(ctx)
+		}
+		// query the node by domain
+		filter = bson.D{primitive.E{Key: "domain", Value: CURRENT_DOMAIN}}
+		projection := bson.D{
+			{Key: "node_at_current_year", Value: 1},
+			// {Key: "node_at_current_month", Value: 1},
+			// {Key: "node_at_current_day", Value: 1},
+			{Key: "node_by_year", Value: 1},
+			// {Key: "node_by_month", Value: 1},
+			// {Key: "node_by_day", Value: 1},
+		}
+		var queriedNode CurrentNode
+		err := nodesCollection.FindOne(ctx, filter, options.FindOne().SetProjection(projection)).Decode(&queriedNode)
+		if err != nil {
+			log.Panic("Panic: ", err)
+		}
 
-			// query the node by domain
-			filter = bson.D{primitive.E{Key: "domain", Value: CURRENT_DOMAIN}}
-			projection := bson.D{
-				{Key: "node_at_current_year", Value: 1},
-				// {Key: "node_at_current_month", Value: 1},
-				// {Key: "node_at_current_day", Value: 1},
-				{Key: "node_by_year", Value: 1},
-				// {Key: "node_by_month", Value: 1},
-				// {Key: "node_by_day", Value: 1},
-			}
-			var queriedNode CurrentNode
-			err = nodesCollection.FindOne(ctx, filter, options.FindOne().SetProjection(projection)).Decode(&queriedNode)
-			if err != nil {
-				log.Panic("Panic: ", err)
-			}
+		// append NodeAtCurrentYear to NodeByYear, then empty NodeAtCurrentYear.
+		queriedNode.NodeByYear = append(queriedNode.NodeByYear, queriedNode.NodeAtCurrentYear)
+		queriedNode.NodeAtCurrentYear = NodeAtPeriod{
+			Period:              current_year,
+			Amount:              0,
+			UserTrafficAtPeriod: map[string]int64{},
+		}
 
-			// append NodeAtCurrentYear to NodeByYear, then empty NodeAtCurrentYear.
-			queriedNode.NodeByYear = append(queriedNode.NodeByYear, queriedNode.NodeAtCurrentYear)
-			queriedNode.NodeAtCurrentYear = NodeAtPeriod{
-				Period:              current_year,
-				Amount:              0,
-				UserTrafficAtPeriod: map[string]int64{},
-			}
+		// upsert the queriedNode into nodesCollection
+		upsert := true
+		after := options.After
+		opt := options.FindOneAndUpdateOptions{
+			ReturnDocument: &after,
+			Upsert:         &upsert,
+		}
+		filter = bson.D{primitive.E{Key: "domain", Value: CURRENT_DOMAIN}}
+		update := bson.D{primitive.E{Key: "$set", Value: bson.D{
+			primitive.E{Key: "node_at_current_year", Value: queriedNode.NodeAtCurrentYear},
+			primitive.E{Key: "node_by_year", Value: queriedNode.NodeByYear},
+			primitive.E{Key: "updated_at", Value: current},
+		}}}
+		result := nodesCollection.FindOneAndUpdate(ctx, filter, update, &opt)
+		if result.Err() != nil {
+			log.Printf("Error: %v", result.Err())
+		}
 
-			// upsert the queriedNode into nodesCollection
-			upsert := true
-			after := options.After
-			opt := options.FindOneAndUpdateOptions{
-				ReturnDocument: &after,
-				Upsert:         &upsert,
-			}
-			filter = bson.D{primitive.E{Key: "domain", Value: CURRENT_DOMAIN}}
-			update := bson.D{primitive.E{Key: "$set", Value: bson.D{
-				primitive.E{Key: "node_at_current_year", Value: queriedNode.NodeAtCurrentYear},
-				primitive.E{Key: "node_by_year", Value: queriedNode.NodeByYear},
-				primitive.E{Key: "updated_at", Value: current},
-			}}}
-			result := nodesCollection.FindOneAndUpdate(ctx, filter, update, &opt)
-			if result.Err() != nil {
-				log.Printf("Error: %v", result.Err())
-			}
-
-			log.Printf("Written by year: %v", current_year)
-		})
-	}
-
+		log.Printf("Written by year: %v", current_year)
+	})
 }
