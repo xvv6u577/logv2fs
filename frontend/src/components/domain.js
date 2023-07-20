@@ -1,11 +1,10 @@
 import { useEffect, useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import axios from "axios";
-import { alert, reset, success } from "../store/message";
+import { alert, reset } from "../store/message";
 import Alert from "./alert";
 import { doRerender } from "../store/rerender";
 import { formatBytes } from "../service/service";
-import TrafficTable from "./trafficTable";
 
 function Domain() {
 
@@ -36,7 +35,6 @@ function Domain() {
             })
             .then((response) => {
                 setNodes(response.data);
-                console.log(response.data);
             })
             .catch((err) => {
                 dispatch(alert({ show: true, content: err.toString() }));
