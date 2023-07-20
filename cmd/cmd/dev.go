@@ -22,19 +22,57 @@ This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
 
-		var test = map[string]int64{
-			"dark":      9533,
-			"done":      8737,
-			"save":      5976,
-			"concerned": 4107,
+		type Person struct {
+			Name string
+			Age  int
 		}
 
-		for k, v := range test {
-			fmt.Println(k, v)
+		people := []Person{
+			{Name: "Alice", Age: 25},
+			{Name: "Bob", Age: 30},
+			{Name: "Charlie", Age: 35},
 		}
 
-		test["white"] += 1000
-		fmt.Println(test["white"])
+		// Updating the Age of each Person by adding 1
+		for i := range people {
+			people[i].Age++
+		}
+
+		// Printing the updated values
+		for _, person := range people {
+			fmt.Println(person.Name, person.Age)
+		}
+
+		var test = []*NodeAtPeriod{
+			{
+				Period: "202101",
+				Amount: 100,
+				UserTrafficAtPeriod: map[string]int64{
+					"email1": 10,
+				},
+			},
+			{
+				Period: "202102",
+				Amount: 200,
+				UserTrafficAtPeriod: map[string]int64{
+					"email1": 20,
+				},
+			},
+		}
+		var foundNode *NodeAtPeriod
+
+		for _, v := range test {
+			if v.Period == "202101" {
+				foundNode = v
+				break
+			}
+		}
+
+		foundNode.Amount = 300
+
+		for _, v := range test {
+			fmt.Println(v)
+		}
 
 	},
 }

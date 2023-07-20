@@ -56,4 +56,6 @@ func UserRoutes(incomingRoutes *gin.Engine) {
 
 	incomingRoutes.GET("/v1/domaininfo", controller.GetDomainInfo())
 	incomingRoutes.PUT("/v1/updatedomaininfo", controller.UpdateDomainInfo())
+
+	incomingRoutes.GET("/v1/partialallnode", controller.GetNodePartial())
 }

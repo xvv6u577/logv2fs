@@ -1349,3 +1349,50 @@ func UpdateDomainInfo() gin.HandlerFunc {
 		c.JSON(http.StatusOK, gin.H{"message": "Update GLOBAL domain list successfully!"})
 	}
 }
+
+func GetNodePartial() gin.HandlerFunc {
+	return func(c *gin.Context) {
+
+		err := helper.CheckUserType(c, "admin")
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		var ctx, cancel = context.WithTimeout(context.Background(), 60*time.Second)
+		defer cancel()
+
+		// query nodeCollection by projection, and return nodePartial with json format
+		var nodePartial []*CurrentNode
+		var projections = bson.D{
+			{Key: "domain", Value: 1},
+			{Key: "status", Value: 1},
+			{Key: "remark", Value: 1},
+			{Key: "node_at_current_day", Value: 1},
+			{Key: "node_at_current_month", Value: 1},
+			{Key: "node_at_current_year", Value: 1},
+			{Key: "node_by_day", Value: 1},
+			{Key: "node_by_month", Value: 1},
+			{Key: "node_by_year", Value: 1},
+			{Key: "created_at", Value: 1},
+		}
+		cur, err := nodeCollection.Find(ctx, bson.D{}, options.Find().SetProjection(projections))
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			log.Printf("Find error: %v", err)
+			return
+		}
+		for cur.Next(ctx) {
+			var node CurrentNode
+			err := cur.Decode(&node)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				log.Printf("Decode error: %v", err)
+				return
+			}
+			nodePartial = append(nodePartial, &node)
+		}
+
+		c.JSON(http.StatusOK, nodePartial)
+	}
+}

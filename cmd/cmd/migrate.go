@@ -171,19 +171,16 @@ var migrateCmd = &cobra.Command{
 					} else {
 						// chek period in array node.NodeByYear, if found, then add traffic.Total to node.NodeByYear.Amount, else, append it to node.NodeByYear
 						var ifFoundNodeByYear = false
-						var foundNodeByYear *NodeAtPeriod
-						for _, node := range foundNode.NodeByYear {
-							if node.Period == year {
+						for i := range foundNode.NodeByYear {
+							if foundNode.NodeByYear[i].Period == year {
+								foundNode.NodeByYear[i].Amount += traffic.Total
+								foundNode.NodeByYear[i].UserTrafficAtPeriod[user.Email] += traffic.Total
 								ifFoundNodeByYear = true
-								foundNodeByYear = &node
 								break
 							}
 						}
 
-						if ifFoundNodeByYear {
-							foundNodeByYear.Amount += traffic.Total
-							foundNodeByYear.UserTrafficAtPeriod[user.Email] += traffic.Total
-						} else {
+						if !ifFoundNodeByYear {
 							foundNode.NodeByYear = append(foundNode.NodeByYear, NodeAtPeriod{
 								Period: year,
 								Amount: traffic.Total,
@@ -202,19 +199,16 @@ var migrateCmd = &cobra.Command{
 					} else {
 						// chek period in array node.NodeByMonth, if found, then add traffic.Total to node.NodeByMonth.Amount, else, append it to node.NodeByMonth
 						var ifFoundNodeByMonth = false
-						var foundNodeByMonth *NodeAtPeriod
-						for _, node := range foundNode.NodeByMonth {
-							if node.Period == month {
+						for i := range foundNode.NodeByMonth {
+							if foundNode.NodeByMonth[i].Period == month {
+								foundNode.NodeByMonth[i].Amount += traffic.Total
+								foundNode.NodeByMonth[i].UserTrafficAtPeriod[user.Email] += traffic.Total
 								ifFoundNodeByMonth = true
-								foundNodeByMonth = &node
 								break
 							}
 						}
 
-						if ifFoundNodeByMonth {
-							foundNodeByMonth.Amount += traffic.Total
-							foundNodeByMonth.UserTrafficAtPeriod[user.Email] += traffic.Total
-						} else {
+						if !ifFoundNodeByMonth {
 							foundNode.NodeByMonth = append(foundNode.NodeByMonth, NodeAtPeriod{
 								Period: month,
 								Amount: traffic.Total,
@@ -233,19 +227,16 @@ var migrateCmd = &cobra.Command{
 					} else {
 						// chek period in array node.NodeByDay, if found, then add traffic.Total to node.NodeByDay.Amount, else, append it to node.NodeByDay
 						var ifFoundNodeByDay = false
-						var foundNodeByDay *NodeAtPeriod
-						for _, node := range foundNode.NodeByDay {
-							if node.Period == day {
+						for i := range foundNode.NodeByDay {
+							if foundNode.NodeByDay[i].Period == day {
+								foundNode.NodeByDay[i].Amount += traffic.Total
+								foundNode.NodeByDay[i].UserTrafficAtPeriod[user.Email] += traffic.Total
 								ifFoundNodeByDay = true
-								foundNodeByDay = &node
 								break
 							}
 						}
 
-						if ifFoundNodeByDay {
-							foundNodeByDay.Amount += traffic.Total
-							foundNodeByDay.UserTrafficAtPeriod[user.Email] += traffic.Total
-						} else {
+						if !ifFoundNodeByDay {
 							foundNode.NodeByDay = append(foundNode.NodeByDay, NodeAtPeriod{
 								Period: day,
 								Amount: traffic.Total,

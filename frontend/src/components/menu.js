@@ -3,6 +3,7 @@ import { logout } from "../store/login";
 import { alert, success } from "../store/message";
 import AddUser from "./adduser";
 import AddNode from "./addNode";
+import DomainStatus from "./domainStatus";
 import axios from "axios";
 
 const Menu = () => {
@@ -58,6 +59,7 @@ const Menu = () => {
 							</svg>
 							WriteToDB
 						</button>
+						<DomainStatus btnName="DomainStatus" />
 						<AddNode btnName="AddNode" />
 						<AddUser btnName="AddUser" />
 					</>
