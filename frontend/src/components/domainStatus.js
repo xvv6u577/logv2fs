@@ -23,19 +23,6 @@ const DomainStatus = ({ btnName }) => {
         }
     }, [message, dispatch]);
 
-    useEffect(() => {
-        axios
-            .get(process.env.REACT_APP_API_HOST + "domaininfo", {
-                headers: { token: loginState.token },
-            })
-            .then((response) => {
-                setDomains(response.data);
-            })
-            .catch((err) => {
-                dispatch(alert({ show: true, content: err.toString() }));
-            });
-    }, [loginState, dispatch, rerenderSignal]);
-
     const handleAddDomain = (e) => {
         e.preventDefault();
 
@@ -65,7 +52,19 @@ const DomainStatus = ({ btnName }) => {
         <>
             <button
                 type="button"
-                onClick={() => setShowModal(!showModal)}
+                onClick={() => {
+                    setShowModal(!showModal);
+                    axios
+                        .get(process.env.REACT_APP_API_HOST + "domaininfo", {
+                            headers: { token: loginState.token },
+                        })
+                        .then((response) => {
+                            setDomains(response.data);
+                        })
+                        .catch((err) => {
+                            dispatch(alert({ show: true, content: err.toString() }));
+                        });
+                }}
                 className="w-full sm:w-auto block text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-1.5 py-1 m-1 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
             >
                 <svg

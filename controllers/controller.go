@@ -1283,23 +1283,39 @@ func buildDomainInfo(domains map[string]string, isInUvp bool) ([]DomainInfo, err
 	var conf = &tls.Config{
 		// InsecureSkipVerify: true,
 	}
+	var normalDomains []string
+	var unreachableDomains []string
 
+	// split domains into normalDomains and unreachableDomains by parallel processing. if domain is reachable, append it to normalDomains, else append it to unreachableDomains.
+	// if domain is localhost, skip it.
+	var wg sync.WaitGroup
 	for _, domain := range domains {
 		if domain == "localhost" {
 			continue
 		}
+		wg.Add(1)
+		go func(domain string) {
+			defer wg.Done()
+			if helper.IsDomainReachable(domain) {
+				normalDomains = append(normalDomains, domain)
+			} else {
+				unreachableDomains = append(unreachableDomains, domain)
+			}
+		}(domain)
+	}
+	wg.Wait()
 
-		conn, err := tls.DialWithDialer(&net.Dialer{Timeout: 5 * time.Second}, "tcp", domain+":"+port, conf)
+	for _, domain := range normalDomains {
+		conn, err := tls.DialWithDialer(&net.Dialer{Timeout: 20 * time.Second}, "tcp", domain+":"+port, conf)
 		if err != nil {
-			log.Printf("error occured while parsing domain info: %v", err)
-			return nil, err
+			log.Printf("tls.DialWithDialer Error: %v", err)
 		}
 		err = conn.VerifyHostname(domain)
 		if err != nil {
-			log.Printf("error occured while parsing domain info: %v", err)
-			return nil, err
+			log.Printf("conn.VerifyHostname Error: %v", err)
 		}
 		expiry := conn.ConnectionState().PeerCertificates[0].NotAfter
+		defer conn.Close()
 
 		minorDomainInfos = append(minorDomainInfos, DomainInfo{
 			IsInUVP:      isInUvp,
@@ -1307,7 +1323,15 @@ func buildDomainInfo(domains map[string]string, isInUvp bool) ([]DomainInfo, err
 			ExpiredDate:  expiry.Local().Format("2006-01-02 15:04:05"),
 			DaysToExpire: int(time.Until(expiry).Hours() / 24),
 		})
-		defer conn.Close()
+	}
+
+	for _, domain := range unreachableDomains {
+		minorDomainInfos = append(minorDomainInfos, DomainInfo{
+			IsInUVP:      isInUvp,
+			Domain:       domain,
+			ExpiredDate:  "unreachable",
+			DaysToExpire: -1,
+		})
 	}
 
 	return minorDomainInfos, nil
