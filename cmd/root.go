@@ -21,11 +21,11 @@ var (
 )
 
 type (
-	User           = model.User
 	CurrentNode    = model.CurrentNode
 	TrafficInDB    = model.TrafficInDB
 	NodeAtPeriod   = model.NodeAtPeriod
 	GlobalVariable = model.GlobalVariable
+	User           = model.User
 )
 
 // rootCmd represents the base command when called without any subcommands

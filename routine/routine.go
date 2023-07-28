@@ -171,9 +171,6 @@ func CronLoggingByNode(traffics []Traffic) {
 		primitive.E{Key: "updated_at", Value: current},
 	}}}
 
-	// print update
-	fmt.Printf("update: %v\n", update)
-
 	result := nodesCollection.FindOneAndUpdate(ctx, filter, update, &opt)
 	if result.Err() != nil {
 		log.Printf("Error: %v", result.Err())
