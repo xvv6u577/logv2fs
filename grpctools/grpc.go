@@ -39,23 +39,10 @@ func (s *Server) AddUser(ctx context.Context, in *pb.GRPCRequest) (*pb.GRPCReply
 
 	log.Printf("Server AddUser. Received: %v", in.GetName()+", "+in.GetUuid()+", "+in.GetPath())
 
-	user := User{
-		Email: in.GetName(),
-		UUID:  in.GetUuid(),
-		Path:  in.GetPath(),
-	}
-
-	cmdConn, err := grpc.Dial(fmt.Sprintf("%s:%s", V2_API_ADDRESS, V2_API_PORT), grpc.WithTransportCredentials(insecure.NewCredentials()))
+	err := v2ray.ServiceAddUser(in.GetName(), in.GetUuid(), in.GetPath())
 	if err != nil {
-		log.Printf("%v", "v2ray connection failed.")
-		return &pb.GRPCReply{SuccesOrNot: "v2ray connection failed."}, err
-	}
-
-	NHSClient := v2ray.NewHandlerServiceClient(cmdConn, in.GetPath())
-	err = NHSClient.AddUser(user)
-	if err != nil {
-		log.Printf("%v", "v2ray take user back online failed.")
-		return &pb.GRPCReply{SuccesOrNot: "v2ray take user back online failed."}, err
+		log.Printf("%v", "v2ray add user failed!")
+		return &pb.GRPCReply{SuccesOrNot: "v2ray add user failed!"}, err
 	}
 
 	log.Println("email: " + in.GetName() + ", uuid: " + in.GetUuid() + ", path: " + in.GetPath() + ". Added in success!")
@@ -66,17 +53,10 @@ func (s *Server) DeleteUser(ctx context.Context, in *pb.GRPCRequest) (*pb.GRPCRe
 
 	log.Printf("Server DeleteUser. Received: %v", in.GetName()+", "+in.GetUuid()+", "+in.GetPath())
 
-	cmdConn, err := grpc.Dial(fmt.Sprintf("%s:%s", V2_API_ADDRESS, V2_API_PORT), grpc.WithTransportCredentials(insecure.NewCredentials()))
+	err := v2ray.ServiceDeleteUser(in.GetName(), in.GetPath())
 	if err != nil {
-		log.Printf("%v", "v2ray connection failed!")
-		return &pb.GRPCReply{SuccesOrNot: "v2ray connection failed!"}, err
-	}
-
-	NHSClient := v2ray.NewHandlerServiceClient(cmdConn, in.GetPath())
-	err = NHSClient.DelUser(in.GetName())
-	if err != nil {
-		log.Printf("%v", "v2ray take user back online failed!")
-		return &pb.GRPCReply{SuccesOrNot: "v2ray take user back online failed!"}, err
+		log.Printf("%v", "v2ray delete user failed!")
+		return &pb.GRPCReply{SuccesOrNot: "v2ray delete user failed!"}, err
 	}
 
 	log.Println("email: " + in.GetName() + ", uuid: " + in.GetUuid() + ", path: " + in.GetPath() + ". Deleted in success!")

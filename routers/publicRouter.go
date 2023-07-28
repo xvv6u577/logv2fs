@@ -8,7 +8,7 @@ import (
 )
 
 // login, home, logout, routers for react frontend app
-func AuthRoutes(incomingRoutes *gin.Engine) {
+func PublicRoutes(incomingRoutes *gin.Engine) {
 
 	frontendRoutes := []string{
 		"/login",

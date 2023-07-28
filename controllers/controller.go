@@ -3,7 +3,6 @@ package controllers
 import (
 	"context"
 	"crypto/tls"
-	"fmt"
 	"log"
 	"net"
 	"os"
@@ -16,7 +15,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 	uuid "github.com/nu7hatch/gouuid"
-	"google.golang.org/grpc"
 
 	localCron "github.com/caster8013/logv2rayfullstack/cron"
 	"github.com/caster8013/logv2rayfullstack/database"
@@ -69,13 +67,19 @@ type DomainInfo struct {
 	IsInUVP      bool   `json:"is_in_uvp"`
 }
 
+func ReturnIfNotAdmin(c *gin.Context) {
+	if err := helper.CheckUserType(c, "admin"); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+}
+
 //HashPassword is used to encrypt the password before it is stored in the DB
 func HashPassword(password string) string {
 	bytes, err := bcrypt.GenerateFromPassword([]byte(password), 14)
 	if err != nil {
 		log.Panic(err)
 	}
-
 	return string(bytes)
 }
 
@@ -128,12 +132,7 @@ func UpdateAllTokens(signedToken string, signedRefreshToken string, userId strin
 func SignUp() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
-		err := helper.CheckUserType(c, "admin")
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"sign up error": err.Error()})
-			log.Printf("%s", err.Error())
-			return
-		}
+		ReturnIfNotAdmin(c)
 
 		var ctx, cancel = context.WithTimeout(context.Background(), 60*time.Second)
 		defer cancel()
@@ -387,12 +386,7 @@ func GetUserSimpleInfo() gin.HandlerFunc {
 func AddNode() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
-		err := helper.CheckUserType(c, "admin")
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"sign up error": err.Error()})
-			log.Printf("%s", err.Error())
-			return
-		}
+		ReturnIfNotAdmin(c)
 
 		var ctx, cancel = context.WithTimeout(context.Background(), 60*time.Second)
 		defer cancel()
@@ -554,11 +548,7 @@ func AddNode() gin.HandlerFunc {
 func EditUser() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
-		if err := helper.CheckUserType(c, "admin"); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			log.Printf("%s", err.Error())
-			return
-		}
+		ReturnIfNotAdmin(c)
 
 		var ctx, cancel = context.WithTimeout(context.Background(), 60*time.Second)
 		defer cancel()
@@ -658,11 +648,8 @@ func GetUserByID() gin.HandlerFunc {
 
 func TakeItOfflineByUserName() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		if err := helper.CheckUserType(c, "admin"); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			log.Printf("%s", err.Error())
-			return
-		}
+
+		ReturnIfNotAdmin(c)
 
 		var ctx, cancel = context.WithTimeout(context.Background(), 60*time.Second)
 		defer cancel()
@@ -746,11 +733,7 @@ func TakeItOfflineByUserName() gin.HandlerFunc {
 func TakeItOnlineByUserName() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
-		if err := helper.CheckUserType(c, "admin"); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			log.Printf("%s", err.Error())
-			return
-		}
+		ReturnIfNotAdmin(c)
 
 		var ctx, cancel = context.WithTimeout(context.Background(), 60*time.Second)
 		defer cancel()
@@ -835,11 +818,7 @@ func TakeItOnlineByUserName() gin.HandlerFunc {
 func DeleteUserByUserName() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
-		if err := helper.CheckUserType(c, "admin"); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			log.Printf("%s", err.Error())
-			return
-		}
+		ReturnIfNotAdmin(c)
 
 		name := c.Param("name")
 		var projections = bson.D{
@@ -909,80 +888,10 @@ func DeleteUserByUserName() gin.HandlerFunc {
 	}
 }
 
-func GetTrafficByUser() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		name := c.Param("name")
-
-		if err := helper.MatchUserTypeAndName(c, name); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			log.Printf("%s", err.Error())
-			return
-		}
-
-		cmdConn, err := grpc.Dial(fmt.Sprintf("%s:%s", V2_API_ADDRESS, V2_API_PORT), grpc.WithInsecure())
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			log.Printf("grpc dial error: %v", err)
-			return
-		}
-
-		NSSClient := v2ray.NewStatsServiceClient(cmdConn)
-		uplink, err := NSSClient.GetUserUplink(name)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			log.Printf("GetUserUplink failed: %v", err)
-			return
-		}
-
-		downlink, err := NSSClient.GetUserDownlink(name)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			log.Printf("Get user %s downlink failed.", helper.SanitizeStr(name))
-			return
-		}
-
-		c.JSON(http.StatusOK, gin.H{"uplink": uplink, "downlink": downlink})
-	}
-}
-
-func GetAllUserTraffic() gin.HandlerFunc {
-	return func(c *gin.Context) {
-
-		if err := helper.CheckUserType(c, "admin"); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			log.Printf("%s", err.Error())
-			return
-		}
-
-		cmdConn, err := grpc.Dial(fmt.Sprintf("%s:%s", V2_API_ADDRESS, V2_API_PORT), grpc.WithInsecure())
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			log.Printf("%s", err.Error())
-			return
-		}
-
-		NSSClient := v2ray.NewStatsServiceClient(cmdConn)
-
-		allTraffic, err := NSSClient.GetAllUserTraffic(false)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			log.Printf("GetAllUserTraffic failed: %s", err.Error())
-			return
-		}
-
-		c.JSON(http.StatusOK, allTraffic)
-	}
-}
-
 func GetAllUsers() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
-		err := helper.CheckUserType(c, "admin")
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			log.Printf("%s", err.Error())
-			return
-		}
+		ReturnIfNotAdmin(c)
 
 		var projections = bson.D{
 			{Key: "email", Value: 1},
@@ -1085,13 +994,9 @@ func GetSubscripionURL() gin.HandlerFunc {
 func WriteToDB() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
-		err := helper.CheckUserType(c, "admin")
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
-		}
+		ReturnIfNotAdmin(c)
 
-		err = localCron.Log_basicAction()
+		err := localCron.Log_basicAction()
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			log.Printf("Write to DB failed: %s", err.Error())
@@ -1106,11 +1011,7 @@ func WriteToDB() gin.HandlerFunc {
 func DisableNodePerUser() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
-		err := helper.CheckUserType(c, "admin")
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
-		}
+		ReturnIfNotAdmin(c)
 
 		var ctx, cancel = context.WithTimeout(context.Background(), 60*time.Second)
 		defer cancel()
@@ -1183,11 +1084,7 @@ func DisableNodePerUser() gin.HandlerFunc {
 func EnableNodePerUser() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
-		err := helper.CheckUserType(c, "admin")
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
-		}
+		ReturnIfNotAdmin(c)
 
 		var ctx, cancel = context.WithTimeout(context.Background(), 60*time.Second)
 		defer cancel()
@@ -1258,11 +1155,7 @@ func EnableNodePerUser() gin.HandlerFunc {
 func GetDomainInfo() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
-		err := helper.CheckUserType(c, "admin")
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
-		}
+		ReturnIfNotAdmin(c)
 
 		var ctx, cancel = context.WithTimeout(context.Background(), 60*time.Second)
 		defer cancel()
@@ -1271,7 +1164,7 @@ func GetDomainInfo() gin.HandlerFunc {
 		var domainInfos = []DomainInfo{}
 		var foundGlobal GlobalVariable
 		var filter = bson.D{primitive.E{Key: "name", Value: "GLOBAL"}}
-		err = globalCollection.FindOne(ctx, filter).Decode(&foundGlobal)
+		err := globalCollection.FindOne(ctx, filter).Decode(&foundGlobal)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			log.Printf("FindOne error: %v", err)
@@ -1370,14 +1263,10 @@ func buildDomainInfo(domains map[string]string, isInUvp bool) ([]DomainInfo, err
 func UpdateDomainInfo() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
-		err := helper.CheckUserType(c, "admin")
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
-		}
+		ReturnIfNotAdmin(c)
 
 		var tempDomainList map[string]string
-		err = c.BindJSON(&tempDomainList)
+		err := c.BindJSON(&tempDomainList)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			log.Printf("BindJSON error: %v", err)
@@ -1407,11 +1296,7 @@ func UpdateDomainInfo() gin.HandlerFunc {
 func GetNodePartial() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
-		err := helper.CheckUserType(c, "admin")
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
-		}
+		ReturnIfNotAdmin(c)
 
 		var ctx, cancel = context.WithTimeout(context.Background(), 60*time.Second)
 		defer cancel()

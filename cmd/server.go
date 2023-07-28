@@ -154,8 +154,8 @@ func RunServer() *gin.Engine {
 	router.Use(gin.Logger())
 	router.Use(recoverFromError)
 
-	routers.AuthRoutes(router)
-	routers.UserRoutes(router)
+	routers.PublicRoutes(router)
+	routers.AuthorizedRoutes(router)
 
 	router.NoRoute(func(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "status: 404! no route found."})

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -22,17 +23,28 @@ import (
 const (
 	ALTERID = 64
 	LEVEL   = 0
-
 	PLAIN   = "plain"
 	DELETE  = "delete"
 	OVERDUE = "overdue"
 )
 
-type Traffic = model.Traffic
-type User = model.User
+var (
+	V2_API_ADDRESS = os.Getenv("V2_API_ADDRESS")
+	V2_API_PORT    = os.Getenv("V2_API_PORT")
+)
+
+type (
+	Traffic = model.Traffic
+	User    = model.User
+)
 
 type StatsServiceClient struct {
 	statsservice.StatsServiceClient
+}
+
+type HandlerServiceClient struct {
+	command.HandlerServiceClient
+	inboundTag string
 }
 
 func NewStatsServiceClient(client *grpc.ClientConn) *StatsServiceClient {
@@ -114,13 +126,6 @@ func (s *StatsServiceClient) GetAllUserTraffic(reset bool) ([]Traffic, error) {
 	return middleStuff, nil
 }
 
-// ——————————————————————————————————————————————————————————————————
-
-type HandlerServiceClient struct {
-	command.HandlerServiceClient
-	inboundTag string
-}
-
 func NewHandlerServiceClient(client *grpc.ClientConn, inboundTag string) *HandlerServiceClient {
 	return &HandlerServiceClient{
 		HandlerServiceClient: command.NewHandlerServiceClient(client),
@@ -159,4 +164,64 @@ func (h *HandlerServiceClient) AlterInbound(req *command.AlterInboundRequest) er
 	_, err := h.HandlerServiceClient.AlterInbound(context.Background(), req)
 	return err
 
+}
+
+func ServiceAddUser(email string, uuid string, path string) error {
+
+	cmdConn, err := grpc.Dial(fmt.Sprintf("%s:%s", V2_API_ADDRESS, V2_API_PORT), grpc.WithInsecure())
+	if err != nil {
+		log.Printf("%v", "v2ray service connection failed.")
+		return err
+	}
+
+	user := User{
+		Email: email,
+		UUID:  uuid,
+		Path:  path,
+	}
+
+	NHSClient := NewHandlerServiceClient(cmdConn, path)
+	err = NHSClient.AddUser(user)
+	if err != nil {
+		log.Printf("%v", "v2ray service add user failed.")
+		return err
+	}
+
+	return nil
+}
+
+func ServiceDeleteUser(email string, path string) error {
+
+	cmdConn, err := grpc.Dial(fmt.Sprintf("%s:%s", V2_API_ADDRESS, V2_API_PORT), grpc.WithInsecure())
+	if err != nil {
+		log.Printf("%v", "v2ray service connection failed.")
+		return err
+	}
+
+	NHSClient := NewHandlerServiceClient(cmdConn, path)
+	err = NHSClient.DelUser(email)
+	if err != nil {
+		log.Printf("%v", "v2ray service delete user failed.")
+		return err
+	}
+
+	return nil
+}
+
+func ServiceGetAllUserTraffic(reset bool) ([]Traffic, error) {
+
+	cmdConn, err := grpc.Dial(fmt.Sprintf("%s:%s", V2_API_ADDRESS, V2_API_PORT), grpc.WithInsecure())
+	if err != nil {
+		log.Printf("%v", "v2ray service connection failed.")
+		return nil, err
+	}
+
+	NSSClient := NewStatsServiceClient(cmdConn)
+	allUserTraffic, err := NSSClient.GetAllUserTraffic(reset)
+	if err != nil {
+		log.Printf("%v", "v2ray service get all user traffic failed.")
+		return nil, err
+	}
+
+	return allUserTraffic, nil
 }

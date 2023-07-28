@@ -10,7 +10,7 @@ import (
 )
 
 //UserRoutes function
-func UserRoutes(incomingRoutes *gin.Engine) {
+func AuthorizedRoutes(incomingRoutes *gin.Engine) {
 
 	GIN_MODE := os.Getenv("GIN_MODE")
 	if GIN_MODE != "test" {
@@ -46,9 +46,6 @@ func UserRoutes(incomingRoutes *gin.Engine) {
 
 	// affect single node!
 	incomingRoutes.GET("/v1/writetodb", controller.WriteToDB())
-
-	incomingRoutes.GET("/v1/traffic/all", controller.GetAllUserTraffic())  // v2api
-	incomingRoutes.GET("/v1/traffic/:name", controller.GetTrafficByUser()) // v2api
 
 	incomingRoutes.PUT("/v1/addnode", controller.AddNode())
 	incomingRoutes.GET("/v1/disanodeperusr", controller.DisableNodePerUser())

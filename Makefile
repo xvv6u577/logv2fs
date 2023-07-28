@@ -1,5 +1,5 @@
 backend: 
-	go run ./main.go
+	go run ./main.go server
 
 web:
 	cd frontend; npm start;

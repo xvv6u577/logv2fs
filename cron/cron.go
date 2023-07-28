@@ -2,7 +2,6 @@ package cron
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"os"
 	"time"
@@ -14,7 +13,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo/options"
-	"google.golang.org/grpc"
 )
 
 type (
@@ -101,12 +99,11 @@ func CronLoggingByUser(traffic Traffic) {
 	}}}
 
 	if traffic.Total+user.Usedtraffic > user.Credittraffic {
-		cmdConn, err := grpc.Dial(fmt.Sprintf("%s:%s", V2_API_ADDRESS, V2_API_PORT), grpc.WithInsecure())
+
+		err := v2ray.ServiceDeleteUser(traffic.Name, user.Path)
 		if err != nil {
-			log.Panic("Panic: ", err)
+			log.Printf("%v", "v2ray delete user failed!")
 		}
-		NHSClient := v2ray.NewHandlerServiceClient(cmdConn, user.Path)
-		NHSClient.DelUser(user.Email)
 
 		update[0].Value.(primitive.D)[4] = primitive.E{Key: "status", Value: "overdue"}
 	}
@@ -179,14 +176,8 @@ func CronLoggingByNode(traffics []Traffic) {
 }
 
 func Log_basicAction() error {
-	cmdConn, err := grpc.Dial(fmt.Sprintf("%s:%s", V2_API_ADDRESS, V2_API_PORT), grpc.WithInsecure())
-	if err != nil {
-		log.Printf("Error: %v", err)
-		return err
-	}
 
-	NSSClient := v2ray.NewStatsServiceClient(cmdConn)
-	allUserTraffic, err := NSSClient.GetAllUserTraffic(true)
+	allUserTraffic, err := v2ray.ServiceGetAllUserTraffic(true)
 	if err != nil {
 		log.Printf("Error: %v", err)
 		return err
