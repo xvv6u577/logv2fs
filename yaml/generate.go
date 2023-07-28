@@ -7,8 +7,8 @@ import (
 	"strings"
 
 	"github.com/caster8013/logv2rayfullstack/database"
+	helper "github.com/caster8013/logv2rayfullstack/helpers"
 	"github.com/caster8013/logv2rayfullstack/model"
-	sanitize "github.com/caster8013/logv2rayfullstack/sanitize"
 	"go.mongodb.org/mongo-driver/bson"
 	"gopkg.in/yaml.v2"
 )
@@ -147,7 +147,7 @@ func GenerateOneYAML(user User) error {
 			}
 		}
 	}
-	user_email := sanitize.SanitizeStr(user.Email)
+	user_email := helper.SanitizeStr(user.Email)
 	log.Printf("%v generated yaml!\n", user_email)
 
 	newYaml, err := yaml.Marshal(&yamlTemplate)

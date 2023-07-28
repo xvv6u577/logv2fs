@@ -14,12 +14,12 @@ import (
 	"sync"
 	"time"
 
+	localCron "github.com/caster8013/logv2rayfullstack/cron"
 	"github.com/caster8013/logv2rayfullstack/database"
 	"github.com/caster8013/logv2rayfullstack/grpctools"
 	"github.com/caster8013/logv2rayfullstack/middleware"
 	"github.com/caster8013/logv2rayfullstack/model"
 	routers "github.com/caster8013/logv2rayfullstack/routers"
-	"github.com/caster8013/logv2rayfullstack/routine"
 	"github.com/caster8013/logv2rayfullstack/v2ray"
 	"github.com/gin-gonic/gin"
 	"github.com/robfig/cron"
@@ -142,7 +142,7 @@ func RunServer() *gin.Engine {
 		wg.Wait()
 	}
 	// add cron
-	routine.Cron_loggingJobs(cronInstance)
+	localCron.Cron_loggingJobs(cronInstance)
 
 	router := gin.New()
 

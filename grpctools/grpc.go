@@ -12,9 +12,9 @@ import (
 	"os"
 	"time"
 
+	helper "github.com/caster8013/logv2rayfullstack/helpers"
 	"github.com/caster8013/logv2rayfullstack/model"
 	pb "github.com/caster8013/logv2rayfullstack/proto"
-	sanitize "github.com/caster8013/logv2rayfullstack/sanitize"
 	"github.com/caster8013/logv2rayfullstack/v2ray"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -122,7 +122,7 @@ func GrpcClientToAddUser(domain string, port string, user User, enableTLS bool) 
 	if enableTLS {
 		tlsCredentials, err := GetClientSideTlsCredential()
 		if err != nil {
-			log.Printf("Warn: %v could not load credential %v\nErr:%v", sanitize.SanitizeStr(domain), sanitize.SanitizeStr(user.Email), err)
+			log.Printf("Warn: %v could not load credential %v\nErr:%v", helper.SanitizeStr(domain), helper.SanitizeStr(user.Email), err)
 			return err
 		}
 
@@ -131,7 +131,7 @@ func GrpcClientToAddUser(domain string, port string, user User, enableTLS bool) 
 
 	conn, err := grpc.Dial(fmt.Sprintf("%s:%s", domain, port), transportOption)
 	if err != nil {
-		log.Printf("%v. Did not connect: %v", sanitize.SanitizeStr(domain), err)
+		log.Printf("%v. Did not connect: %v", helper.SanitizeStr(domain), err)
 		return err
 	}
 	defer conn.Close()
@@ -142,11 +142,11 @@ func GrpcClientToAddUser(domain string, port string, user User, enableTLS bool) 
 	defer cancel()
 	r, err := client.AddUser(ctx, &pb.GRPCRequest{Uuid: user.UUID, Path: user.Path, Name: user.Email})
 	if err != nil {
-		log.Printf("Warn: %v could not add user %v\nErr: %v", sanitize.SanitizeStr(domain), sanitize.SanitizeStr(user.Email), err)
+		log.Printf("Warn: %v could not add user %v\nErr: %v", helper.SanitizeStr(domain), helper.SanitizeStr(user.Email), err)
 		return err
 	}
 
-	log.Printf("Info: %s added in %s!", sanitize.SanitizeStr(domain), r.GetSuccesOrNot())
+	log.Printf("Info: %s added in %s!", helper.SanitizeStr(domain), r.GetSuccesOrNot())
 	return nil
 }
 
@@ -156,7 +156,7 @@ func GrpcClientToDeleteUser(domain string, port string, user User, enableTLS boo
 	if enableTLS {
 		tlsCredentials, err := GetClientSideTlsCredential()
 		if err != nil {
-			log.Printf("Warn: %v could not load credential %v\nErr:%v", sanitize.SanitizeStr(domain), sanitize.SanitizeStr(user.Email), err)
+			log.Printf("Warn: %v could not load credential %v\nErr:%v", helper.SanitizeStr(domain), helper.SanitizeStr(user.Email), err)
 			return err
 		}
 
@@ -165,7 +165,7 @@ func GrpcClientToDeleteUser(domain string, port string, user User, enableTLS boo
 
 	conn, err := grpc.Dial(fmt.Sprintf("%s:%s", domain, port), transportOption)
 	if err != nil {
-		log.Printf("Warn: %v. Did not connect: %v", sanitize.SanitizeStr(domain), err)
+		log.Printf("Warn: %v. Did not connect: %v", helper.SanitizeStr(domain), err)
 		return err
 	}
 	defer conn.Close()
@@ -177,11 +177,11 @@ func GrpcClientToDeleteUser(domain string, port string, user User, enableTLS boo
 	defer cancel()
 	r, err := client.DeleteUser(ctx, &pb.GRPCRequest{Uuid: user.UUID, Path: user.Path, Name: user.Email})
 	if err != nil {
-		log.Printf("Warn: %v could not delete user %v\nErr:%v", sanitize.SanitizeStr(domain), sanitize.SanitizeStr(user.Email), err)
+		log.Printf("Warn: %v could not delete user %v\nErr:%v", helper.SanitizeStr(domain), helper.SanitizeStr(user.Email), err)
 		return err
 	}
 
-	log.Printf("Info: %s deleted in %s!", sanitize.SanitizeStr(domain), r.GetSuccesOrNot())
+	log.Printf("Info: %s deleted in %s!", helper.SanitizeStr(domain), r.GetSuccesOrNot())
 
 	return nil
 }

@@ -18,12 +18,11 @@ import (
 	uuid "github.com/nu7hatch/gouuid"
 	"google.golang.org/grpc"
 
+	localCron "github.com/caster8013/logv2rayfullstack/cron"
 	"github.com/caster8013/logv2rayfullstack/database"
-	"github.com/caster8013/logv2rayfullstack/routine"
 	"github.com/caster8013/logv2rayfullstack/v2ray"
 
 	helper "github.com/caster8013/logv2rayfullstack/helpers"
-	sanitize "github.com/caster8013/logv2rayfullstack/sanitize"
 
 	"github.com/caster8013/logv2rayfullstack/grpctools"
 	"github.com/caster8013/logv2rayfullstack/model"
@@ -94,6 +93,37 @@ func VerifyPassword(userPassword string, providedPassword string) (bool, string)
 	return check, msg
 }
 
+// Renews the user tokens when they login
+func UpdateAllTokens(signedToken string, signedRefreshToken string, userId string) {
+
+	var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
+	var updateObj primitive.D
+
+	updateObj = append(updateObj, bson.E{Key: "token", Value: signedToken})
+	updateObj = append(updateObj, bson.E{Key: "refresh_token", Value: signedRefreshToken})
+
+	Updated_at := time.Now()
+	updateObj = append(updateObj, bson.E{Key: "updated_at", Value: Updated_at})
+
+	upsert := true
+	filter := bson.M{"user_id": userId}
+	opt := options.UpdateOptions{
+		Upsert: &upsert,
+	}
+	_, err := userCollection.UpdateOne(
+		ctx,
+		filter,
+		bson.D{{Key: "$set", Value: updateObj}},
+		&opt,
+	)
+	defer cancel()
+
+	if err != nil {
+		log.Printf("Error: %s", err.Error())
+	}
+
+}
+
 //CreateUser is the api used to tget a single user
 func SignUp() gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -125,7 +155,7 @@ func SignUp() gin.HandlerFunc {
 			return
 		}
 
-		user_email := sanitize.SanitizeStr(user.Email)
+		user_email := helper.SanitizeStr(user.Email)
 		count, err := userCollection.CountDocuments(ctx, bson.M{"email": user_email})
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "error occured while checking for the email"})
@@ -173,7 +203,7 @@ func SignUp() gin.HandlerFunc {
 
 		user.NodeGlobalList = adminUser.NodeGlobalList
 		user.ProduceNodeInUse(adminUser.NodeGlobalList)
-		user_role := sanitize.SanitizeStr(user.Role)
+		user_role := helper.SanitizeStr(user.Role)
 		// if user_role == "admin" {
 		// }
 
@@ -294,7 +324,7 @@ func Login() gin.HandlerFunc {
 			return
 		}
 
-		sanitized_email := sanitize.SanitizeStr(boundUser.Email)
+		sanitized_email := helper.SanitizeStr(boundUser.Email)
 		err := userCollection.FindOne(ctx, bson.M{"email": sanitized_email}).Decode(&foundUser)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -311,7 +341,7 @@ func Login() gin.HandlerFunc {
 
 		token, refreshToken, _ := helper.GenerateAllTokens(sanitized_email, foundUser.UUID, foundUser.Path, foundUser.Role, foundUser.User_id)
 
-		helper.UpdateAllTokens(token, refreshToken, foundUser.User_id)
+		UpdateAllTokens(token, refreshToken, foundUser.User_id)
 		var projections = bson.D{
 			{Key: "token", Value: 1},
 		}
@@ -541,7 +571,7 @@ func EditUser() gin.HandlerFunc {
 			return
 		}
 
-		err := userCollection.FindOne(ctx, bson.M{"email": sanitize.SanitizeStr(user.Email)}).Decode(&foundUser)
+		err := userCollection.FindOne(ctx, bson.M{"email": helper.SanitizeStr(user.Email)}).Decode(&foundUser)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "email is incorrect"})
 			log.Printf("email is incorrect")
@@ -579,7 +609,7 @@ func EditUser() gin.HandlerFunc {
 
 		err = userCollection.FindOneAndUpdate(
 			ctx,
-			bson.M{"email": sanitize.SanitizeStr(user.Email)},
+			bson.M{"email": helper.SanitizeStr(user.Email)},
 			bson.M{"$set": newFoundUser},
 			options.FindOneAndUpdate().SetUpsert(true),
 		).Decode(&replacedDocument)
@@ -589,7 +619,7 @@ func EditUser() gin.HandlerFunc {
 			return
 		}
 
-		err = userCollection.FindOne(ctx, bson.M{"email": sanitize.SanitizeStr(user.Email)}).Decode(&foundUser)
+		err = userCollection.FindOne(ctx, bson.M{"email": helper.SanitizeStr(user.Email)}).Decode(&foundUser)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			log.Printf("error: %v", err)
@@ -607,7 +637,7 @@ func GetUserByID() gin.HandlerFunc {
 		defer cancel()
 
 		var user model.User
-		userId := sanitize.SanitizeStr(c.Param("user_id"))
+		userId := helper.SanitizeStr(c.Param("user_id"))
 
 		if err := helper.MatchUserTypeAndUid(c, userId); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -637,7 +667,7 @@ func TakeItOfflineByUserName() gin.HandlerFunc {
 		var ctx, cancel = context.WithTimeout(context.Background(), 60*time.Second)
 		defer cancel()
 
-		name := sanitize.SanitizeStr(c.Param("name"))
+		name := helper.SanitizeStr(c.Param("name"))
 		var projections = bson.D{
 			{Key: "email", Value: 1},
 			{Key: "path", Value: 1},
@@ -724,7 +754,7 @@ func TakeItOnlineByUserName() gin.HandlerFunc {
 
 		var ctx, cancel = context.WithTimeout(context.Background(), 60*time.Second)
 		defer cancel()
-		name := sanitize.SanitizeStr(c.Param("name"))
+		name := helper.SanitizeStr(c.Param("name"))
 		var projections = bson.D{
 			{Key: "email", Value: 1},
 			{Key: "path", Value: 1},
@@ -907,7 +937,7 @@ func GetTrafficByUser() gin.HandlerFunc {
 		downlink, err := NSSClient.GetUserDownlink(name)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			log.Printf("Get user %s downlink failed.", sanitize.SanitizeStr(name))
+			log.Printf("Get user %s downlink failed.", helper.SanitizeStr(name))
 			return
 		}
 
@@ -1061,7 +1091,7 @@ func WriteToDB() gin.HandlerFunc {
 			return
 		}
 
-		err = routine.Log_basicAction()
+		err = localCron.Log_basicAction()
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			log.Printf("Write to DB failed: %s", err.Error())
@@ -1085,8 +1115,8 @@ func DisableNodePerUser() gin.HandlerFunc {
 		var ctx, cancel = context.WithTimeout(context.Background(), 60*time.Second)
 		defer cancel()
 
-		email := sanitize.SanitizeStr(c.Request.URL.Query().Get("email"))
-		node := sanitize.SanitizeStr(c.Request.URL.Query().Get("node"))
+		email := helper.SanitizeStr(c.Request.URL.Query().Get("email"))
+		node := helper.SanitizeStr(c.Request.URL.Query().Get("node"))
 
 		var projections = bson.D{
 			{Key: "email", Value: 1},
@@ -1145,7 +1175,7 @@ func DisableNodePerUser() gin.HandlerFunc {
 			return
 		}
 
-		log.Printf("Disable user: %v, node: %v by hand!", sanitize.SanitizeStr(email), sanitize.SanitizeStr(node))
+		log.Printf("Disable user: %v, node: %v by hand!", helper.SanitizeStr(email), helper.SanitizeStr(node))
 		c.JSON(http.StatusOK, gin.H{"message": "Disable user: " + email + " at node: " + node + " successfully!"})
 	}
 }
@@ -1162,8 +1192,8 @@ func EnableNodePerUser() gin.HandlerFunc {
 		var ctx, cancel = context.WithTimeout(context.Background(), 60*time.Second)
 		defer cancel()
 
-		email := sanitize.SanitizeStr(c.Request.URL.Query().Get("email"))
-		node := sanitize.SanitizeStr(c.Request.URL.Query().Get("node"))
+		email := helper.SanitizeStr(c.Request.URL.Query().Get("email"))
+		node := helper.SanitizeStr(c.Request.URL.Query().Get("node"))
 
 		var projections = bson.D{
 			{Key: "email", Value: 1},
@@ -1220,7 +1250,7 @@ func EnableNodePerUser() gin.HandlerFunc {
 			return
 		}
 
-		log.Printf("Enable user: %v, node: %v by hand!", sanitize.SanitizeStr(email), sanitize.SanitizeStr(node))
+		log.Printf("Enable user: %v, node: %v by hand!", helper.SanitizeStr(email), helper.SanitizeStr(node))
 		c.JSON(http.StatusOK, gin.H{"message": "Enable user: " + email + " at node: " + node + " successfully!"})
 	}
 }

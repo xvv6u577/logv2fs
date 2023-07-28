@@ -4,7 +4,13 @@ import (
 	"context"
 	"net/http"
 	"time"
+
+	localSanitize "github.com/mrz1836/go-sanitize"
 )
+
+func SanitizeStr(str string) string {
+	return localSanitize.Custom(str, `[^\p{Han}a-zA-Z0-9-._]+`)
+}
 
 func CountNodesInUse(nodeStatus map[string]bool) int {
 	trueCount := 0

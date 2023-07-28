@@ -7,8 +7,8 @@ import (
 	"log"
 	"time"
 
+	helper "github.com/caster8013/logv2rayfullstack/helpers"
 	"github.com/caster8013/logv2rayfullstack/model"
-	sanitize "github.com/caster8013/logv2rayfullstack/sanitize"
 	"github.com/go-playground/validator/v10"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -69,7 +69,7 @@ func DeleteUserByName(email string) error {
 	var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
 	defer cancel()
 
-	email = sanitize.SanitizeStr(email)
+	email = helper.SanitizeStr(email)
 	filter := bson.D{primitive.E{Key: "email", Value: email}}
 	_, error := OpenCollection(Client, "USERS").DeleteOne(ctx, filter)
 	if error != nil {
@@ -87,7 +87,7 @@ func CreateUserByName(user *User) error {
 	defer cancel()
 
 	validationErr := validate.Struct(user)
-	sanitized_email := sanitize.SanitizeStr(user.Email)
+	sanitized_email := helper.SanitizeStr(user.Email)
 	if validationErr != nil {
 		log.Printf("error occured while validating user %s", sanitized_email)
 		return validationErr
@@ -197,13 +197,13 @@ func GetUserByName(name string, projections bson.D) (User, error) {
 
 	var user User
 	filter := bson.D{
-		primitive.E{Key: "email", Value: sanitize.SanitizeStr(name)},
+		primitive.E{Key: "email", Value: helper.SanitizeStr(name)},
 	}
 	opts := options.FindOne().SetProjection(projections)
 
 	err := OpenCollection(Client, "USERS").FindOne(ctx, filter, opts).Decode(&user)
 	if err != nil {
-		log.Printf("error occured while finding user %s", sanitize.SanitizeStr(name))
+		log.Printf("error occured while finding user %s", helper.SanitizeStr(name))
 		return user, err
 	}
 

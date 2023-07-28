@@ -1,18 +1,11 @@
 package helper
 
 import (
-	"context"
 	"log"
 	"os"
 	"time"
 
-	"github.com/caster8013/logv2rayfullstack/database"
-
 	jwt "github.com/dgrijalva/jwt-go"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 // SignedDetails
@@ -24,8 +17,6 @@ type SignedDetails struct {
 	Role  string
 	jwt.StandardClaims
 }
-
-var userCollection *mongo.Collection = database.OpenCollection(database.Client, "USERS")
 
 var SECRET_KEY string = os.Getenv("SECRET_KEY")
 
@@ -90,35 +81,4 @@ func ValidateToken(signedToken string) (claims *SignedDetails, msg string) {
 	}
 
 	return claims, msg
-}
-
-//UpdateAllTokens renews the user tokens when they login
-func UpdateAllTokens(signedToken string, signedRefreshToken string, userId string) {
-
-	var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
-	var updateObj primitive.D
-
-	updateObj = append(updateObj, bson.E{Key: "token", Value: signedToken})
-	updateObj = append(updateObj, bson.E{Key: "refresh_token", Value: signedRefreshToken})
-
-	Updated_at := time.Now()
-	updateObj = append(updateObj, bson.E{Key: "updated_at", Value: Updated_at})
-
-	upsert := true
-	filter := bson.M{"user_id": userId}
-	opt := options.UpdateOptions{
-		Upsert: &upsert,
-	}
-	_, err := userCollection.UpdateOne(
-		ctx,
-		filter,
-		bson.D{{Key: "$set", Value: updateObj}},
-		&opt,
-	)
-	defer cancel()
-
-	if err != nil {
-		log.Printf("Error: %s", err.Error())
-	}
-
 }
