@@ -6,12 +6,12 @@ frontend/build
 frontend/.env
 frontend/tool
 
-yaml/results/*
-cmd/development/
-# cmd/in_progress/
-config
+config/results/*
+development/
 CA
 setup-script*
+cmd/init*
+cmd/dev*
 
 .env
 *.sh

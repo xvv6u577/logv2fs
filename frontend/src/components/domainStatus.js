@@ -35,7 +35,7 @@ const DomainStatus = ({ btnName }) => {
 
         axios({
             method: "put",
-            url: process.env.REACT_APP_API_HOST + "updatedomaininfo",
+            url: process.env.REACT_APP_API_HOST + "g7302b",
             headers: { token: loginState.token },
             data: tempDomainList,
         })
@@ -55,7 +55,7 @@ const DomainStatus = ({ btnName }) => {
                 onClick={() => {
                     setShowModal(!showModal);
                     axios
-                        .get(process.env.REACT_APP_API_HOST + "domaininfo", {
+                        .get(process.env.REACT_APP_API_HOST + "681p32", {
                             headers: { token: loginState.token },
                         })
                         .then((response) => {

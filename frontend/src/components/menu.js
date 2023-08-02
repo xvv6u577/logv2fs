@@ -2,8 +2,6 @@ import { useSelector, useDispatch } from "react-redux";
 import { logout } from "../store/login";
 import { alert, success } from "../store/message";
 import AddUser from "./adduser";
-import AddNode from "./addNode";
-import DomainStatus from "./domainStatus";
 import axios from "axios";
 
 const Menu = () => {
@@ -16,7 +14,7 @@ const Menu = () => {
 	const handleWriteToDB = (e) => {
 		axios({
 			method: "get",
-			url: process.env.REACT_APP_API_HOST + "writetodb",
+			url: process.env.REACT_APP_API_HOST + "cl6217",
 			headers: { token: loginState.token },
 		})
 			.then((response) => {
@@ -38,7 +36,8 @@ const Menu = () => {
 					{loginState.jwt.Role === "admin" && (
 						<>
 							<a className="mr-5 hover:text-white" href="/home">User</a>
-							<a className="mr-5 hover:text-white" href="/domain">Domain</a>
+							<a className="mr-5 hover:text-white" href="/nodes">Nodes</a>
+							<a className="mr-5 hover:text-white" href="/addnode">Add Node</a>
 						</>
 					)}
 					<a className="mr-5 hover:text-white" href="/mypanel">My Panel</a>
@@ -59,8 +58,6 @@ const Menu = () => {
 							</svg>
 							WriteToDB
 						</button>
-						<DomainStatus btnName="DomainStatus" />
-						<AddNode btnName="AddNode" />
 						<AddUser btnName="AddUser" />
 					</>
 				)}

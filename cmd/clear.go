@@ -26,7 +26,7 @@ var clearCmd = &cobra.Command{
 		var projections = bson.D{
 			{Key: "email", Value: 1},
 		}
-		users, err := database.GetPartialInfosForAllUsers(projections)
+		users, err := database.GetAllUsersPartialInfo(projections)
 		if err != nil {
 			panic(err)
 		}

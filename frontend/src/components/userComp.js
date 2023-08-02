@@ -31,7 +31,7 @@ const UserComp = (props) => {
 
     const handleOnline = (name) => {
         axios
-            .get(process.env.REACT_APP_API_HOST + "takeuseronline/" + name, {
+            .get(process.env.REACT_APP_API_HOST + "08f87p/" + name, {
                 headers: { token: loginState.token },
             })
             .then((response) => {
@@ -45,7 +45,7 @@ const UserComp = (props) => {
 
     const handleOffline = (name) => {
         axios
-            .get(process.env.REACT_APP_API_HOST + "takeuseroffline/" + name, {
+            .get(process.env.REACT_APP_API_HOST + "yi9a92/" + name, {
                 headers: { token: loginState.token },
             })
             .then((response) => {
@@ -81,7 +81,7 @@ const UserComp = (props) => {
 
     const handleDisableNode = ({ email, node }) => {
         axios
-            .get(process.env.REACT_APP_API_HOST + "disanodeperusr", {
+            .get(process.env.REACT_APP_API_HOST + "0l54vs", {
                 params: { email, node },
                 headers: { token: loginState.token },
             })
@@ -101,7 +101,7 @@ const UserComp = (props) => {
 
     const handleEnableNode = ({ email, node }) => {
         axios
-            .get(process.env.REACT_APP_API_HOST + "enanodeperusr", {
+            .get(process.env.REACT_APP_API_HOST + "9mu6g1", {
                 params: { email, node },
                 headers: { token: loginState.token },
             })
@@ -359,7 +359,7 @@ const EditUser = (props) => {
             },
         })
             .then((response) => {
-                dispatch(success({ show: true, content: "user info updated!" }));
+                dispatch(success({ show: true, content: "User info updated!" }));
                 props.editUserFunc();
             })
             .catch((err) => {

@@ -11,7 +11,8 @@ import Iphone from "./components/iphone";
 import Android from "./components/android";
 import Footer from "./components/footer";
 import Mypanel from "./components/mypanel";
-import Domain from "./components/domain";
+import Nodes from "./components/nodes";
+import AddNode from "./components/addNode";
 
 function RequireAuth({ children }) {
 	const loginState = useSelector((state) => state.login);
@@ -42,12 +43,24 @@ function App() {
 					}
 				></Route>
 				<Route
-					path="/domain"
+					path="/addnode"
 					element={
 						<RequireAuth>
 							<div className="flex-1 flex flex-col md:container md:mx-auto" fluid="true">
 								<Menu />
-								<Domain />
+								<AddNode />
+								<Footer />
+							</div>
+						</RequireAuth>
+					}
+				></Route>
+				<Route
+					path="/nodes"
+					element={
+						<RequireAuth>
+							<div className="flex-1 flex flex-col md:container md:mx-auto" fluid="true">
+								<Menu />
+								<Nodes />
 								<Footer />
 							</div>
 						</RequireAuth>

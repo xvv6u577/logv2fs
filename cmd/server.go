@@ -119,7 +119,7 @@ func RunServer() *gin.Engine {
 		{Key: "credit", Value: 1},
 	}
 
-	allUsersInDB, _ := database.GetPartialInfosForAllUsers(projections)
+	allUsersInDB, _ := database.GetAllUsersPartialInfo(projections)
 	if len(allUsersInDB) != 0 {
 
 		cmdConn, err := grpc.Dial(fmt.Sprintf("%s:%s", V2_API_ADDRESS, V2_API_PORT), grpc.WithInsecure())

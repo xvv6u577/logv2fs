@@ -24,7 +24,21 @@ type NodeAtPeriod struct {
 
 // var nodeGlobalList = NodeGlobalList{"domain": "remark"}
 type GlobalVariable struct {
-	Name           string            `json:"name" bson:"name" validate:"required,min=2,max=100"`
-	DomainList     map[string]string `json:"domain_list" bson:"domain_list"`
-	NodeGlobalList map[string]string `json:"node_global_list" bson:"node_global_list"`
+	Name                  string   `json:"name" bson:"name" validate:"required,min=2,max=100"`
+	WorkRelatedDomainList []Domain `json:"work_related_domain_list" bson:"work_related_domain_list"`
+	ActiveGlobalNodes     []Domain `json:"active_global_nodes" bson:"active_global_nodes"`
+	// DomainList            map[string]string `json:"domain_list" bson:"domain_list"`
+	// NodeGlobalList        map[string]string `json:"node_global_list" bson:"node_global_list"`
+}
+
+// Domain type: "work", "vmess", "vmessCDN", "vlessCDN"
+type Domain struct {
+	Type              string `json:"type" bason:"type"`
+	Domain            string `json:"domain" bson:"domain" validate:"required,min=2,max=100"`
+	Remark            string `json:"remark" bson:"remark"`
+	EnableSubcription bool   `json:"enable_subscription" bson:"enable_subscription"`
+	EnableChatgpt     bool   `json:"enable_chatgpt" bson:"enable_chatgpt"`
+	SNI               string `json:"sni" bson:"sni"`
+	UUID              string `json:"uuid" bson:"uuid"`
+	PATH              string `json:"path" bson:"path"`
 }

@@ -2,7 +2,10 @@ package helper
 
 import (
 	"context"
+	"log"
 	"net/http"
+	"os"
+	"strings"
 	"time"
 
 	localSanitize "github.com/mrz1836/go-sanitize"
@@ -10,6 +13,14 @@ import (
 
 func SanitizeStr(str string) string {
 	return localSanitize.Custom(str, `[^\p{Han}a-zA-Z0-9-._]+`)
+}
+
+func CurrentPath() string {
+	dir, err := os.Getwd()
+	if err != nil {
+		log.Fatal(err)
+	}
+	return strings.Replace(dir, "\\", "/", -1)
 }
 
 func CountNodesInUse(nodeStatus map[string]bool) int {

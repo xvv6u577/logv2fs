@@ -2,11 +2,16 @@ package model
 
 import (
 	"encoding/json"
+	"io/ioutil"
+	"log"
+	"os"
 	"time"
 
 	b64 "encoding/base64"
 
+	helper "github.com/caster8013/logv2rayfullstack/helpers"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"gopkg.in/yaml.v2"
 )
 
 type User struct {
@@ -55,18 +60,21 @@ type TrafficInDB struct {
 }
 
 type Node struct {
-	Version string `default:"2" json:"v"`
-	Domain  string `json:"add"`
-	UUID    string `json:"id"`
-	Path    string `json:"path"`
-	Remark  string `json:"ps"`
-	Port    string `default:"443" json:"port"`
-	Aid     string `default:"64" json:"aid"`
-	Net     string `default:"ws" json:"net"`
-	Type    string `json:"type" `
-	Host    string `default:"none" json:"host"`
-	Tls     string `default:"tls" json:"tls"`
-	Method  string `default:"none" json:"method"`
+	Version     string `default:"2" json:"v"`
+	Remark      string `json:"ps"`
+	Domain      string `json:"add"`
+	Port        string `default:"443" json:"port"`
+	UUID        string `json:"id"`
+	Aid         string `default:"4" json:"aid"`
+	Security    string `default:"auto" json:"scy"`
+	Net         string `default:"ws" json:"net"`
+	Type        string `default:"none" json:"type" `
+	Host        string `json:"host"`
+	Path        string `json:"path"`
+	Tls         string `default:"tls" json:"tls"`
+	SNI         string `json:"sni"`
+	Alpn        string `default:"h2" json:"alpn"`
+	FingerPrint string `default:"chrome" json:"fp"`
 }
 
 type YamlTemplate struct {
@@ -116,6 +124,8 @@ type Proxies struct {
 	Cipher         string `yaml:"cipher"`
 	TLS            bool   `yaml:"tls"`
 	SkipCertVerify bool   `yaml:"skip-cert-verify"`
+	SNI            string `yaml:"sni"`
+	UDP            bool   `yaml:"udp"`
 	Network        string `yaml:"network"`
 	WsOpts         WsOpts `yaml:"ws-opts"`
 }
@@ -127,40 +137,68 @@ type ProxyGroups struct {
 	Interval int      `yaml:"interval,omitempty"`
 }
 
-func (u *User) ProduceSuburl() {
+func (u *User) ProduceSuburl(activeGlobalNodes []Domain) {
 
-	var node Node
-	var exchangeMap = map[string]string{}
-	subscription := ""
-
-	for k, v := range u.NodeGlobalList {
-		exchangeMap[v] = k
+	if u.Status != "plain" {
+		u.Suburl = ""
+		return
 	}
 
-	for index, item := range u.NodeInUseStatus {
-		if item {
+	subscription := ""
+	for _, item := range activeGlobalNodes {
+
+		if item.Domain == "localhost" || (item.Type == "vmess" && !u.NodeInUseStatus[item.Domain]) {
+			continue
+		}
+
+		var node Node
+
+		switch item.Type {
+		case "vmess", "vmessCDN":
 			node = Node{
-				Domain:  index,
+				Domain:  item.Domain,
 				Path:    "/" + u.Path,
 				UUID:    u.UUID,
-				Remark:  exchangeMap[index],
+				Remark:  item.Remark,
 				Version: "2",
 				Port:    "443",
 				Aid:     "4",
 				Net:     "ws",
 				Type:    "none",
 				Tls:     "tls",
-				Method:  "none",
+				Host:    item.SNI,
+				SNI:     item.SNI,
 			}
-
 			jsonedNode, _ := json.Marshal(node)
-
 			if len(subscription) == 0 {
 				subscription = "vmess://" + b64.StdEncoding.EncodeToString(jsonedNode)
 			} else {
 				subscription = subscription + "\n" + "vmess://" + b64.StdEncoding.EncodeToString(jsonedNode)
 			}
+
+		case "vlessCDN":
+			node = Node{
+				Domain:  item.Domain,
+				Path:    item.PATH,
+				UUID:    item.UUID,
+				Remark:  item.Remark,
+				Version: "2",
+				Port:    "443",
+				Aid:     "4",
+				Net:     "ws",
+				Type:    "none",
+				Tls:     "tls",
+				Host:    item.SNI,
+				SNI:     item.SNI,
+			}
+			jsonedNode, _ := json.Marshal(node)
+			if len(subscription) == 0 {
+				subscription = "vless://" + b64.StdEncoding.EncodeToString(jsonedNode)
+			} else {
+				subscription = subscription + "\n" + "vless://" + b64.StdEncoding.EncodeToString(jsonedNode)
+			}
 		}
+
 	}
 
 	u.Suburl = b64.StdEncoding.EncodeToString([]byte(subscription))
@@ -168,40 +206,124 @@ func (u *User) ProduceSuburl() {
 
 func (u *User) DeleteNodeInUse(domain string) {
 	u.NodeInUseStatus[domain] = false
-	u.ProduceSuburl()
 }
 
 func (u *User) AddNodeInUse(domain string) {
 	u.NodeInUseStatus[domain] = true
-	u.ProduceSuburl()
 }
 
-func (u *User) ProduceNodeInUse(submittedNodes map[string]string) {
+func (u *User) UpdateNodeStatusInUse(activeGlobalNodes []Domain) {
 
 	var updatedNodes = map[string]bool{}
-	var submittedNodesReverse = map[string]string{}
-	for k, v := range submittedNodes {
-		submittedNodesReverse[v] = k
+	// separate out vemss nodes
+	var simplifiedNodes = map[string]string{}
+	for _, node := range activeGlobalNodes {
+		if node.Type == "vmess" {
+			simplifiedNodes[node.Domain] = node.Remark
+		}
 	}
 
 	if u.Status == "plain" {
-		// if node in u.NodeInUseStatus and in submittedNodesReverse, keep it
+		// if node in u.NodeInUseStatus and in simplifiedNodes, keep it
 		for node, status := range u.NodeInUseStatus {
-			if _, ok := submittedNodesReverse[node]; ok {
+			if _, ok := simplifiedNodes[node]; ok {
 				updatedNodes[node] = status
 			}
 		}
-		// if node in submittedNodesReverse not in updatedNodes, add it
-		for node := range submittedNodesReverse {
+		// if node in simplifiedNodes not in updatedNodes, add it
+		for node := range simplifiedNodes {
 			if _, ok := updatedNodes[node]; !ok {
 				updatedNodes[node] = true
 			}
 		}
 	} else {
-		for node := range submittedNodesReverse {
+		for node := range simplifiedNodes {
 			updatedNodes[node] = false
 		}
 	}
+
 	u.NodeInUseStatus = updatedNodes
-	u.ProduceSuburl()
+}
+
+func (u *User) GenerateYAML(nodes []Domain) error {
+
+	var yamlTemplate = YamlTemplate{}
+	yamlFile, err := os.ReadFile(helper.CurrentPath() + "/config/template.yaml")
+	if err != nil {
+		log.Printf("yamlFile.Get err #%v ", err)
+		return err
+	}
+
+	if u.Status == "plain" {
+		var noVlessNodes []Domain
+		for _, item := range nodes {
+			if item.Type != "vlessCDN" {
+				noVlessNodes = append(noVlessNodes, item)
+			}
+		}
+
+		err = yaml.Unmarshal(yamlFile, &yamlTemplate)
+		if err != nil {
+			log.Printf("Unmarshal: %v", err)
+			return err
+		}
+
+		for _, node := range noVlessNodes {
+
+			if node.Domain == "localhost" || (node.Type == "vmess" && !u.NodeInUseStatus[node.Domain]) || !node.EnableSubcription {
+				continue
+			}
+
+			yamlTemplate.Proxies = append(yamlTemplate.Proxies, Proxies{
+				Name:           node.Remark,
+				Server:         node.Domain,
+				Port:           443,
+				Type:           "vmess",
+				UUID:           u.UUID,
+				AlterID:        4,
+				Cipher:         "none",
+				TLS:            true,
+				SkipCertVerify: false,
+				Network:        "ws",
+				SNI:            node.SNI,
+				UDP:            false,
+				WsOpts: WsOpts{
+					Path:    "/" + u.Path,
+					Headers: Headers{Host: node.SNI},
+				},
+			})
+
+			for index, value := range yamlTemplate.ProxyGroups {
+				if value.Name == "manual-select" || value.Name == "auto-select" || value.Name == "fallback" {
+					yamlTemplate.ProxyGroups[index].Proxies = append(yamlTemplate.ProxyGroups[index].Proxies, node.Remark)
+				}
+			}
+
+			if node.Type == "vmess" && node.EnableChatgpt {
+				for index, value := range yamlTemplate.ProxyGroups {
+					if value.Name == "chatGPT" || value.Name == "gpt-auto" {
+						yamlTemplate.ProxyGroups[index].Proxies = append(yamlTemplate.ProxyGroups[index].Proxies, node.Remark)
+					}
+				}
+			}
+		}
+	}
+
+	newYaml, err := yaml.Marshal(&yamlTemplate)
+	if err != nil {
+		log.Printf("Marshal: %v", err)
+		return err
+	}
+
+	// if directory not exist, create it
+	if _, err := os.Stat(helper.CurrentPath() + "/config/results"); os.IsNotExist(err) {
+		os.Mkdir(helper.CurrentPath()+"/config/results", os.ModePerm)
+	}
+	err = ioutil.WriteFile(helper.CurrentPath()+"/config/results/"+u.Email+".yaml", newYaml, 0644)
+	if err != nil {
+		log.Printf("WriteFile: %v", err)
+		return err
+	}
+
+	return nil
 }

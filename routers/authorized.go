@@ -35,24 +35,24 @@ func AuthorizedRoutes(incomingRoutes *gin.Engine) {
 	incomingRoutes.POST("/v1/signup", controller.SignUp())
 	incomingRoutes.POST("/v1/edit/:name", controller.EditUser())
 
-	incomingRoutes.GET("/v1/alluser", controller.GetAllUsers())
+	incomingRoutes.GET("/v1/n778cf", controller.GetAllUsers())
 
-	incomingRoutes.GET("/v1/userbyid/:user_id", controller.GetUserByID())
 	incomingRoutes.GET("/v1/user/:name", controller.GetUserByName())
 
-	incomingRoutes.GET("/v1/takeuseroffline/:name", controller.TakeItOfflineByUserName())
-	incomingRoutes.GET("/v1/takeuseronline/:name", controller.TakeItOnlineByUserName())
+	incomingRoutes.GET("/v1/yi9a92/:name", controller.TakeItOfflineByUserName())
+	incomingRoutes.GET("/v1/08f87p/:name", controller.TakeItOnlineByUserName())
 	incomingRoutes.GET("/v1/deluser/:name", controller.DeleteUserByUserName())
 
 	// affect single node!
-	incomingRoutes.GET("/v1/writetodb", controller.WriteToDB())
+	incomingRoutes.GET("/v1/cl6217", controller.WriteToDB())
 
-	incomingRoutes.PUT("/v1/addnode", controller.AddNode())
-	incomingRoutes.GET("/v1/disanodeperusr", controller.DisableNodePerUser())
-	incomingRoutes.GET("/v1/enanodeperusr", controller.EnableNodePerUser())
+	incomingRoutes.PUT("/v1/759b0v", controller.AddNode())
+	incomingRoutes.GET("/v1/0l54vs", controller.DisableNodePerUser())
+	incomingRoutes.GET("/v1/9mu6g1", controller.EnableNodePerUser())
 
-	incomingRoutes.GET("/v1/domaininfo", controller.GetDomainInfo())
-	incomingRoutes.PUT("/v1/updatedomaininfo", controller.UpdateDomainInfo())
+	incomingRoutes.GET("/v1/681p32", controller.GetDomainInfo())
+	incomingRoutes.PUT("/v1/g7302b", controller.UpdateDomainInfo())
 
-	incomingRoutes.GET("/v1/partialallnode", controller.GetNodePartial())
+	incomingRoutes.GET("/v1/c47kr8", controller.GetNodePartial())
+	incomingRoutes.GET("/v1/t7k033", controller.GetActiveGlobalNodesInfo())
 }

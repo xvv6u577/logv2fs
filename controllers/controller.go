@@ -2,9 +2,7 @@ package controllers
 
 import (
 	"context"
-	"crypto/tls"
 	"log"
-	"net"
 	"os"
 	"strconv"
 	"sync"
@@ -22,9 +20,9 @@ import (
 
 	helper "github.com/caster8013/logv2rayfullstack/helpers"
 
+	yamlTools "github.com/caster8013/logv2rayfullstack/config"
 	"github.com/caster8013/logv2rayfullstack/grpctools"
 	"github.com/caster8013/logv2rayfullstack/model"
-	yamlTools "github.com/caster8013/logv2rayfullstack/yaml"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -44,6 +42,7 @@ var (
 	CURRENT_DOMAIN                     = os.Getenv("CURRENT_DOMAIN")
 	MIXED_PORT                         = os.Getenv("MIXED_PORT")
 	ADMINUSERID                        = os.Getenv("ADMINUSERID")
+	CREDIT                             = os.Getenv("CREDIT")
 )
 
 type (
@@ -58,6 +57,7 @@ type (
 	CurrentNode     = model.CurrentNode
 	NodeAtPeriod    = model.NodeAtPeriod
 	GlobalVariable  = model.GlobalVariable
+	Domain          = model.Domain
 )
 
 type DomainInfo struct {
@@ -139,8 +139,6 @@ func SignUp() gin.HandlerFunc {
 		var user model.User
 		var current = time.Now()
 
-		CREDIT := os.Getenv("CREDIT")
-
 		if err := c.BindJSON(&user); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			log.Printf("BindJSON error: %v", err)
@@ -158,7 +156,7 @@ func SignUp() gin.HandlerFunc {
 		count, err := userCollection.CountDocuments(ctx, bson.M{"email": user_email})
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "error occured while checking for the email"})
-			log.Printf("error occured while checking for the email: %s", err.Error())
+			log.Printf("Checking email error: %s", err.Error())
 			return
 		}
 
@@ -168,16 +166,12 @@ func SignUp() gin.HandlerFunc {
 			return
 		}
 
-		var adminUser model.User
-		var userId = c.GetString("uid")
-		if userId == "" {
-			userId = ADMINUSERID
-		}
-
-		err = userCollection.FindOne(ctx, bson.M{"user_id": userId}).Decode(&adminUser)
+		// get ActiveGlobalNodes from globalCollection, seperate out vmess nodes and put them into vmessNodes
+		var globalVariable GlobalVariable
+		err = globalCollection.FindOne(ctx, bson.M{"name": "global"}).Decode(&globalVariable)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			log.Printf("FindOne error: %v", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "error occured while getting globalVariable"})
+			log.Printf("Getting globalVariable error: %s", err.Error())
 			return
 		}
 
@@ -199,12 +193,7 @@ func SignUp() gin.HandlerFunc {
 			uuidV4, _ := uuid.NewV4()
 			user.UUID = uuidV4.String()
 		}
-
-		user.NodeGlobalList = adminUser.NodeGlobalList
-		user.ProduceNodeInUse(adminUser.NodeGlobalList)
 		user_role := helper.SanitizeStr(user.Role)
-		// if user_role == "admin" {
-		// }
 
 		if user.Credittraffic == 0 {
 			credit, _ := strconv.ParseInt(CREDIT, 10, 64)
@@ -240,12 +229,12 @@ func SignUp() gin.HandlerFunc {
 		token, refreshToken, _ := helper.GenerateAllTokens(user_email, user.UUID, user.Path, user_role, user.User_id)
 		user.Token = &token
 		user.Refresh_token = &refreshToken
+		user.UpdateNodeStatusInUse(globalVariable.ActiveGlobalNodes)
 
 		var wg sync.WaitGroup
-		var waitQueueLength = 3
+		var waitQueueLength = 2
 
 		if NODE_TYPE == "local" {
-
 			wg.Add(waitQueueLength + 1)
 			go func() {
 				defer wg.Done()
@@ -256,22 +245,28 @@ func SignUp() gin.HandlerFunc {
 					return
 				}
 			}()
-
 		} else {
-
 			wg.Add(waitQueueLength + helper.CountNodesInUse(user.NodeInUseStatus))
 			for node, available := range user.NodeInUseStatus {
-
 				if available {
 					go func(domain string) {
 						defer wg.Done()
 						grpctools.GrpcClientToAddUser(domain, MIXED_PORT, user, true)
 					}(node)
 				}
-
 			}
-
 		}
+
+		go func() {
+			defer wg.Done()
+			user.ProduceSuburl(globalVariable.ActiveGlobalNodes)
+			err = user.GenerateYAML(globalVariable.ActiveGlobalNodes)
+			if err != nil {
+				log.Printf("error occured while generating yaml: %v", err)
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				return
+			}
+		}()
 
 		go func() {
 			defer wg.Done()
@@ -279,26 +274,6 @@ func SignUp() gin.HandlerFunc {
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 				log.Printf("error occured while inserting user: %v", err)
-				return
-			}
-		}()
-
-		go func() {
-			defer wg.Done()
-			err = database.Client.Database("logV2rayTrafficDB").CreateCollection(ctx, user.Email)
-			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-				log.Printf("error occured while creating collection for user %s", user_email)
-				return
-			}
-		}()
-
-		go func() {
-			defer wg.Done()
-			err = yamlTools.GenerateOneYAML(user)
-			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-				log.Printf("error occured while generating yaml: %v", err)
 				return
 			}
 		}()
@@ -383,168 +358,6 @@ func GetUserSimpleInfo() gin.HandlerFunc {
 	}
 }
 
-func AddNode() gin.HandlerFunc {
-	return func(c *gin.Context) {
-
-		ReturnIfNotAdmin(c)
-
-		var ctx, cancel = context.WithTimeout(context.Background(), 60*time.Second)
-		defer cancel()
-		var current = time.Now().Local()
-		var domains map[string]string
-		var keyValueExchangedDomains = map[string]string{}
-
-		if err := c.BindJSON(&domains); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			log.Printf("error: %v", err)
-			return
-		}
-
-		// exchange remark and domain in domains
-		for remark, domain := range domains {
-			keyValueExchangedDomains[domain] = remark
-		}
-
-		// query all nodes by projections, combine domain and status into a map
-		var allNodes = map[string]string{}
-		var nodeProjections = bson.D{
-			{Key: "domain", Value: 1},
-			{Key: "status", Value: 1},
-		}
-
-		cursor, err := nodeCollection.Find(ctx, bson.M{}, options.Find().SetProjection(nodeProjections))
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			log.Printf("error occured while finding nodes")
-			return
-		}
-
-		for cursor.Next(ctx) {
-			var t CurrentNode
-			err := cursor.Decode(&t)
-			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-				log.Printf("error occured while decoding nodes")
-				return
-			}
-			allNodes[t.Domain] = t.Status
-		}
-
-		for _, domain := range domains {
-
-			// if it is a local mode, only localhost is checked; if it is a remote(main/attached) mode, all remote domain are checked.
-			if NODE_TYPE == "local" && domain != "localhost" {
-				continue
-			}
-
-			// check if domain is in allNodes, if not, insert new one into nodeCollection; if yes, check if it is inactive, if yes, enable it.
-			if _, ok := allNodes[domain]; !ok {
-				var node CurrentNode
-				node.Domain = domain
-				node.Status = "active"
-				node.NodeAtCurrentYear = NodeAtPeriod{
-					Period:              current.Format("2006"),
-					Amount:              0,
-					UserTrafficAtPeriod: map[string]int64{},
-				}
-				node.NodeAtCurrentMonth = NodeAtPeriod{
-					Period:              current.Format("200601"),
-					Amount:              0,
-					UserTrafficAtPeriod: map[string]int64{},
-				}
-				node.NodeAtCurrentDay = NodeAtPeriod{
-					Period:              current.Format("20060102"),
-					Amount:              0,
-					UserTrafficAtPeriod: map[string]int64{},
-				}
-				node.NodeByYear = []NodeAtPeriod{}
-				node.NodeByMonth = []NodeAtPeriod{}
-				node.NodeByDay = []NodeAtPeriod{}
-				node.CreatedAt = current
-				node.UpdatedAt = current
-
-				_, err = nodeCollection.InsertOne(ctx, node)
-				if err != nil {
-					c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-					log.Printf("error occured while inserting node: %v", err)
-					return
-				}
-
-			}
-
-			if allNodes[domain] == "inactive" {
-				filter := bson.D{primitive.E{Key: "domain", Value: domain}}
-				update := bson.M{"$set": bson.M{"status": "active", "updated_at": time.Now().Local()}}
-				_, err = nodeCollection.UpdateOne(ctx, filter, update)
-				if err != nil {
-					c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-					log.Printf("error occured while updating node: %v", err)
-					return
-				}
-			}
-
-		}
-
-		// for node in allNodes, if it is not in domains, set it to inactive.
-		for node := range allNodes {
-			if _, ok := keyValueExchangedDomains[node]; !ok {
-				filter := bson.D{primitive.E{Key: "domain", Value: node}}
-				update := bson.M{"$set": bson.M{"status": "inactive", "updated_at": time.Now().Local()}}
-				_, err = nodeCollection.UpdateOne(ctx, filter, update)
-				if err != nil {
-					c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-					log.Printf("error occured while updating node: %v", err)
-					return
-				}
-			}
-		}
-
-		var projections = bson.D{
-			{Key: "node_global_list", Value: 1},
-			{Key: "node_in_use_status", Value: 1},
-			{Key: "suburl", Value: 1},
-			{Key: "role", Value: 1},
-			{Key: "email", Value: 1},
-			{Key: "user_id", Value: 1},
-			{Key: "status", Value: 1},
-			{Key: "uuid", Value: 1},
-			{Key: "name", Value: 1},
-			{Key: "path", Value: 1},
-		}
-		allUsers, err := database.GetPartialInfosForAllUsers(projections)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			log.Printf("error: %v", err)
-			return
-		}
-
-		for _, user := range allUsers {
-			// if user.Role == "admin" {
-			// }
-			user.NodeGlobalList = domains
-
-			user.ProduceNodeInUse(domains)
-			filter := bson.D{primitive.E{Key: "user_id", Value: user.User_id}}
-			update := bson.M{"$set": bson.M{"updated_at": time.Now().Local(), "node_in_use_status": user.NodeInUseStatus, "suburl": user.Suburl, "node_global_list": user.NodeGlobalList}}
-			_, err = userCollection.UpdateOne(ctx, filter, update)
-			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-				log.Printf("%v", err.Error())
-				return
-			}
-
-			err = yamlTools.GenerateOneByQuery(user.Email)
-			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-				log.Printf("error occured while generating yaml: %v", err)
-				return
-			}
-		}
-
-		c.JSON(http.StatusOK, gin.H{"message": "Congrats! Nodes updated in success!"})
-	}
-}
-
 func EditUser() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
@@ -609,40 +422,7 @@ func EditUser() gin.HandlerFunc {
 			return
 		}
 
-		err = userCollection.FindOne(ctx, bson.M{"email": helper.SanitizeStr(user.Email)}).Decode(&foundUser)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			log.Printf("error: %v", err)
-			return
-		}
-
 		c.JSON(http.StatusOK, foundUser)
-	}
-}
-
-//GetUser is the api used to get a single user
-func GetUserByID() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		var ctx, cancel = context.WithTimeout(context.Background(), 60*time.Second)
-		defer cancel()
-
-		var user model.User
-		userId := helper.SanitizeStr(c.Param("user_id"))
-
-		if err := helper.MatchUserTypeAndUid(c, userId); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			log.Printf("%s", err.Error())
-			return
-		}
-
-		err := userCollection.FindOne(ctx, bson.M{"user_id": userId}).Decode(&user)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			log.Printf("error occured while listing user items")
-			return
-		}
-
-		c.JSON(http.StatusOK, user)
 	}
 }
 
@@ -653,6 +433,14 @@ func TakeItOfflineByUserName() gin.HandlerFunc {
 
 		var ctx, cancel = context.WithTimeout(context.Background(), 60*time.Second)
 		defer cancel()
+
+		var globalVariable GlobalVariable
+		err := globalCollection.FindOne(ctx, bson.M{"name": "global"}).Decode(&globalVariable)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "error occured while getting globalVariable"})
+			log.Printf("Getting globalVariable error: %s", err.Error())
+			return
+		}
 
 		name := helper.SanitizeStr(c.Param("name"))
 		var projections = bson.D{
@@ -665,7 +453,6 @@ func TakeItOfflineByUserName() gin.HandlerFunc {
 			{Key: "status", Value: 1},
 			{Key: "suburl", Value: 1},
 			{Key: "user_id", Value: 1},
-			{Key: "node_global_list", Value: 1},
 			{Key: "used", Value: 1},
 			{Key: "credit", Value: 1},
 			{Key: "created_at", Value: 1},
@@ -707,7 +494,16 @@ func TakeItOfflineByUserName() gin.HandlerFunc {
 			wg.Wait()
 		}
 
-		user.ProduceSuburl()
+		user.Status = v2ray.DELETE
+		user.UpdateNodeStatusInUse(globalVariable.ActiveGlobalNodes)
+		user.ProduceSuburl(globalVariable.ActiveGlobalNodes)
+		err = user.GenerateYAML(globalVariable.ActiveGlobalNodes)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			log.Printf("TakeItOfflineByUserName generating yaml error: %v", err)
+			return
+		}
+
 		filter := bson.D{primitive.E{Key: "email", Value: name}}
 		update := bson.M{"$set": bson.M{"status": v2ray.DELETE, "node_in_use_status": user.NodeInUseStatus, "suburl": user.Suburl}}
 		_, err = userCollection.UpdateOne(ctx, filter, update)
@@ -715,13 +511,6 @@ func TakeItOfflineByUserName() gin.HandlerFunc {
 			msg := "database user info update failed."
 			c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
 			log.Printf("%s", msg)
-			return
-		}
-
-		err = yamlTools.GenerateOneYAML(user)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			log.Printf("error occured while generating yaml: %v", err)
 			return
 		}
 
@@ -738,6 +527,15 @@ func TakeItOnlineByUserName() gin.HandlerFunc {
 		var ctx, cancel = context.WithTimeout(context.Background(), 60*time.Second)
 		defer cancel()
 		name := helper.SanitizeStr(c.Param("name"))
+
+		var globalVariable GlobalVariable
+		err := globalCollection.FindOne(ctx, bson.M{"name": "global"}).Decode(&globalVariable)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "error occured while getting globalVariable"})
+			log.Printf("Getting globalVariable error: %s", err.Error())
+			return
+		}
+
 		var projections = bson.D{
 			{Key: "email", Value: 1},
 			{Key: "path", Value: 1},
@@ -748,7 +546,6 @@ func TakeItOnlineByUserName() gin.HandlerFunc {
 			{Key: "status", Value: 1},
 			{Key: "suburl", Value: 1},
 			{Key: "user_id", Value: 1},
-			{Key: "node_global_list", Value: 1},
 			{Key: "used", Value: 1},
 			{Key: "credit", Value: 1},
 			{Key: "created_at", Value: 1},
@@ -791,22 +588,23 @@ func TakeItOnlineByUserName() gin.HandlerFunc {
 			wg.Wait()
 		}
 
-		user.ProduceSuburl()
+		user.Status = v2ray.PLAIN
+		user.UpdateNodeStatusInUse(globalVariable.ActiveGlobalNodes)
+		user.ProduceSuburl(globalVariable.ActiveGlobalNodes)
+		err = user.GenerateYAML(globalVariable.ActiveGlobalNodes)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			log.Printf("TakeItOnlineByUserName generating yaml error: %v", err)
+			return
+		}
+
 		filter := bson.D{primitive.E{Key: "email", Value: name}}
 		update := bson.M{"$set": bson.M{"status": v2ray.PLAIN, "node_in_use_status": user.NodeInUseStatus, "suburl": user.Suburl}}
-
 		_, err = userCollection.UpdateOne(ctx, filter, update)
 		if err != nil {
 			msg := "database user info update failed."
 			c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
 			log.Printf("%s", msg)
-			return
-		}
-
-		err = yamlTools.GenerateOneYAML(user)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			log.Printf("error occured while generating yaml: %v", err)
 			return
 		}
 
@@ -831,13 +629,11 @@ func DeleteUserByUserName() gin.HandlerFunc {
 			{Key: "status", Value: 1},
 			{Key: "suburl", Value: 1},
 			{Key: "user_id", Value: 1},
-			{Key: "node_global_list", Value: 1},
 			{Key: "used", Value: 1},
 			{Key: "credit", Value: 1},
 			{Key: "created_at", Value: 1},
 			{Key: "updated_at", Value: 1},
 		}
-
 		user, err := database.GetUserByName(name, projections)
 		if err != nil {
 			msg := "database get user failed."
@@ -903,7 +699,6 @@ func GetAllUsers() gin.HandlerFunc {
 			{Key: "status", Value: 1},
 			{Key: "suburl", Value: 1},
 			{Key: "user_id", Value: 1},
-			{Key: "node_global_list", Value: 1},
 			{Key: "used", Value: 1},
 			{Key: "credit", Value: 1},
 			{Key: "created_at", Value: 1},
@@ -913,7 +708,7 @@ func GetAllUsers() gin.HandlerFunc {
 			{Key: "used_by_current_year", Value: 1},
 		}
 
-		allUsers, err := database.GetPartialInfosForAllUsers(projections)
+		allUsers, err := database.GetAllUsersPartialInfo(projections)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			log.Printf("GetAllUsers failed: %s", err.Error())
@@ -959,7 +754,6 @@ func GetUserByName() gin.HandlerFunc {
 			{Key: "path", Value: 1},
 			{Key: "uuid", Value: 1},
 			{Key: "name", Value: 1},
-			{Key: "node_global_list", Value: 1},
 			{Key: "node_in_use_status", Value: 1},
 		}
 		user, err := database.GetUserByName(name, projections)
@@ -1019,6 +813,14 @@ func DisableNodePerUser() gin.HandlerFunc {
 		email := helper.SanitizeStr(c.Request.URL.Query().Get("email"))
 		node := helper.SanitizeStr(c.Request.URL.Query().Get("node"))
 
+		var globalVariable GlobalVariable
+		err := globalCollection.FindOne(ctx, bson.M{"name": "global"}).Decode(&globalVariable)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "error occured while getting globalVariable"})
+			log.Printf("Getting globalVariable error: %s", err.Error())
+			return
+		}
+
 		var projections = bson.D{
 			{Key: "email", Value: 1},
 			{Key: "path", Value: 1},
@@ -1029,7 +831,6 @@ func DisableNodePerUser() gin.HandlerFunc {
 			{Key: "status", Value: 1},
 			{Key: "suburl", Value: 1},
 			{Key: "user_id", Value: 1},
-			{Key: "node_global_list", Value: 1},
 			{Key: "used", Value: 1},
 			{Key: "credit", Value: 1},
 			{Key: "created_at", Value: 1},
@@ -1058,21 +859,16 @@ func DisableNodePerUser() gin.HandlerFunc {
 		}
 
 		user.DeleteNodeInUse(node)
+		user.UpdateNodeStatusInUse(globalVariable.ActiveGlobalNodes)
+		user.GenerateYAML(globalVariable.ActiveGlobalNodes)
+
 		filter := bson.D{primitive.E{Key: "email", Value: email}}
 		update := bson.M{"$set": bson.M{"node_in_use_status": user.NodeInUseStatus, "suburl": user.Suburl}}
-
 		_, err = userCollection.UpdateOne(ctx, filter, update)
 		if err != nil {
 			msg := "database user info update failed."
 			c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
 			log.Printf("%s", msg)
-			return
-		}
-
-		err = yamlTools.GenerateOneYAML(user)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			log.Printf("error occured while generating yaml: %v", err)
 			return
 		}
 
@@ -1092,6 +888,14 @@ func EnableNodePerUser() gin.HandlerFunc {
 		email := helper.SanitizeStr(c.Request.URL.Query().Get("email"))
 		node := helper.SanitizeStr(c.Request.URL.Query().Get("node"))
 
+		var globalVariable GlobalVariable
+		err := globalCollection.FindOne(ctx, bson.M{"name": "global"}).Decode(&globalVariable)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "error occured while getting globalVariable"})
+			log.Printf("Getting globalVariable error: %s", err.Error())
+			return
+		}
+
 		var projections = bson.D{
 			{Key: "email", Value: 1},
 			{Key: "path", Value: 1},
@@ -1102,7 +906,6 @@ func EnableNodePerUser() gin.HandlerFunc {
 			{Key: "status", Value: 1},
 			{Key: "suburl", Value: 1},
 			{Key: "user_id", Value: 1},
-			{Key: "node_global_list", Value: 1},
 			{Key: "used", Value: 1},
 			{Key: "credit", Value: 1},
 			{Key: "created_at", Value: 1},
@@ -1129,9 +932,11 @@ func EnableNodePerUser() gin.HandlerFunc {
 		}
 
 		user.AddNodeInUse(node)
+		user.UpdateNodeStatusInUse(globalVariable.ActiveGlobalNodes)
+		user.GenerateYAML(globalVariable.ActiveGlobalNodes)
+
 		filter := bson.D{primitive.E{Key: "email", Value: email}}
 		update := bson.M{"$set": bson.M{"node_in_use_status": user.NodeInUseStatus, "suburl": user.Suburl}}
-
 		_, err = userCollection.UpdateOne(ctx, filter, update)
 		if err != nil {
 			msg := "database user info update failed."
@@ -1140,198 +945,7 @@ func EnableNodePerUser() gin.HandlerFunc {
 			return
 		}
 
-		err = yamlTools.GenerateOneYAML(user)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			log.Printf("error occured while generating yaml: %v", err)
-			return
-		}
-
 		log.Printf("Enable user: %v, node: %v by hand!", helper.SanitizeStr(email), helper.SanitizeStr(node))
 		c.JSON(http.StatusOK, gin.H{"message": "Enable user: " + email + " at node: " + node + " successfully!"})
-	}
-}
-
-func GetDomainInfo() gin.HandlerFunc {
-	return func(c *gin.Context) {
-
-		ReturnIfNotAdmin(c)
-
-		var ctx, cancel = context.WithTimeout(context.Background(), 60*time.Second)
-		defer cancel()
-
-		// query GlobalVariable
-		var domainInfos = []DomainInfo{}
-		var foundGlobal GlobalVariable
-		var filter = bson.D{primitive.E{Key: "name", Value: "GLOBAL"}}
-		err := globalCollection.FindOne(ctx, filter).Decode(&foundGlobal)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			log.Printf("FindOne error: %v", err)
-			return
-		}
-		tempArray, err := buildDomainInfo(foundGlobal.DomainList, false)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			log.Printf("error occured while parsing domain info: %v", err)
-			return
-		}
-		domainInfos = append(domainInfos, tempArray...)
-
-		// query user
-		var adminUser model.User
-		var userId = ADMINUSERID
-		err = userCollection.FindOne(ctx, bson.M{"user_id": userId}).Decode(&adminUser)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			log.Printf("FindOne error: %v", err)
-			return
-		}
-		tempArray, err = buildDomainInfo(adminUser.NodeGlobalList, true)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			log.Printf("error occured while parsing domain info: %v", err)
-			return
-		}
-		domainInfos = append(domainInfos, tempArray...)
-
-		c.JSON(http.StatusOK, domainInfos)
-	}
-}
-
-func buildDomainInfo(domains map[string]string, isInUvp bool) ([]DomainInfo, error) {
-
-	var minorDomainInfos []DomainInfo
-	var port = "443"
-	var conf = &tls.Config{
-		// InsecureSkipVerify: true,
-	}
-	var normalDomains []string
-	var unreachableDomains []string
-
-	// split domains into normalDomains and unreachableDomains by parallel processing. if domain is reachable, append it to normalDomains, else append it to unreachableDomains.
-	// if domain is localhost, skip it.
-	var wg sync.WaitGroup
-	for _, domain := range domains {
-		if domain == "localhost" {
-			continue
-		}
-		wg.Add(1)
-		go func(domain string) {
-			defer wg.Done()
-			if helper.IsDomainReachable(domain) {
-				normalDomains = append(normalDomains, domain)
-			} else {
-				unreachableDomains = append(unreachableDomains, domain)
-			}
-		}(domain)
-	}
-	wg.Wait()
-
-	for _, domain := range normalDomains {
-		conn, err := tls.DialWithDialer(&net.Dialer{Timeout: 20 * time.Second}, "tcp", domain+":"+port, conf)
-		if err != nil {
-			log.Printf("tls.DialWithDialer Error: %v", err)
-		}
-		err = conn.VerifyHostname(domain)
-		if err != nil {
-			log.Printf("conn.VerifyHostname Error: %v", err)
-		}
-		expiry := conn.ConnectionState().PeerCertificates[0].NotAfter
-		defer conn.Close()
-
-		minorDomainInfos = append(minorDomainInfos, DomainInfo{
-			IsInUVP:      isInUvp,
-			Domain:       domain,
-			ExpiredDate:  expiry.Local().Format("2006-01-02 15:04:05"),
-			DaysToExpire: int(time.Until(expiry).Hours() / 24),
-		})
-	}
-
-	for _, domain := range unreachableDomains {
-		minorDomainInfos = append(minorDomainInfos, DomainInfo{
-			IsInUVP:      isInUvp,
-			Domain:       domain,
-			ExpiredDate:  "unreachable",
-			DaysToExpire: -1,
-		})
-	}
-
-	return minorDomainInfos, nil
-}
-
-func UpdateDomainInfo() gin.HandlerFunc {
-	return func(c *gin.Context) {
-
-		ReturnIfNotAdmin(c)
-
-		var tempDomainList map[string]string
-		err := c.BindJSON(&tempDomainList)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			log.Printf("BindJSON error: %v", err)
-			return
-		}
-
-		// replace domain_list in GlobalVariable in globalCollection with tempDomainList
-		var ctx, cancel = context.WithTimeout(context.Background(), 60*time.Second)
-		defer cancel()
-
-		var replacedDocument GlobalVariable
-		err = globalCollection.FindOneAndUpdate(ctx,
-			bson.M{"name": "GLOBAL"},
-			bson.M{"$set": bson.M{"domain_list": tempDomainList}},
-			options.FindOneAndUpdate().SetReturnDocument(1),
-		).Decode(&replacedDocument)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			log.Printf("FindOneAndUpdate error: %v", err)
-			return
-		}
-
-		c.JSON(http.StatusOK, gin.H{"message": "Update GLOBAL domain list successfully!"})
-	}
-}
-
-func GetNodePartial() gin.HandlerFunc {
-	return func(c *gin.Context) {
-
-		ReturnIfNotAdmin(c)
-
-		var ctx, cancel = context.WithTimeout(context.Background(), 60*time.Second)
-		defer cancel()
-
-		// query nodeCollection by projection, and return nodePartial with json format
-		var nodePartial []*CurrentNode
-		var projections = bson.D{
-			{Key: "domain", Value: 1},
-			{Key: "status", Value: 1},
-			{Key: "remark", Value: 1},
-			{Key: "node_at_current_day", Value: 1},
-			{Key: "node_at_current_month", Value: 1},
-			{Key: "node_at_current_year", Value: 1},
-			{Key: "node_by_day", Value: 1},
-			{Key: "node_by_month", Value: 1},
-			{Key: "node_by_year", Value: 1},
-			{Key: "created_at", Value: 1},
-		}
-		cur, err := nodeCollection.Find(ctx, bson.D{}, options.Find().SetProjection(projections))
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			log.Printf("Find error: %v", err)
-			return
-		}
-		for cur.Next(ctx) {
-			var node CurrentNode
-			err := cur.Decode(&node)
-			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-				log.Printf("Decode error: %v", err)
-				return
-			}
-			nodePartial = append(nodePartial, &node)
-		}
-
-		c.JSON(http.StatusOK, nodePartial)
 	}
 }

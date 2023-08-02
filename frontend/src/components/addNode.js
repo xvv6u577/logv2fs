@@ -1,22 +1,72 @@
 import { useState, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
-import { alert, success } from "../store/message";
+import { alert, success, reset } from "../store/message";
 import { doRerender } from "../store/rerender";
+import Alert from "./alert";
 import axios from "axios";
 
-const AddNode = ({ btnName }) => {
+const AddNode = () => {
 
-	const [domains, setDomains] = useState({});
-	const [newdomain, updateNewdomain] = useState("");
-	const [newremark, updateNewremark] = useState("");
-	const [showModal, setShowModal] = useState(false);
+    const [nodes, setnodes] = useState([]);
+    const[enable_chatgpt, setChatgptChecked] = useState(false);
+    const[enable_subscription, setSubscriptionChecked] = useState(false);
+    const initialState = {
+        type: "vmess",
+        remark: "",
+        domain: "",
+        uuid: "",
+        path: "",
+        sni: ""
+	};
 
-	const dispatch = useDispatch();
-	const loginState = useSelector((state) => state.login);
-	const message = useSelector((state) => state.message);
-	const rerenderSignal = useSelector((state) => state.rerender);
+    const [{ type, remark, domain, uuid, path, sni }, setState] = useState(initialState);
+    const clearState = () => {
+        setState({ ...initialState }); 
+    };
 
-	useEffect(() => {
+    const dispatch = useDispatch();
+    const loginState = useSelector((state) => state.login);
+    const message = useSelector((state) => state.message);
+    const rerenderSignal = useSelector((state) => state.rerender);
+
+    useEffect(() => {
+        axios
+            .get(process.env.REACT_APP_API_HOST + "t7k033", {
+                headers: { token: loginState.token },
+            })
+            .then((response) => {
+                setnodes(response.data);
+            })
+            .catch((err) => {
+                dispatch(alert({ show: true, content: err.toString() }));
+            });
+    }, [rerenderSignal, loginState.token, dispatch]);
+
+    const handleAddNode = (e) => {
+        e.preventDefault();
+        axios({
+            method: "put",
+            url: process.env.REACT_APP_API_HOST + "759b0v",
+            headers: { token: loginState.token },
+            data: nodes,
+        })
+            .then((response) => {
+                dispatch(success({ show: true, content: response.data.message }));
+                dispatch(doRerender({ rerender: !rerenderSignal.rerender }))
+                clearState();
+            })
+            .catch((err) => {
+                dispatch(alert({ show: true, content: err.toString() }));
+            });
+    }
+
+    const onChange = (e) => {
+        const name = e.target.name;
+        const value = e.target.value.replace(/\s/g, "");
+        setState((prevState) => ({ ...prevState, [name]: value }));
+    };
+
+    useEffect(() => {
 		if (message.show === true) {
 			setTimeout(() => {
 				dispatch(alert({ show: false }));
@@ -24,151 +74,164 @@ const AddNode = ({ btnName }) => {
 		}
 	}, [message, dispatch]);
 
-	useEffect(() => {
-		axios
-			.get(process.env.REACT_APP_API_HOST + "user/" + loginState.jwt.Email, {
-				headers: { token: loginState.token },
-			})
-			.then((response) => {
-				setDomains(response.data.node_global_list);
-			})
-			.catch((err) => {
-				dispatch(alert({ show: true, content: err.toString() }));
-			});
-	}, [rerenderSignal, loginState.jwt.Email, loginState.token, dispatch]);
+    return (
+        <>
+            <Alert message={message.content} type={message.type} shown={message.show} close={() => { dispatch(reset({})); }} />
+            <section className="text-gray-400 bg-gray-900 body-font">
+                <div className="container px-3 pt-10 mx-auto">
+                    <div className="flex flex-col text-center w-full my-10">
+                        <h1 className="sm:text-4xl text-3xl font-medium title-font mb-2 text-white">Node Status</h1>
+                        <p className="lg:w-2/3 mx-auto leading-relaxed text-base">Current status of active nodes</p>
+                    </div>
+                    <div className="px-2 w-full mx-auto overflow-auto shadow-md">
+                        <table className="table-auto w-full text-left whitespace-no-wrap">
+                            <thead>
+                                <tr>
+                                    <th className="px-4 py-3 title-font tracking-wider font-medium text-white text-sm bg-gray-800">Type</th>
+                                    <th className="px-4 py-3 title-font tracking-wider font-medium text-white text-sm bg-gray-800">名称</th>
+                                    <th className="px-4 py-3 title-font tracking-wider font-medium text-white text-sm bg-gray-800">域名</th>
+                                    <th className="px-4 py-3 title-font tracking-wider font-medium text-white text-sm bg-gray-800">Enable ChatGPT</th>
+                                    <th className="px-4 py-3 title-font tracking-wider font-medium text-white text-sm bg-gray-800">Enable Subscription</th>
+                                    <th className="px-4 py-3 title-font tracking-wider font-medium text-white text-sm bg-gray-800">UUID</th>
+                                    <th className="px-4 py-3 title-font tracking-wider font-medium text-white text-sm bg-gray-800">PATH</th>
+                                    <th className="px-4 py-3 title-font tracking-wider font-medium text-white text-sm bg-gray-800">SNI</th>
+                                    <th className="w-10 title-font tracking-wider font-medium text-white text-sm bg-gray-800 rounded-tr rounded-br">
 
-	const handleAddNode = (e) => {
-		e.preventDefault();
-		setShowModal(!showModal)
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {nodes.map((node, index) => (
+                                    <tr key={index + 1000} className="border-b">
+                                        <td className="px-4 py-3">{node.type}</td>
+                                        <td className="px-4 py-3">{node.remark}</td>
+                                        <td className="px-4 py-3">{node.domain}</td>
+                                        <td className="px-4 py-3">{node.enable_chatgpt ? "Yes" : "No"}</td>
+                                        <td className="px-4 py-3">{node.enable_subscription ? "Yes" : "No"}</td>
+                                        <td className="px-4 py-3">{node.uuid ? node.uuid : "None"}</td>
+                                        <td className="px-4 py-3">{node.path ? node.path : "None"}</td>
+                                        <td className="px-4 py-3">{node.sni ? node.sni : "None"}</td>
+                                        <td className="w-10 text-center">
+                                            <span 
+                                                onClick={() => {
+                                                    // delete node from nodes
+                                                    setnodes(nodes.filter((node, i) => i !== index));
+                                                }}
+                                                className="cursor-pointer inline-flex items-center justify-center px-2 py-0.5 ml-3 text-xs font-medium text-gray-500 bg-gray-200 rounded dark:bg-gray-700 dark:text-gray-400" >
+                                                Delete
+                                            </span>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                    <form className="" onSubmit={handleAddNode}>
+                        <div className="flex w-full mx-auto">
+                            <select id="countries"
+                                name="type"
+                                onChange={onChange}
+                                value={type}
+                                className="mr-2 my-4 pl-4 w-1/12 text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                            >
+                                <option value="vmess">Vmess</option>
+                                <option value="vmessCDN">VmessCDN</option>
+                                <option value="vlessCDN">VLessCDN</option>
+                            </select>
+                            <input
+                                type="text"
+                                name="remark"
+                                onChange={onChange}
+                                value={remark}
+                                className="mr-4 my-4 w-1/12 text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                                placeholder="Remark"
+                            />
+                            <input
+                                type="text"
+                                name="domain"
+                                onChange={onChange}
+                                value={domain}
+                                className="mr-4 my-4 w-2/12 text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                                placeholder="New domain"
+                            />
+                            <input 
+                                type="checkbox" 
+                                name="enable_chatgpt"
+                                onChange={(e)=>setChatgptChecked(e.target.checked)}
+                               checked={enable_chatgpt}
+                                className="w-4 h-4 m-4 p-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600" />
+                            <input 
+                                type="checkbox" 
+                                name="enable_subscription"
+                                onChange={(e)=>setSubscriptionChecked(e.target.checked)}
+                                checked={enable_subscription}
+                                id="default-checkbox" 
+                                className="w-4 h-4 m-4 p-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600" />
+                            <input
+                                type="text"
+                                name="uuid"
+                                onChange={onChange}
+                                value={uuid}
+                                className="m-4 w-3/12 text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                                placeholder="UUID"
+                                />
+                            <input
+                                type="text"
+                                name="path"
+                                onChange={onChange}
+                                value={path}
+                                placeholder="Path"
+                                className="m-4 w-1/12 text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                                />
+                            <input
+                                type="text"
+                                name="sni"
+                                onChange={onChange}
+                                value={sni}
+                                placeholder="SNI"
+                                className="m-4 w-1/12 text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                            />
+                            <button type="button"
+                                onClick={() => {
+                                    // append {type, remark, domain, enable_chatgpt, enable_subscription, uuid, path, sni} to nodes
+                                    if (domain.length > 0 && remark.length > 0) {
+                                        setnodes((prevState) => ([
+                                            ...prevState,
+                                            {
+                                                type,
+                                                remark,
+                                                domain,
+                                                enable_chatgpt,
+                                                enable_subscription,
+                                                uuid,
+                                                path,
+                                                sni
+                                            }
+                                        ]));
+                                        clearState();
+                                        setSubscriptionChecked(false);
+                                        setChatgptChecked(false);
+                                    } else {
+                                        dispatch(alert({ show: true, content: "Either the domain or remark field should be left empty." }));
+                                    }
+                                }}
+                                className="w-1/12 px-1 m-4 text-white right-2.5 bottom-2.5 bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
+                            >
+                                Add Domain
+                            </button>
+                        </div>
+                        <button
+                            type="submit"
+                            className="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm w-full sm:w-auto px-5 py-2.5 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
+                        >
+                            Update Nodes
+                        </button>
+                    </form>
+                </div>
+            </section>
+        </>
+    )
 
-		axios({
-			method: "put",
-			url: process.env.REACT_APP_API_HOST + "addnode",
-			headers: { token: loginState.token },
-			data: domains,
-		})
-			.then((response) => {
-				dispatch(success({ show: true, content: response.data.message }));
-				dispatch(doRerender({ rerender: !rerenderSignal.rerender }))
-			})
-			.catch((err) => {
-				dispatch(alert({ show: true, content: err.toString() }));
-			});
-	};
-
-	return (
-		<>
-			<button
-				type="button"
-				onClick={() => setShowModal(!showModal)}
-				className="w-full sm:w-auto block text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-1.5 py-1 m-1 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
-			>
-				<svg
-					aria-hidden="true"
-					className="inline-block mr-1 w-4 h-4"
-					fill="none"
-					stroke="currentColor"
-					viewBox="0 0 24 24"
-					xmlns="http://www.w3.org/2000/svg"
-				>
-					<path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
-				</svg>
-				{btnName}
-			</button>
-
-			{showModal ?
-				<div
-					id="add-node-modal"
-					className="overflow-y-auto overflow-x-hidden fixed top-0 right-0 left-0 z-50 w-full md:inset-0 h-modal md:h-full justify-center items-center flex"
-				>
-					<div className="relative p-4 w-full max-w-lg h-full md:h-auto">
-						<div className="relative bg-white rounded-lg shadow dark:bg-gray-700">
-							<button
-								type="button"
-								className="absolute top-3 right-2.5 text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm p-1.5 ml-auto inline-flex items-center dark:hover:bg-gray-800 dark:hover:text-white"
-								onClick={() => setShowModal(!showModal)}
-							>
-								<svg aria-hidden="true" className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-									<path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd"></path>
-								</svg>
-								<span className="sr-only">Close modal</span>
-							</button>
-							<div className="py-4 px-6 rounded-t border-b dark:border-gray-600">
-								<h3 className="text-base font-semibold text-gray-900 lg:text-xl dark:text-white">
-									Add Node
-								</h3>
-							</div>
-							<div className="p-6">
-								<p className="text-sm font-normal text-gray-500 dark:text-gray-400">Attach New Node to V2ray Cluster.</p>
-								<ul className="my-4 space-y-3">
-									{Object.entries(domains).map(([key, value]) => (
-										<li key={key} >
-											<div className="flex items-center p-3 text-base font-bold text-gray-900 bg-gray-50 rounded-lg hover:bg-gray-100 group hover:shadow dark:bg-gray-600 dark:hover:bg-gray-500 dark:text-white">
-												<span className="flex-1 ml-3 whitespace-nowrap">{key}: {value}</span>
-												<span
-													onClick={() => {
-														delete domains[key];
-														setDomains({ ...domains });
-													}}
-													className="cursor-pointer inline-flex items-center justify-center px-2 py-0.5 ml-3 text-xs font-medium text-gray-500 bg-gray-200 rounded dark:bg-gray-700 dark:text-gray-400"
-												>
-													Delete
-												</span>
-											</div>
-										</li>
-									))}
-								</ul>
-								<form className="space-y-6" onSubmit={handleAddNode}>
-									<div className="relative">
-										<label htmlFor="">Domain:</label>
-										<input
-											type="text"
-											onChange={(e) => updateNewdomain(e.target.value.replace(/\s/g, ""))}
-											value={newdomain} 
-											className="p-4 pl-10 w-full text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" 
-											placeholder="New domain" 
-											/>
-											<label htmlFor="">Remark:</label>
-										<input
-											type="text"
-											onChange={(e) => updateNewremark(e.target.value.replace(/\s/g, ""))}
-											value={newremark} 
-											className="p-4 pl-10 w-full text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" 
-											placeholder="Remark of New Domain" 
-											/>
-										<button type="button"
-											onClick={() => {
-												if (newdomain.length > 0 && newremark.length > 0) {
-													setDomains((prevState) => ({
-														...prevState,
-														[newremark]: newdomain,
-													}));
-													updateNewdomain("");
-													updateNewremark("");
-												} else {
-													dispatch(alert({ show: true, content: "Either the domain or remark field should be left empty." }));
-												}
-											}}
-											className="block text-white absolute right-2.5 bottom-2.5 bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-4 py-2 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
-										>
-											Add Domain
-										</button>
-									</div>
-									<button
-										type="submit"
-										className="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm w-full sm:w-auto px-5 py-2.5 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
-									>
-										Update Nodes
-									</button>
-								</form>
-							</div>
-						</div>
-					</div>
-				</div>
-				: null}
-
-		</>
-	);
-};
+}
 
 export default AddNode;

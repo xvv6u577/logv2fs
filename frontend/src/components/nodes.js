@@ -6,7 +6,7 @@ import Alert from "./alert";
 import { doRerender } from "../store/rerender";
 import { formatBytes } from "../service/service";
 
-function Domain() {
+function Nodes() {
 
     const [nodes, setNodes] = useState([]);
     const [activeTab, setActiveTab] = useState(-1);
@@ -30,7 +30,7 @@ function Domain() {
 
     useEffect(() => {
         axios
-            .get(process.env.REACT_APP_API_HOST + "partialallnode", {
+            .get(process.env.REACT_APP_API_HOST + "c47kr8", {
                 headers: { token: loginState.token },
             })
             .then((response) => {
@@ -188,4 +188,4 @@ function Domain() {
         </div>);
 }
 
-export default Domain;
+export default Nodes;

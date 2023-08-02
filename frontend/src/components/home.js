@@ -30,7 +30,7 @@ const Home = () => {
 
 	useEffect(() => {
 		axios
-			.get(process.env.REACT_APP_API_HOST + "alluser", {
+			.get(process.env.REACT_APP_API_HOST + "n778cf", {
 				headers: { token: loginState.token },
 			})
 			.then((response) => {

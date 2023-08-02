@@ -26,6 +26,7 @@ type (
 	NodeAtPeriod   = model.NodeAtPeriod
 	GlobalVariable = model.GlobalVariable
 	User           = model.User
+	Domain         = model.Domain
 )
 
 // rootCmd represents the base command when called without any subcommands
