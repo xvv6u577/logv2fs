@@ -53,6 +53,7 @@ func AuthorizedRoutes(incomingRoutes *gin.Engine) {
 	incomingRoutes.GET("/v1/681p32", controller.GetDomainInfo())
 	incomingRoutes.PUT("/v1/g7302b", controller.UpdateDomainInfo())
 
+	// /nodes
 	incomingRoutes.GET("/v1/c47kr8", controller.GetNodePartial())
 	incomingRoutes.GET("/v1/t7k033", controller.GetActiveGlobalNodesInfo())
 }

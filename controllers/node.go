@@ -31,7 +31,10 @@ func IsDomainInDomainList(domain string, domainList []Domain) bool {
 func AddNode() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
-		ReturnIfNotAdmin(c)
+		if err := helper.CheckUserType(c, "admin"); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
 
 		var ctx, cancel = context.WithTimeout(context.Background(), 60*time.Second)
 		defer cancel()
@@ -208,7 +211,10 @@ func AddNode() gin.HandlerFunc {
 
 func GetActiveGlobalNodesInfo() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		ReturnIfNotAdmin(c)
+		if err := helper.CheckUserType(c, "admin"); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
 
 		var ctx, cancel = context.WithTimeout(context.Background(), 60*time.Second)
 		defer cancel()
@@ -229,7 +235,10 @@ func GetActiveGlobalNodesInfo() gin.HandlerFunc {
 func GetDomainInfo() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
-		ReturnIfNotAdmin(c)
+		if err := helper.CheckUserType(c, "admin"); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
 
 		var ctx, cancel = context.WithTimeout(context.Background(), 60*time.Second)
 		defer cancel()
@@ -339,7 +348,10 @@ func buildDomainInfo(domains map[string]string, isInUvp bool) ([]DomainInfo, err
 func UpdateDomainInfo() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
-		ReturnIfNotAdmin(c)
+		if err := helper.CheckUserType(c, "admin"); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
 
 		var tempDomainList map[string]string
 		err := c.BindJSON(&tempDomainList)
@@ -372,7 +384,10 @@ func UpdateDomainInfo() gin.HandlerFunc {
 func GetNodePartial() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
-		ReturnIfNotAdmin(c)
+		if err := helper.CheckUserType(c, "admin"); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
 
 		var ctx, cancel = context.WithTimeout(context.Background(), 60*time.Second)
 		defer cancel()
