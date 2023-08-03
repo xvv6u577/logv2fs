@@ -20,6 +20,8 @@ func PublicRoutes(incomingRoutes *gin.Engine) {
 		"/windows",
 		"/iphone",
 		"/android",
+		"/nodes",
+		"/addnode",
 		"/",
 	}
 

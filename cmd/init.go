@@ -10,7 +10,6 @@ import (
 
 	"github.com/spf13/cobra"
 	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 // initCmd represents the init command
@@ -30,29 +29,50 @@ var initCmd = &cobra.Command{
 
 		var global = GlobalVariable{
 			Name: "GLOBAL",
-			DomainList: map[string]string{
-				"www.baidu.com": "www.baidu.com",
+			WorkRelatedDomainList: []Domain{
+				{
+					Type:              "work",
+					Domain:            "www.baidu.com",
+					Remark:            "百度",
+					SNI:               "www.baidu.com",
+					EnableSubcription: true,
+					EnableChatgpt:     false,
+					UUID:              "7d2a8695-ee88-484d-8bea-ad86c95e6ff6",
+					PATH:              "/",
+				},
 			},
-			NodeGlobalList: map[string]string{
-				"localhost": "localhost",
+			ActiveGlobalNodes: []Domain{
+				{
+					Type:              "vmess",
+					Domain:            "sel.undervineyard.com",
+					Remark:            "韩国sel",
+					SNI:               "",
+					EnableSubcription: true,
+					EnableChatgpt:     true,
+					UUID:              "",
+					PATH:              "",
+				},
+				{
+					Type:              "vmessCDN",
+					Domain:            "sel.logv2.link",
+					Remark:            "韩国selCDN",
+					EnableSubcription: true,
+					EnableChatgpt:     false,
+					SNI:               "",
+					UUID:              "",
+					PATH:              "",
+				},
+				{
+					Type:              "vlessCDN",
+					Domain:            "anycastus.undervineyard.link",
+					Remark:            "地区不定CDN",
+					SNI:               "anycastus.undervineyard.link",
+					EnableSubcription: true,
+					EnableChatgpt:     false,
+					UUID:              "b66da0cb-342e-482e-a0cf-1d94698a4731",
+					PATH:              "/?ed=2048",
+				},
 			},
-		}
-
-		var adminUser *User
-		var filter = bson.D{
-			{Key: "role", Value: "admin"},
-		}
-		var adminProjections = bson.D{
-			{Key: "email", Value: 1},
-			{Key: "node_global_list", Value: 1},
-		}
-
-		if err := userCollection.FindOne(ctx, filter, options.FindOne().SetProjection(adminProjections)).Decode(&adminUser); err != nil {
-			panic(err)
-		}
-
-		for key, value := range adminUser.NodeGlobalList {
-			global.NodeGlobalList[value] = key
 		}
 
 		_, err := globalCOLLECTIONS.InsertOne(ctx, global)
@@ -60,37 +80,11 @@ var initCmd = &cobra.Command{
 			panic(err)
 		}
 
-		// insert NODES collection for each node in global.NodeGlobalList
-		for key, value := range global.NodeGlobalList {
-			var node = CurrentNode{
-				Status: "active",
-				Domain: key,
-				Remark: value,
-				NodeAtCurrentYear: NodeAtPeriod{
-					Period:              time.Now().Format("2006"),
-					Amount:              0,
-					UserTrafficAtPeriod: map[string]int64{},
-				},
-				NodeAtCurrentMonth: NodeAtPeriod{
-					Period:              time.Now().Format("200601"),
-					Amount:              0,
-					UserTrafficAtPeriod: map[string]int64{},
-				},
-				NodeAtCurrentDay: NodeAtPeriod{
-					Period:              time.Now().Format("20060102"),
-					Amount:              0,
-					UserTrafficAtPeriod: map[string]int64{},
-				},
-				NodeByYear:  []NodeAtPeriod{},
-				NodeByMonth: []NodeAtPeriod{},
-				NodeByDay:   []NodeAtPeriod{},
-				CreatedAt:   time.Now().Local(),
-				UpdatedAt:   time.Now().Local(),
-			}
-			_, err := nodesCollection.InsertOne(ctx, node)
-			if err != nil {
-				panic(err)
-			}
+		// remove node_global_list key from all users in USERS collection
+
+		_, err = userCollection.UpdateMany(ctx, bson.M{}, bson.M{"$unset": bson.M{"node_global_list": ""}})
+		if err != nil {
+			panic(err)
 		}
 
 	},
@@ -98,14 +92,4 @@ var initCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(initCmd)
-
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// initCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// initCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }

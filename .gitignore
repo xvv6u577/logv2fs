@@ -10,8 +10,8 @@ config/results/*
 development/
 CA
 setup-script*
-cmd/init*
-cmd/dev*
+cmd/init.go
+cmd/dev.go
 
 .env
 *.sh
