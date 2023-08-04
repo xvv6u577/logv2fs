@@ -2,16 +2,12 @@ package controllers
 
 import (
 	"context"
-	"crypto/tls"
 	"log"
-	"net"
 	"net/http"
-	"sync"
 	"time"
 
 	"github.com/caster8013/logv2rayfullstack/database"
 	helper "github.com/caster8013/logv2rayfullstack/helpers"
-	"github.com/caster8013/logv2rayfullstack/model"
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -240,11 +236,11 @@ func GetDomainInfo() gin.HandlerFunc {
 			return
 		}
 
-		var ctx, cancel = context.WithTimeout(context.Background(), 60*time.Second)
-		defer cancel()
+		// var ctx, cancel = context.WithTimeout(context.Background(), 60*time.Second)
+		// defer cancel()
 
 		// query GlobalVariable
-		var err error
+		// var err error
 		var domainInfos = []DomainInfo{}
 		var tempArray []DomainInfo
 		// var foundGlobal GlobalVariable
@@ -264,86 +260,86 @@ func GetDomainInfo() gin.HandlerFunc {
 		// domainInfos = append(domainInfos, tempArray...)
 
 		// query user
-		var adminUser model.User
-		var userId = ADMINUSERID
-		err = userCollection.FindOne(ctx, bson.M{"user_id": userId}).Decode(&adminUser)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			log.Printf("FindOne error: %v", err)
-			return
-		}
-		tempArray, err = buildDomainInfo(adminUser.NodeGlobalList, true)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			log.Printf("error occured while parsing domain info: %v", err)
-			return
-		}
+		// var adminUser model.User
+		// var userId = ADMINUSERID
+		// err = userCollection.FindOne(ctx, bson.M{"user_id": userId}).Decode(&adminUser)
+		// if err != nil {
+		// 	c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		// 	log.Printf("FindOne error: %v", err)
+		// 	return
+		// }
+		// tempArray, err = buildDomainInfo(adminUser.NodeGlobalList, true)
+		// if err != nil {
+		// 	c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		// 	log.Printf("error occured while parsing domain info: %v", err)
+		// 	return
+		// }
 		domainInfos = append(domainInfos, tempArray...)
 
 		c.JSON(http.StatusOK, domainInfos)
 	}
 }
 
-func buildDomainInfo(domains map[string]string, isInUvp bool) ([]DomainInfo, error) {
+// func buildDomainInfo(domains map[string]string, isInUvp bool) ([]DomainInfo, error) {
 
-	var minorDomainInfos []DomainInfo
-	var port = "443"
-	var conf = &tls.Config{
-		// InsecureSkipVerify: true,
-	}
-	var normalDomains []string
-	var unreachableDomains []string
+// 	var minorDomainInfos []DomainInfo
+// 	var port = "443"
+// 	var conf = &tls.Config{
+// 		// InsecureSkipVerify: true,
+// 	}
+// 	var normalDomains []string
+// 	var unreachableDomains []string
 
-	// split domains into normalDomains and unreachableDomains by parallel processing. if domain is reachable, append it to normalDomains, else append it to unreachableDomains.
-	// if domain is localhost, skip it.
-	var wg sync.WaitGroup
-	for _, domain := range domains {
-		if domain == "localhost" {
-			continue
-		}
-		wg.Add(1)
-		go func(domain string) {
-			defer wg.Done()
-			if helper.IsDomainReachable(domain) {
-				normalDomains = append(normalDomains, domain)
-			} else {
-				unreachableDomains = append(unreachableDomains, domain)
-			}
-		}(domain)
-	}
-	wg.Wait()
+// 	// split domains into normalDomains and unreachableDomains by parallel processing. if domain is reachable, append it to normalDomains, else append it to unreachableDomains.
+// 	// if domain is localhost, skip it.
+// 	var wg sync.WaitGroup
+// 	for _, domain := range domains {
+// 		if domain == "localhost" {
+// 			continue
+// 		}
+// 		wg.Add(1)
+// 		go func(domain string) {
+// 			defer wg.Done()
+// 			if helper.IsDomainReachable(domain) {
+// 				normalDomains = append(normalDomains, domain)
+// 			} else {
+// 				unreachableDomains = append(unreachableDomains, domain)
+// 			}
+// 		}(domain)
+// 	}
+// 	wg.Wait()
 
-	for _, domain := range normalDomains {
-		conn, err := tls.DialWithDialer(&net.Dialer{Timeout: 20 * time.Second}, "tcp", domain+":"+port, conf)
-		if err != nil {
-			log.Printf("tls.DialWithDialer Error: %v", err)
-		}
-		err = conn.VerifyHostname(domain)
-		if err != nil {
-			log.Printf("conn.VerifyHostname Error: %v", err)
-		}
-		expiry := conn.ConnectionState().PeerCertificates[0].NotAfter
-		defer conn.Close()
+// 	for _, domain := range normalDomains {
+// 		conn, err := tls.DialWithDialer(&net.Dialer{Timeout: 20 * time.Second}, "tcp", domain+":"+port, conf)
+// 		if err != nil {
+// 			log.Printf("tls.DialWithDialer Error: %v", err)
+// 		}
+// 		err = conn.VerifyHostname(domain)
+// 		if err != nil {
+// 			log.Printf("conn.VerifyHostname Error: %v", err)
+// 		}
+// 		expiry := conn.ConnectionState().PeerCertificates[0].NotAfter
+// 		defer conn.Close()
 
-		minorDomainInfos = append(minorDomainInfos, DomainInfo{
-			IsInUVP:      isInUvp,
-			Domain:       domain,
-			ExpiredDate:  expiry.Local().Format("2006-01-02 15:04:05"),
-			DaysToExpire: int(time.Until(expiry).Hours() / 24),
-		})
-	}
+// 		minorDomainInfos = append(minorDomainInfos, DomainInfo{
+// 			IsInUVP:      isInUvp,
+// 			Domain:       domain,
+// 			ExpiredDate:  expiry.Local().Format("2006-01-02 15:04:05"),
+// 			DaysToExpire: int(time.Until(expiry).Hours() / 24),
+// 		})
+// 	}
 
-	for _, domain := range unreachableDomains {
-		minorDomainInfos = append(minorDomainInfos, DomainInfo{
-			IsInUVP:      isInUvp,
-			Domain:       domain,
-			ExpiredDate:  "unreachable",
-			DaysToExpire: -1,
-		})
-	}
+// 	for _, domain := range unreachableDomains {
+// 		minorDomainInfos = append(minorDomainInfos, DomainInfo{
+// 			IsInUVP:      isInUvp,
+// 			Domain:       domain,
+// 			ExpiredDate:  "unreachable",
+// 			DaysToExpire: -1,
+// 		})
+// 	}
 
-	return minorDomainInfos, nil
-}
+// 	return minorDomainInfos, nil
+// }
 
 func UpdateDomainInfo() gin.HandlerFunc {
 	return func(c *gin.Context) {

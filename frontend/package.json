@@ -2,7 +2,7 @@
   "name": "frontend",
   "version": "0.1.0",
   "private": true,
-  "proxy": "http://127.0.0.1:8079",
+  "proxy": "http://127.0.0.1:8079/",
   "dependencies": {
     "@reduxjs/toolkit": "1.7.1",
     "@testing-library/jest-dom": "4.2.4",

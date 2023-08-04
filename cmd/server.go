@@ -48,6 +48,7 @@ var (
 	V2_API_PORT    = os.Getenv("V2_API_PORT")
 	V2RAY          = os.Getenv("V2RAY")
 	V2RAY_CONFIG   = os.Getenv("V2RAY_CONFIG")
+	GRPC_PORT      = os.Getenv("GRPC_PORT")
 	cronInstance   *cron.Cron
 )
 
@@ -90,7 +91,7 @@ func init() {
 }
 
 func RunGRPCServer() {
-	if err := grpctools.GrpcServer("0.0.0.0:50051", false); err != nil {
+	if err := grpctools.GrpcServer(fmt.Sprintf("0.0.0.0:%s", GRPC_PORT), false); err != nil {
 		log.Panic("GrpcServer panic: ", err)
 	}
 }
@@ -130,7 +131,7 @@ func RunServer() *gin.Engine {
 
 		var wg sync.WaitGroup
 		for _, user := range allUsersInDB {
-			if user.Name != "GLOBAL" && user.Status == "plain" && user.NodeInUseStatus[CURRENT_DOMAIN] {
+			if user.Status == "plain" && user.NodeInUseStatus[CURRENT_DOMAIN] {
 				wg.Add(1)
 				go func(user User) {
 					defer wg.Done()

@@ -39,8 +39,8 @@ func AuthorizedRoutes(incomingRoutes *gin.Engine) {
 
 	incomingRoutes.GET("/v1/user/:name", controller.GetUserByName())
 
-	incomingRoutes.GET("/v1/yi9a92/:name", controller.TakeItOfflineByUserName())
-	incomingRoutes.GET("/v1/08f87p/:name", controller.TakeItOnlineByUserName())
+	incomingRoutes.GET("/v1/offlineuser/:name", controller.TakeItOfflineByUserName())
+	incomingRoutes.GET("/v1/onlineuser/:name", controller.TakeItOnlineByUserName())
 	incomingRoutes.GET("/v1/deluser/:name", controller.DeleteUserByUserName())
 
 	// affect single node!

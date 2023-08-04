@@ -6,14 +6,15 @@ package cmd
 
 import (
 	"fmt"
-	"os"
+	"log"
+	"os/exec"
 
 	"github.com/spf13/cobra"
 )
 
-// devCmd represents the dev command
-var devCmd = &cobra.Command{
-	Use:   "dev",
+// v2rayServiceCmd represents the v2rayService command
+var v2rayServiceCmd = &cobra.Command{
+	Use:   "v2rayService",
 	Short: "A brief description of your command",
 	Long: `A longer description that spans multiple lines and likely contains examples
 and usage of using your command. For example:
@@ -22,25 +23,25 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
-
-		V2_API_ADDRESS = os.Getenv("V2_API_ADDRESS")
-		V2_API_PORT = os.Getenv("V2_API_PORT")
-
-		fmt.Printf("%s:%s", V2_API_ADDRESS, V2_API_PORT)
+		fmt.Println("V2ray process runs at 8070, 10000, 10001, 10002")
+		var myCmd = exec.Command(V2RAY, "-config", V2RAY_CONFIG)
+		if err := myCmd.Run(); err != nil {
+			log.Panic("Panic: ", err)
+		}
 
 	},
 }
 
 func init() {
-	rootCmd.AddCommand(devCmd)
+	rootCmd.AddCommand(v2rayServiceCmd)
 
 	// Here you will define your flags and configuration settings.
 
 	// Cobra supports Persistent Flags which will work for this command
 	// and all subcommands, e.g.:
-	// devCmd.PersistentFlags().String("foo", "", "A help for foo")
+	// v2rayServiceCmd.PersistentFlags().String("foo", "", "A help for foo")
 
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
-	// devCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	// v2rayServiceCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }

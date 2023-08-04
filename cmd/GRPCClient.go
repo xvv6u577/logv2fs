@@ -46,7 +46,7 @@ var GRPCClientCmd = &cobra.Command{
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 		defer cancel()
 
-		res, err := client.AddUser(ctx, &pb.GRPCRequest{Uuid: "uuid-uuid", Path: "path-path", Name: "email-email"})
+		res, err := client.AddUser(ctx, &pb.GRPCRequest{Uuid: "3fea728a-a921-40bf-b1af-1ce5e66aa19b", Path: "ray", Name: "testuser"})
 		if err != nil {
 			log.Fatalf("could not greet: %v", err)
 		}

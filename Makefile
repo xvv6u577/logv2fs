@@ -33,16 +33,16 @@ server:
 	go run ./ GRPCServer --address 0.0.0.0:50051 
 
 server-tls:
-	go run ./ GRPCServer -address 0.0.0.0:50051 -tls
+	go run ./ GRPCServer --address 0.0.0.0:50051 --tls
 
 server-tls-auth:
-	go run ./ GRPCServer -address 0.0.0.0:50051 -tls -auth
+	go run ./ GRPCServer --address 0.0.0.0:50051 --tls --auth
 
 client:
 	go run ./ GRPCClient --address 0.0.0.0:50051
 
 client-tls:
-	go run ./ GRPCClient -address 0.0.0.0:50051 -tls
+	go run ./ GRPCClient --address 0.0.0.0:50051 --tls
 
 client-nginx-tls:
-	go run ./ GRPCClient -address 0.0.0.0:8070 -tls
+	go run ./ GRPCClient --address 0.0.0.0:8070 --tls

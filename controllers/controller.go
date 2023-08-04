@@ -231,7 +231,7 @@ func SignUp() gin.HandlerFunc {
 		user.UpdateNodeStatusInUse(globalVariable.ActiveGlobalNodes)
 
 		var wg sync.WaitGroup
-		var waitQueueLength = 2
+		var waitQueueLength = 0
 
 		if NODE_TYPE == "local" {
 			wg.Add(waitQueueLength + 1)
@@ -239,7 +239,7 @@ func SignUp() gin.HandlerFunc {
 				defer wg.Done()
 				err = grpctools.GrpcClientToAddUser("0.0.0.0", "50051", user, false)
 				if err != nil {
-					log.Printf("v2ray add user failed: \n%v", err.Error())
+					log.Printf("error occured while adding user: %v", err)
 					c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 					return
 				}
@@ -256,30 +256,24 @@ func SignUp() gin.HandlerFunc {
 			}
 		}
 
-		go func() {
-			defer wg.Done()
-			user.ProduceSuburl(globalVariable.ActiveGlobalNodes)
-			err = user.GenerateYAML(globalVariable.ActiveGlobalNodes)
-			if err != nil {
-				log.Printf("error occured while generating yaml: %v", err)
-				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-				return
-			}
-		}()
-
-		go func() {
-			defer wg.Done()
-			_, err = userCollection.InsertOne(ctx, user)
-			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-				log.Printf("error occured while inserting user: %v", err)
-				return
-			}
-		}()
-
 		wg.Wait()
-		c.JSON(http.StatusOK, gin.H{"message": "user " + user.Name + " created at v2ray and database."})
 
+		user.ProduceSuburl(globalVariable.ActiveGlobalNodes)
+		err = user.GenerateYAML(globalVariable.ActiveGlobalNodes)
+		if err != nil {
+			log.Printf("error occured while generating yaml: %v", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		_, err = userCollection.InsertOne(ctx, user)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			log.Printf("error occured while inserting user: %v", err)
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{"message": "user " + user.Name + " created at v2ray and database."})
 	}
 }
 

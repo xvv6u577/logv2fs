@@ -31,21 +31,7 @@ const UserComp = (props) => {
 
     const handleOnline = (name) => {
         axios
-            .get(process.env.REACT_APP_API_HOST + "08f87p/" + name, {
-                headers: { token: loginState.token },
-            })
-            .then((response) => {
-                dispatch(doRerender({ rerender: !rerenderSignal.rerender }));
-                dispatch(success({ show: true, content: response.data.message }));
-            })
-            .catch((err) => {
-                dispatch(alert({ show: true, content: err.toString() }));
-            });
-    };
-
-    const handleOffline = (name) => {
-        axios
-            .get(process.env.REACT_APP_API_HOST + "yi9a92/" + name, {
+            .get(process.env.REACT_APP_API_HOST + "onlineuser/" + name, {
                 headers: { token: loginState.token },
             })
             .then((response) => {
@@ -54,7 +40,25 @@ const UserComp = (props) => {
             })
             .catch((err) => {
                 if (err.response) {
-                    dispatch(alert({ show: true, content: err.response.data.error }));
+                    dispatch(alert({ show: true, content: err.response.data }));
+                } else {
+                    dispatch(alert({ show: true, content: err.toString() }));
+                }
+            });
+    };
+
+    const handleOffline = (name) => {
+        axios
+            .get(process.env.REACT_APP_API_HOST + "offlineuser/" + name, {
+                headers: { token: loginState.token },
+            })
+            .then((response) => {
+                dispatch(doRerender({ rerender: !rerenderSignal.rerender }));
+                dispatch(success({ show: true, content: response.data.message }));
+            })
+            .catch((err) => {
+                if (err.response) {
+                    dispatch(alert({ show: true, content: err.response.data }));
                 } else {
                     dispatch(alert({ show: true, content: err.toString() }));
                 }
@@ -72,7 +76,7 @@ const UserComp = (props) => {
             })
             .catch((err) => {
                 if (err.response) {
-                    dispatch(alert({ show: true, content: err.response.data.error }));
+                    dispatch(alert({ show: true, content: err.response.data }));
                 } else {
                     dispatch(alert({ show: true, content: err.toString() }));
                 }

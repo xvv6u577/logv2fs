@@ -1,12 +1,14 @@
-#### Senario 1 (GRPC client noTLS <-> GRPC server)
+#### Senario 1 (GRPC client noTLS <-> GRPC server) Success!
 
+<!-- Comment client AddUser at first -->
 ```bash
 make server
 make client
 ```
 
-#### Senario 2 (GRPC client <-> TLS GRPC server)
+#### Senario 2 (GRPC client <-> TLS GRPC server) Success!
 
+<!-- Comment client AddUser at first -->
 ```bash
 make server-tls
 make client-tls

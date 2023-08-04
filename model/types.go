@@ -14,6 +14,7 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+// NodeGlobalList     map[string]string  `json:"node_global_list" bson:"node_global_list"`
 type User struct {
 	ID                 primitive.ObjectID `bson:"_id"`
 	Email              string             `json:"email" bson:"email" validate:"required,min=2,max=100"`
@@ -29,7 +30,6 @@ type User struct {
 	Usedtraffic        int64              `json:"used" bson:"used"`
 	Credittraffic      int64              `json:"credit" bson:"credit"`
 	NodeInUseStatus    map[string]bool    `json:"node_in_use_status" bson:"node_in_use_status"`
-	NodeGlobalList     map[string]string  `json:"node_global_list" bson:"node_global_list"`
 	Suburl             string             `json:"suburl"`
 	CreatedAt          time.Time          `json:"created_at" bson:"created_at"`
 	UpdatedAt          time.Time          `json:"updated_at" bson:"updated_at"`
@@ -197,6 +197,7 @@ func (u *User) ProduceSuburl(activeGlobalNodes []Domain) {
 			} else {
 				subscription = subscription + "\n" + "vless://" + b64.StdEncoding.EncodeToString(jsonedNode)
 			}
+
 		}
 
 	}
@@ -215,7 +216,6 @@ func (u *User) AddNodeInUse(domain string) {
 func (u *User) UpdateNodeStatusInUse(activeGlobalNodes []Domain) {
 
 	var updatedNodes = map[string]bool{}
-	// separate out vemss nodes
 	var simplifiedNodes = map[string]string{}
 	for _, node := range activeGlobalNodes {
 		if node.Type == "vmess" {

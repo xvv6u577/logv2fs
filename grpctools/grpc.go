@@ -22,7 +22,6 @@ import (
 )
 
 var (
-	// addr           = flag.String("addr", "0.0.0.0:50051", "the address to connect to")
 	V2_API_ADDRESS = os.Getenv("V2_API_ADDRESS")
 	V2_API_PORT    = os.Getenv("V2_API_PORT")
 )
@@ -37,11 +36,12 @@ type Server struct {
 
 func (s *Server) AddUser(ctx context.Context, in *pb.GRPCRequest) (*pb.GRPCReply, error) {
 
-	cmdConn, err := grpc.Dial(fmt.Sprintf("%s:%s", V2_API_ADDRESS, V2_API_PORT), grpc.WithInsecure())
+	cmdConn, err := grpc.Dial("127.0.0.1:8070", grpc.WithInsecure())
 	if err != nil {
 		log.Printf("%v", "v2ray service connection failed.")
 		return &pb.GRPCReply{SuccesOrNot: "v2ray service connection failed."}, err
 	}
+	defer cmdConn.Close()
 
 	user := User{
 		Email: in.GetName(),
@@ -62,11 +62,12 @@ func (s *Server) AddUser(ctx context.Context, in *pb.GRPCRequest) (*pb.GRPCReply
 
 func (s *Server) DeleteUser(ctx context.Context, in *pb.GRPCRequest) (*pb.GRPCReply, error) {
 
-	cmdConn, err := grpc.Dial(fmt.Sprintf("%s:%s", V2_API_ADDRESS, V2_API_PORT), grpc.WithInsecure())
+	cmdConn, err := grpc.Dial("127.0.0.1:8070", grpc.WithInsecure())
 	if err != nil {
 		log.Printf("%v", "v2ray service connection failed.")
 		return &pb.GRPCReply{SuccesOrNot: "v2ray service connection failed."}, err
 	}
+	defer cmdConn.Close()
 
 	NHSClient := v2ray.NewHandlerServiceClient(cmdConn, in.GetPath())
 	err = NHSClient.DelUser(in.GetName())
