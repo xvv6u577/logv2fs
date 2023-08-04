@@ -37,12 +37,23 @@ type Server struct {
 
 func (s *Server) AddUser(ctx context.Context, in *pb.GRPCRequest) (*pb.GRPCReply, error) {
 
-	log.Printf("Server AddUser. Received: %v", in.GetName()+", "+in.GetUuid()+", "+in.GetPath())
-
-	err := v2ray.ServiceAddUser(in.GetName(), in.GetUuid(), in.GetPath())
+	cmdConn, err := grpc.Dial(fmt.Sprintf("%s:%s", V2_API_ADDRESS, V2_API_PORT), grpc.WithInsecure())
 	if err != nil {
-		log.Printf("%v", "v2ray add user failed!")
-		return &pb.GRPCReply{SuccesOrNot: "v2ray add user failed!"}, err
+		log.Printf("%v", "v2ray service connection failed.")
+		return &pb.GRPCReply{SuccesOrNot: "v2ray service connection failed."}, err
+	}
+
+	user := User{
+		Email: in.GetName(),
+		UUID:  in.GetUuid(),
+		Path:  in.GetPath(),
+	}
+
+	NHSClient := v2ray.NewHandlerServiceClient(cmdConn, in.GetPath())
+	err = NHSClient.AddUser(user)
+	if err != nil {
+		log.Printf("%v", "v2ray service add user failed.")
+		return &pb.GRPCReply{SuccesOrNot: "v2ray service add user failed."}, err
 	}
 
 	log.Println("email: " + in.GetName() + ", uuid: " + in.GetUuid() + ", path: " + in.GetPath() + ". Added in success!")
@@ -51,12 +62,17 @@ func (s *Server) AddUser(ctx context.Context, in *pb.GRPCRequest) (*pb.GRPCReply
 
 func (s *Server) DeleteUser(ctx context.Context, in *pb.GRPCRequest) (*pb.GRPCReply, error) {
 
-	log.Printf("Server DeleteUser. Received: %v", in.GetName()+", "+in.GetUuid()+", "+in.GetPath())
-
-	err := v2ray.ServiceDeleteUser(in.GetName(), in.GetPath())
+	cmdConn, err := grpc.Dial(fmt.Sprintf("%s:%s", V2_API_ADDRESS, V2_API_PORT), grpc.WithInsecure())
 	if err != nil {
-		log.Printf("%v", "v2ray delete user failed!")
-		return &pb.GRPCReply{SuccesOrNot: "v2ray delete user failed!"}, err
+		log.Printf("%v", "v2ray service connection failed.")
+		return &pb.GRPCReply{SuccesOrNot: "v2ray service connection failed."}, err
+	}
+
+	NHSClient := v2ray.NewHandlerServiceClient(cmdConn, in.GetPath())
+	err = NHSClient.DelUser(in.GetName())
+	if err != nil {
+		log.Printf("%v", "v2ray service delete user failed.")
+		return &pb.GRPCReply{SuccesOrNot: "v2ray service delete user failed."}, err
 	}
 
 	log.Println("email: " + in.GetName() + ", uuid: " + in.GetUuid() + ", path: " + in.GetPath() + ". Deleted in success!")

@@ -18,6 +18,9 @@ var (
 	nodesCollection   *mongo.Collection = database.OpenCollection(database.Client, "NODES")
 	userCollection    *mongo.Collection = database.OpenCollection(database.Client, "USERS")
 	globalCOLLECTIONS *mongo.Collection = database.OpenCollection(database.Client, "GLOBAL")
+	address           string
+	tlsStatus         bool
+	authrRequired     bool
 )
 
 type (

@@ -5,7 +5,6 @@ Copyright © 2023 NAME HERE <EMAIL ADDRESS>
 package cmd
 
 import (
-	"flag"
 	"log"
 	"net"
 
@@ -22,12 +21,7 @@ var GRPCServerCmd = &cobra.Command{
 	Long:  `GRPC server`,
 	Run: func(cmd *cobra.Command, args []string) {
 
-		addr := flag.String("address", "0.0.0.0:8070", "the server address")
-		tlsStatus := flag.Bool("tls", false, "enable tls")
-		authrRequired := flag.Bool("auth", false, "enable auth")
-		flag.Parse()
-
-		lis, err := net.Listen("tcp", *addr)
+		lis, err := net.Listen("tcp", address)
 		if err != nil {
 			log.Fatalf("Failed to listen: %v", err)
 		}
@@ -35,8 +29,8 @@ var GRPCServerCmd = &cobra.Command{
 		var grpcServer *grpc.Server
 		serverOptions := []grpc.ServerOption{}
 
-		if *tlsStatus {
-			tlsCredentials, err := grpctools.GetServerSideTlsCredential(*authrRequired)
+		if tlsStatus {
+			tlsCredentials, err := grpctools.GetServerSideTlsCredential(authrRequired)
 			if err != nil {
 				log.Fatal("cannot load TLS credentials: ", err)
 			}
@@ -48,7 +42,7 @@ var GRPCServerCmd = &cobra.Command{
 
 		pb.RegisterManageV2RayUserBygRPCServer(grpcServer, &grpctools.Server{})
 
-		log.Println("gRPC Server is listening on", *addr, "with TLS:", *tlsStatus)
+		log.Println("gRPC Server is listening on", address, "with TLS:", tlsStatus)
 		if err := grpcServer.Serve(lis); err != nil {
 			log.Fatalf("Failed to serve: %v", err)
 		}
@@ -58,6 +52,10 @@ var GRPCServerCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(GRPCServerCmd)
+
+	GRPCServerCmd.Flags().StringVarP(&address, "address", "a", "0.0.0.0:50051", "Address to bind the server")
+	GRPCServerCmd.Flags().BoolVarP(&tlsStatus, "tls", "t", false, "Enable TLS")
+	GRPCServerCmd.Flags().BoolVarP(&authrRequired, "auth", "r", false, "Enable auth")
 
 	// Here you will define your flags and configuration settings.
 

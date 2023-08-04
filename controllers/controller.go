@@ -164,7 +164,7 @@ func SignUp() gin.HandlerFunc {
 
 		// get ActiveGlobalNodes from globalCollection, seperate out vmess nodes and put them into vmessNodes
 		var globalVariable GlobalVariable
-		err = globalCollection.FindOne(ctx, bson.M{"name": "global"}).Decode(&globalVariable)
+		err = globalCollection.FindOne(ctx, bson.M{"name": "GLOBAL"}).Decode(&globalVariable)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "error occured while getting globalVariable"})
 			log.Printf("Getting globalVariable error: %s", err.Error())
@@ -204,16 +204,19 @@ func SignUp() gin.HandlerFunc {
 		var current_day = current.Local().Format("20060102")
 
 		user.UsedByCurrentDay = TrafficAtPeriod{
-			Period: current_day,
-			Amount: 0,
+			Period:       current_day,
+			Amount:       0,
+			UsedByDomain: map[string]int64{},
 		}
 		user.UsedByCurrentMonth = TrafficAtPeriod{
-			Period: current_month,
-			Amount: 0,
+			Period:       current_month,
+			Amount:       0,
+			UsedByDomain: map[string]int64{},
 		}
 		user.UsedByCurrentYear = TrafficAtPeriod{
-			Period: current_year,
-			Amount: 0,
+			Period:       current_year,
+			Amount:       0,
+			UsedByDomain: map[string]int64{},
 		}
 
 		user.TrafficByDay = []TrafficAtPeriod{}
@@ -234,7 +237,7 @@ func SignUp() gin.HandlerFunc {
 			wg.Add(waitQueueLength + 1)
 			go func() {
 				defer wg.Done()
-				err = grpctools.GrpcClientToAddUser("0.0.0.0", MIXED_PORT, user, true)
+				err = grpctools.GrpcClientToAddUser("0.0.0.0", "50051", user, false)
 				if err != nil {
 					log.Printf("v2ray add user failed: \n%v", err.Error())
 					c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -437,7 +440,7 @@ func TakeItOfflineByUserName() gin.HandlerFunc {
 		defer cancel()
 
 		var globalVariable GlobalVariable
-		err := globalCollection.FindOne(ctx, bson.M{"name": "global"}).Decode(&globalVariable)
+		err := globalCollection.FindOne(ctx, bson.M{"name": "GLOBAL"}).Decode(&globalVariable)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "error occured while getting globalVariable"})
 			log.Printf("Getting globalVariable error: %s", err.Error())
@@ -469,7 +472,7 @@ func TakeItOfflineByUserName() gin.HandlerFunc {
 		}
 
 		if NODE_TYPE == "local" {
-			err = grpctools.GrpcClientToDeleteUser("0.0.0.0", MIXED_PORT, user, true)
+			err = grpctools.GrpcClientToDeleteUser("0.0.0.0", "50051", user, false)
 			if err != nil {
 				msg := "v2ray take user back online failed."
 				log.Panicf("%v", msg)
@@ -534,7 +537,7 @@ func TakeItOnlineByUserName() gin.HandlerFunc {
 		name := helper.SanitizeStr(c.Param("name"))
 
 		var globalVariable GlobalVariable
-		err := globalCollection.FindOne(ctx, bson.M{"name": "global"}).Decode(&globalVariable)
+		err := globalCollection.FindOne(ctx, bson.M{"name": "GLOBAL"}).Decode(&globalVariable)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "error occured while getting globalVariable"})
 			log.Printf("Getting globalVariable error: %s", err.Error())
@@ -566,7 +569,7 @@ func TakeItOnlineByUserName() gin.HandlerFunc {
 		}
 
 		if NODE_TYPE == "local" {
-			err = grpctools.GrpcClientToAddUser("0.0.0.0", MIXED_PORT, user, true)
+			err = grpctools.GrpcClientToAddUser("0.0.0.0", "50051", user, false)
 			if err != nil {
 				msg := "v2ray take user back online failed."
 				log.Panicf("%v", msg)
@@ -652,7 +655,7 @@ func DeleteUserByUserName() gin.HandlerFunc {
 
 		if user.Status == "plain" {
 			if NODE_TYPE == "local" {
-				err = grpctools.GrpcClientToDeleteUser("0.0.0.0", MIXED_PORT, user, true)
+				err = grpctools.GrpcClientToDeleteUser("0.0.0.0", "50051", user, false)
 				if err != nil {
 					msg := "v2ray take user offline failed."
 					log.Panicf("%v", msg)
@@ -831,7 +834,7 @@ func DisableNodePerUser() gin.HandlerFunc {
 		node := helper.SanitizeStr(c.Request.URL.Query().Get("node"))
 
 		var globalVariable GlobalVariable
-		err := globalCollection.FindOne(ctx, bson.M{"name": "global"}).Decode(&globalVariable)
+		err := globalCollection.FindOne(ctx, bson.M{"name": "GLOBAL"}).Decode(&globalVariable)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "error occured while getting globalVariable"})
 			log.Printf("Getting globalVariable error: %s", err.Error())
@@ -863,7 +866,7 @@ func DisableNodePerUser() gin.HandlerFunc {
 		if NODE_TYPE == "local" {
 			if CURRENT_DOMAIN == node {
 
-				err = grpctools.GrpcClientToDeleteUser("0.0.0.0", MIXED_PORT, user, true)
+				err = grpctools.GrpcClientToDeleteUser("0.0.0.0", "50051", user, false)
 				if err != nil {
 					c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 					log.Printf("Delete user on node failed: %s", err.Error())
@@ -909,7 +912,7 @@ func EnableNodePerUser() gin.HandlerFunc {
 		node := helper.SanitizeStr(c.Request.URL.Query().Get("node"))
 
 		var globalVariable GlobalVariable
-		err := globalCollection.FindOne(ctx, bson.M{"name": "global"}).Decode(&globalVariable)
+		err := globalCollection.FindOne(ctx, bson.M{"name": "GLOBAL"}).Decode(&globalVariable)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "error occured while getting globalVariable"})
 			log.Printf("Getting globalVariable error: %s", err.Error())
@@ -940,7 +943,7 @@ func EnableNodePerUser() gin.HandlerFunc {
 
 		if NODE_TYPE == "local" {
 			if CURRENT_DOMAIN == node {
-				err = grpctools.GrpcClientToAddUser("0.0.0.0", MIXED_PORT, user, true)
+				err = grpctools.GrpcClientToAddUser("0.0.0.0", "50051", user, false)
 				if err != nil {
 					c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 					log.Printf("Add user on node failed: %s", err.Error())

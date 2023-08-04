@@ -6,7 +6,6 @@ package cmd
 
 import (
 	"context"
-	"flag"
 	"log"
 	"time"
 
@@ -24,13 +23,9 @@ var GRPCClientCmd = &cobra.Command{
 	Long:  `GRPC client`,
 	Run: func(cmd *cobra.Command, args []string) {
 
-		addr := flag.String("address", "0.0.0.0:8070", "the server address")
-		tlsStatus := flag.Bool("tls", false, "enable tls")
-		flag.Parse()
-
 		transportOption := grpc.WithTransportCredentials(insecure.NewCredentials())
 
-		if *tlsStatus {
+		if tlsStatus {
 			tlsCredentials, err := grpctools.GetClientSideTlsCredential()
 			if err != nil {
 				log.Fatal("cannot load TLS credentials: ", err)
@@ -39,7 +34,7 @@ var GRPCClientCmd = &cobra.Command{
 			transportOption = grpc.WithTransportCredentials(tlsCredentials)
 		}
 
-		conn, err := grpc.Dial(*addr, transportOption)
+		conn, err := grpc.Dial(address, transportOption)
 
 		if err != nil {
 			log.Fatalf("Failed to connect: %v", err)
@@ -62,6 +57,9 @@ var GRPCClientCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(GRPCClientCmd)
+
+	GRPCClientCmd.Flags().StringVarP(&address, "address", "a", "0.0.0.0:50051", "Address to bind the server")
+	GRPCClientCmd.Flags().BoolVarP(&tlsStatus, "tls", "t", false, "Enable TLS")
 
 	// Here you will define your flags and configuration settings.
 
