@@ -17,10 +17,10 @@ var (
 	trafficCollection *mongo.Collection = database.OpenCollection(database.Client, "TRAFFIC")
 	nodesCollection   *mongo.Collection = database.OpenCollection(database.Client, "NODES")
 	userCollection    *mongo.Collection = database.OpenCollection(database.Client, "USERS")
-	globalCOLLECTIONS *mongo.Collection = database.OpenCollection(database.Client, "GLOBAL")
-	address           string
-	tlsStatus         bool
-	authrRequired     bool
+	// globalCOLLECTIONS *mongo.Collection = database.OpenCollection(database.Client, "GLOBAL")
+	address       string
+	tlsStatus     bool
+	authrRequired bool
 )
 
 type (

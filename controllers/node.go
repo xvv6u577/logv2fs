@@ -177,12 +177,9 @@ func AddNode() gin.HandlerFunc {
 
 		for _, user := range allUsers {
 
-			// fmt.Println("Before: ", user)
-			// shadowrocket suburl.
 			user.UpdateNodeStatusInUse(comingDomains)
 			user.ProduceSuburl(comingDomains)
 
-			// use yamTools.GenerateYAML to generate yaml.
 			err = user.GenerateYAML(comingDomains)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -190,7 +187,6 @@ func AddNode() gin.HandlerFunc {
 				return
 			}
 
-			// fmt.Println("After: ", user)
 			filter := bson.D{primitive.E{Key: "user_id", Value: user.User_id}}
 			update := bson.M{"$set": bson.M{"updated_at": time.Now().Local(), "node_in_use_status": user.NodeInUseStatus, "suburl": user.Suburl}}
 			_, err = userCollection.UpdateOne(ctx, filter, update)

@@ -874,6 +874,7 @@ func DisableNodePerUser() gin.HandlerFunc {
 
 		user.DeleteNodeInUse(node)
 		user.UpdateNodeStatusInUse(globalVariable.ActiveGlobalNodes)
+		user.ProduceSuburl(globalVariable.ActiveGlobalNodes)
 		user.GenerateYAML(globalVariable.ActiveGlobalNodes)
 
 		filter := bson.D{primitive.E{Key: "email", Value: email}}
@@ -950,6 +951,7 @@ func EnableNodePerUser() gin.HandlerFunc {
 
 		user.AddNodeInUse(node)
 		user.UpdateNodeStatusInUse(globalVariable.ActiveGlobalNodes)
+		user.ProduceSuburl(globalVariable.ActiveGlobalNodes)
 		user.GenerateYAML(globalVariable.ActiveGlobalNodes)
 
 		filter := bson.D{primitive.E{Key: "email", Value: email}}

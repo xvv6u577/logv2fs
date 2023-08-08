@@ -147,7 +147,7 @@ func (u *User) ProduceSuburl(activeGlobalNodes []Domain) {
 	subscription := ""
 	for _, item := range activeGlobalNodes {
 
-		if item.Domain == "localhost" || (item.Type == "vmess" && !u.NodeInUseStatus[item.Domain]) {
+		if item.Domain == "localhost" || (item.Type == "vmess" && !u.NodeInUseStatus[item.Domain]) || !item.EnableSubcription {
 			continue
 		}
 
