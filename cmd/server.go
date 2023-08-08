@@ -49,10 +49,10 @@ var (
 	V2RAY          = os.Getenv("V2RAY")
 	V2RAY_CONFIG   = os.Getenv("V2RAY_CONFIG")
 	GRPC_PORT      = os.Getenv("GRPC_PORT")
+	GIN_MODE       = os.Getenv("GIN_MODE")
 	cronInstance   *cron.Cron
 )
 
-// serverCmd represents the server command
 var serverCmd = &cobra.Command{
 	Use:   "server",
 	Short: "run server",
@@ -105,7 +105,7 @@ func V2rayProcess() {
 }
 
 func RunServer() *gin.Engine {
-	// wait v2ray process to be ready.
+
 	time.Sleep(time.Second)
 
 	var projections = bson.D{
@@ -146,6 +146,7 @@ func RunServer() *gin.Engine {
 	localCron.Cron_loggingJobs(cronInstance)
 
 	router := gin.New()
+	gin.SetMode(gin.ReleaseMode)
 
 	// Enables automatic redirection if the current route can’t be matched but a
 	// handler for the path with (without) the trailing slash exists.
