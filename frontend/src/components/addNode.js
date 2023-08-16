@@ -78,8 +78,8 @@ const AddNode = () => {
         <>
             <Alert message={message.content} type={message.type} shown={message.show} close={() => { dispatch(reset({})); }} />
             <section className="text-gray-400 bg-gray-900 body-font">
-                <div className="container px-3 pt-10 mx-auto">
-                    <div className="flex flex-col text-center w-full my-10">
+                <div className="container px-3 mx-auto">
+                    <div className="flex flex-col text-center w-full my-5">
                         <h1 className="sm:text-4xl text-3xl font-medium title-font mb-2 text-white">Node Status</h1>
                         <p className="lg:w-2/3 mx-auto leading-relaxed text-base">Current status of active nodes</p>
                     </div>

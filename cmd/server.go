@@ -145,8 +145,11 @@ func RunServer() *gin.Engine {
 	// add cron
 	localCron.Cron_loggingJobs(cronInstance)
 
+	if GIN_MODE == "release" {
+		gin.SetMode(gin.ReleaseMode)
+
+	}
 	router := gin.New()
-	gin.SetMode(gin.ReleaseMode)
 
 	// Enables automatic redirection if the current route can’t be matched but a
 	// handler for the path with (without) the trailing slash exists.
@@ -169,15 +172,12 @@ func RunServer() *gin.Engine {
 func recoverFromError(c *gin.Context) {
 	defer func() {
 		if r := recover(); r != nil {
-			// Print error stack information
 			log.Panicf("Panic: %v\n", r)
 			debug.PrintStack()
 
-			// Return information wrapped in json
 			c.JSON(200, gin.H{"code": 4444, "message": "Server internal error!"})
 		}
 	}()
 
-	// Continue with subsequent interface calls after loading defer recover
 	c.Next()
 }
