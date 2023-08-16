@@ -96,7 +96,17 @@ func AddNode() gin.HandlerFunc {
 			// 	continue
 			// }
 
-			if _, ok := allNodeStatus[domain.Domain]; !ok {
+			if _, ok := allNodeStatus[domain.Domain]; ok {
+				// update remark and updated_at in nodeCollection
+				filter := bson.D{primitive.E{Key: "domain", Value: domain.Domain}}
+				update := bson.M{"$set": bson.M{"remark": domain.Remark, "updated_at": time.Now().Local()}}
+				_, err = nodeCollection.UpdateOne(ctx, filter, update)
+				if err != nil {
+					c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+					log.Printf("error occured while updating remark of node: %v", err)
+					return
+				}
+			} else {
 				var node CurrentNode
 				node.Domain = domain.Domain
 				node.Status = "active"
