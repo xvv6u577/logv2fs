@@ -42,3 +42,9 @@ type Domain struct {
 	UUID              string `json:"uuid" bson:"uuid"`
 	PATH              string `json:"path" bson:"path"`
 }
+
+type DomainInfo struct {
+	Domain       string `json:"domain"`
+	ExpiredDate  string `json:"expired_date"`
+	DaysToExpire int    `json:"days_to_expire"`
+}

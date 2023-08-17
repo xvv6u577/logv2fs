@@ -58,14 +58,8 @@ type (
 	NodeAtPeriod    = model.NodeAtPeriod
 	GlobalVariable  = model.GlobalVariable
 	Domain          = model.Domain
+	DomainInfo      = model.DomainInfo
 )
-
-type DomainInfo struct {
-	Domain       string `json:"domain"`
-	ExpiredDate  string `json:"expired_date"`
-	DaysToExpire int    `json:"days_to_expire"`
-	IsInUVP      bool   `json:"is_in_uvp"`
-}
 
 //HashPassword is used to encrypt the password before it is stored in the DB
 func HashPassword(password string) string {
