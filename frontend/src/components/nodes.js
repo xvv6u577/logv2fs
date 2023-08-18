@@ -143,7 +143,7 @@ function Nodes() {
                                     if (newdomain.length > 0 && newRemark.length > 0) {
                                         var tempDomains = domains.filter(item => item.domain === newdomain);
                                         if (tempDomains.length === 0) {
-                                            setDomains([...domains, { domain: newdomain, remark: newRemark, expired_date: "", days_to_expire: -1 }]);
+                                            setDomains([...domains, { domain: newdomain, remark: newRemark }]);
                                         }
                                         updateNewdomain("");
                                         updateNewRemark("");
