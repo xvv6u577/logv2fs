@@ -13,6 +13,7 @@ function Nodes() {
 
     const [domains, setDomains] = useState([]);
     const [newdomain, updateNewdomain] = useState("");
+    const [newRemark, updateNewRemark] = useState("");
 
 
     const dispatch = useDispatch();
@@ -59,16 +60,11 @@ function Nodes() {
     const handleAddDomain = (e) => {
         e.preventDefault();
 
-        var tempDomainList = {};
-        domains.forEach((domain) => {
-            tempDomainList[domain.domain] = domain.domain;
-        })
-
         axios({
             method: "put",
             url: process.env.REACT_APP_API_HOST + "g7302b",
             headers: { token: loginState.token },
-            data: tempDomainList,
+            data: domains,
         })
             .then((response) => {
                 dispatch(success({ show: true, content: response.data.message }));
@@ -82,72 +78,95 @@ function Nodes() {
     return (
         <div className="py-3 flex-1 w-full mx-auto">
             <Alert message={message.content} type={message.type} shown={message.show} close={() => { dispatch(reset({})); }} />
-            <h2 className="text-2xl font-semibold leading-tight py-3">Work Domains Status</h2>
-            <div className="p-6">
-                <p className="text-sm font-normal text-gray-500 dark:text-gray-400">Days to be Expired!</p>
-                <ul className="my-4 space-y-3">
-                    {domains.map((domain, index) => (
-                        <li key={index} >
-                            <div className="flex items-center p-3 text-base font-bold text-gray-900 bg-gray-50 rounded-lg hover:bg-gray-100 group hover:shadow dark:bg-gray-600 dark:hover:bg-gray-500 dark:text-white">
-                                <span className="d-block flex-1">
-                                    <span className="inline-block w-48">{domain.domain}</span>:{" "}
-                                    <span className="inline-flex justify-center w-20 bg-green-100 text-green-800 text-sm font-medium px-0 py-0.5 rounded dark:bg-green-200 dark:text-green-900">
-                                        {domain.days_to_expire}天
-                                    </span>
-                                </span>
-                                {/* <span className="flex-1 ml-3 whitespace-nowrap">{domain.domain}: {domain.days_to_expire}</span> */}
-                                <span
-                                    onClick={() => {
-                                        var tempDomains = domains.filter(item => item.domain !== domain.domain);
-                                        setDomains(tempDomains);
-                                    }}
-                                    className="cursor-pointer inline-flex items-center justify-center px-2 py-0.5 ml-3 text-xs font-medium text-gray-500 bg-gray-200 rounded dark:bg-gray-700 dark:text-gray-400"
-                                >
-                                    Delete
-                                </span>
+            <h2 className="text-2xl font-semibold leading-tight">
+                Work Domains Status
+                <p className="inline-block px-5 text-sm font-normal text-gray-500 dark:text-gray-400">Days to be Expired!</p>
+            </h2>
+            <div className="container px-5 py-5 mx-auto">
+                <div className="flex flex-wrap -m-4">
+                    {
+                        domains.map((domain, index) => (
+                            <div className="p-4 lg:w-1/3" key={index} >
+                                <div className="h-full bg-gray-800 bg-opacity-40 px-8 pt-10 pb-10 rounded-lg overflow-hidden text-center relative hover:bg-gray-700">
+                                    <button className="absolute top-0 right-0 p-2"
+                                        onClick={() => {
+                                            var tempDomains = domains.filter(item => item.domain !== domain.domain);
+                                            setDomains(tempDomains);
+                                        }}
+                                    >
+
+                                        <svg xmlns="http://www.w3.org/2000/svg"
+                                            className="h-5 w-5 fill-current text-gray-300 hover:text-red-600"
+                                            viewBox="0 0 50 50"
+                                        >
+                                            <path d="M 7.71875 6.28125 L 6.28125 7.71875 L 23.5625 25 L 6.28125 42.28125 L 7.71875 43.71875 L 25 26.4375 L 42.28125 43.71875 L 43.71875 42.28125 L 26.4375 25 L 43.71875 7.71875 L 42.28125 6.28125 L 25 23.5625 Z"></path>
+                                        </svg>
+                                    </button>
+                                    <h2 className="w-full tracking-widest text-sm title-font font-medium text-sky-400 mb-1">
+                                        {domain.domain}
+                                        <span className="w-30 px-2 inline-flex justify-center bg-green-100 text-green-800 text-sm font-medium py-0.5 rounded dark:bg-green-200 dark:text-green-900">
+                                            {domain.remark}
+                                        </span>
+                                    </h2>
+                                    <h1 className="title-font sm:text-4xl text-2xl font-medium text-white mb-3 py-3">{domain.days_to_expire}天</h1>
+                                    <p className="leading-relaxed mb-3">到期时间: {domain.expired_date}</p>
+                                </div>
                             </div>
-                        </li>
-                    ))}
-                </ul>
-                <form className="space-y-6"
-                    onSubmit={handleAddDomain}
-                >
+                        ))
+                    }
+                </div>
+                <form className="space-y-6 py-5 px-72" onSubmit={handleAddDomain} >
                     <div className="relative">
-                        <label htmlFor="">Domain:</label>
-                        <input
-                            type="text"
-                            onChange={(e) => updateNewdomain(e.target.value.replace(/\s/g, ""))}
-                            value={newdomain}
-                            className="p-4 pl-10 w-full text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-                            placeholder="New Domain to Add"
-                        />
-                        <button type="button"
-                            onClick={() => {
-                                if (newdomain.length > 0) {
-                                    var tempDomains = domains.filter(item => item.domain === newdomain);
-                                    if (tempDomains.length === 0) {
-                                        setDomains([...domains, { domain: newdomain, expired_date: "N/A", days_to_expire: "N/A" }]);
+                        <span className="inline-block w-1/3 pr-3">
+                            <label htmlFor="" className="block">Domain:</label>
+                            <input
+                                type="text"
+                                onChange={(e) => updateNewdomain(e.target.value.replace(/\s/g, ""))}
+                                value={newdomain}
+                                className="w-full p-4 text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                                placeholder="New Domain"
+                            />
+                        </span>
+                        <span className="inline-block w-1/3 pr-3">
+                            <label htmlFor="" className="block">Remark:</label>
+                            <input
+                                type="text"
+                                onChange={(e) => updateNewRemark(e.target.value.replace(/\s/g, ""))}
+                                value={newRemark}
+                                className="w-full p-4 text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                                placeholder="Remark of Domain"
+                            />
+                        </span>
+                        <span className="inline-block w-1/3">
+                            <button type="button"
+                                onClick={() => {
+                                    if (newdomain.length > 0 && newRemark.length > 0) {
+                                        var tempDomains = domains.filter(item => item.domain === newdomain);
+                                        if (tempDomains.length === 0) {
+                                            setDomains([...domains, { domain: newdomain, remark: newRemark, expired_date: "", days_to_expire: -1 }]);
+                                        }
+                                        updateNewdomain("");
+                                        updateNewRemark("");
+                                    } else {
+                                        dispatch(alert({ show: true, content: "Domain field should't be left empty." }));
                                     }
-                                    updateNewdomain("");
-                                } else {
-                                    dispatch(alert({ show: true, content: "Domain field should't be left empty." }));
-                                }
-                            }}
-                            className="block text-white absolute right-2.5 bottom-2.5 bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-4 py-2 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
-                        >
-                            Add Domain
-                        </button>
+                                }}
+                                className="mx-auto w-full block text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-4 py-4 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
+                            >
+                                Add Domain
+                            </button>
+                        </span>
                     </div>
                     <button
                         type="submit"
-                        className="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm w-full sm:w-auto px-5 py-2.5 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
+                        className="px-4 py-4 mx-auto text-center text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm sm:w-auto dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
                     >
-                        Update DomainList
+                        Update Domains
                     </button>
                 </form>
             </div>
             <h2 className="text-2xl font-semibold leading-tight py-3">Active Nodes</h2>
-            <div id="accordion-collapse" data-accordion="collapse">
+            <div className="p-6" id="accordion-collapse" data-accordion="collapse">
                 {nodes && nodes
                     // sort by status
                     // .sort((a, b) => {

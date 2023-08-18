@@ -27,8 +27,6 @@ type GlobalVariable struct {
 	Name                  string   `json:"name" bson:"name" validate:"required,min=2,max=100"`
 	WorkRelatedDomainList []Domain `json:"work_related_domain_list" bson:"work_related_domain_list"`
 	ActiveGlobalNodes     []Domain `json:"active_global_nodes" bson:"active_global_nodes"`
-	// DomainList            map[string]string `json:"domain_list" bson:"domain_list"`
-	// NodeGlobalList        map[string]string `json:"node_global_list" bson:"node_global_list"`
 }
 
 // Domain type: "work", "vmess", "vmessCDN", "vlessCDN"
@@ -45,6 +43,7 @@ type Domain struct {
 
 type DomainInfo struct {
 	Domain       string `json:"domain"`
+	Remark       string `json:"remark"`
 	ExpiredDate  string `json:"expired_date"`
 	DaysToExpire int    `json:"days_to_expire"`
 }

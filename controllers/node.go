@@ -336,8 +336,8 @@ func getDomainExpiredStatus(domains []Domain) ([]DomainInfo, error) {
 	var conf = &tls.Config{
 		// InsecureSkipVerify: true,
 	}
-	var normalDomains []string
-	var unreachableDomains []string
+	var normalDomains = make(map[string]string)
+	var unreachableDomains = make(map[string]string)
 
 	// split domains into normalDomains and unreachableDomains by parallel processing. if domain is reachable, append it to normalDomains, else append it to unreachableDomains.
 	// if domain is localhost, skip it.
@@ -347,18 +347,18 @@ func getDomainExpiredStatus(domains []Domain) ([]DomainInfo, error) {
 			continue
 		}
 		wg.Add(1)
-		go func(domain string) {
+		go func(d Domain) {
 			defer wg.Done()
-			if helper.IsDomainReachable(domain) {
-				normalDomains = append(normalDomains, domain)
+			if helper.IsDomainReachable(d.Domain) {
+				normalDomains[d.Domain] = d.Remark
 			} else {
-				unreachableDomains = append(unreachableDomains, domain)
+				unreachableDomains[d.Domain] = d.Remark
 			}
-		}(domain.Domain)
+		}(domain)
 	}
 	wg.Wait()
 
-	for _, domain := range normalDomains {
+	for domain, remark := range normalDomains {
 		conn, err := tls.DialWithDialer(&net.Dialer{Timeout: 20 * time.Second}, "tcp", domain+":"+port, conf)
 		if err != nil {
 			log.Printf("tls.DialWithDialer Error: %v", err)
@@ -374,14 +374,16 @@ func getDomainExpiredStatus(domains []Domain) ([]DomainInfo, error) {
 
 		minorDomainInfos = append(minorDomainInfos, DomainInfo{
 			Domain:       domain,
+			Remark:       remark,
 			ExpiredDate:  expiry.Local().Format("2006-01-02 15:04:05"),
 			DaysToExpire: int(time.Until(expiry).Hours() / 24),
 		})
 	}
 
-	for _, domain := range unreachableDomains {
+	for domain, remark := range unreachableDomains {
 		minorDomainInfos = append(minorDomainInfos, DomainInfo{
 			Domain:       domain,
+			Remark:       remark,
 			ExpiredDate:  "unreachable",
 			DaysToExpire: -1,
 		})
@@ -401,7 +403,7 @@ func UpdateDomainInfo() gin.HandlerFunc {
 		var ctx, cancel = context.WithTimeout(context.Background(), 60*time.Second)
 		defer cancel()
 
-		var comingDomainList map[string]string
+		var comingDomainList []DomainInfo
 		var workRelatedDomainList []Domain
 		err := c.BindJSON(&comingDomainList)
 		if err != nil {
@@ -410,11 +412,11 @@ func UpdateDomainInfo() gin.HandlerFunc {
 			return
 		}
 
-		for domain := range comingDomainList {
+		for _, domain := range comingDomainList {
 			workRelatedDomainList = append(workRelatedDomainList, Domain{
 				Type:   "work",
-				Domain: domain,
-				Remark: domain,
+				Domain: domain.Domain,
+				Remark: domain.Remark,
 			})
 		}
 
