@@ -1,0 +1,16 @@
+proxies:
+- name: 香港hkkmt1-cfCDN
+  server: 129.154.199.251
+  port: 443
+  type: vmess
+  uuid: C47AD2B9-0C74-4804-AA10-4CB4DB7D1250
+  alterId: 4
+  cipher: none
+  tls: true
+  skip-cert-verify: false
+  network: ws
+  sni: cdn.anycast.eu.org
+  ws-opts:
+    path: /ray
+    headers:
+      Host: cdn.anycast.eu.org
