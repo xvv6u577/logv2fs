@@ -15,7 +15,7 @@ protoc --go_out=. --go_opt=paths=source_relative \
 ```
 
 > 环境变量：.env
-> go v1.17.2
+> go v1.18.10
 > v2ray v4.23.4
 
 ```

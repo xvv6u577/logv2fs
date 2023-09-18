@@ -7,9 +7,10 @@ package cmd
 import (
 	"fmt"
 	"log"
-	"os/exec"
 
+	"github.com/caster8013/logv2rayfullstack/v2ray"
 	"github.com/spf13/cobra"
+	"google.golang.org/grpc"
 )
 
 // v2rayServiceCmd represents the v2rayService command
@@ -23,11 +24,30 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("V2ray process runs at 8070, 10000, 10001, 10002")
-		var myCmd = exec.Command(V2RAY, "-config", V2RAY_CONFIG)
-		if err := myCmd.Run(); err != nil {
-			log.Panic("Panic: ", err)
+
+		cmdConn, err := grpc.Dial(fmt.Sprintf("%s:%s", V2_API_ADDRESS, V2_API_PORT), grpc.WithInsecure())
+		if err != nil {
+			log.Panic(err)
 		}
+		defer cmdConn.Close()
+
+		var user_vmessws = User{
+			Path:  "vmessws",
+			UUID:  "b831381d-6324-4d53-ad4f-8cda48b30811",
+			Email: "mytestuser",
+		}
+
+		NHSClient := v2ray.NewHandlerServiceClient(cmdConn, user_vmessws.Path)
+		NHSClient.AddUser(user_vmessws)
+
+		var user_vmess = User{
+			Path:  "ray",
+			UUID:  "b831381d-6324-4d53-ad4f-8cda48b30811",
+			Email: "mytestuser",
+		}
+
+		NHSClient = v2ray.NewHandlerServiceClient(cmdConn, user_vmess.Path)
+		NHSClient.AddUser(user_vmess)
 
 	},
 }

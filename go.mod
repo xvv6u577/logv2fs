@@ -1,6 +1,6 @@
 module github.com/caster8013/logv2rayfullstack
 
-go 1.17
+go 1.18
 
 require (
 	github.com/gin-gonic/gin v1.7.7

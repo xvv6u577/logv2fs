@@ -41,7 +41,6 @@ func printfLog(format string, v ...interface{}) {
 		return
 	}
 
-	logging.Printf(format, v...)
 }
 
 // invoke handler
