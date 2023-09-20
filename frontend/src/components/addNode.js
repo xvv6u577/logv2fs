@@ -14,12 +14,13 @@ const AddNode = () => {
         type: "vmess",
         remark: "",
         domain: "",
+        ip: "",
         uuid: "",
         path: "",
         sni: ""
 	};
 
-    const [{ type, remark, domain, uuid, path, sni }, setState] = useState(initialState);
+    const [{ type, remark, domain, uuid, path, sni, ip }, setState] = useState(initialState);
     const clearState = () => {
         setState({ ...initialState }); 
     };
@@ -44,6 +45,7 @@ const AddNode = () => {
 
     const handleAddNode = (e) => {
         e.preventDefault();
+        console.log(nodes);
         axios({
             method: "put",
             url: process.env.REACT_APP_API_HOST + "759b0v",
@@ -90,14 +92,13 @@ const AddNode = () => {
                                     <th className="px-4 py-3 title-font tracking-wider font-medium text-white text-sm bg-gray-800">Type</th>
                                     <th className="px-4 py-3 title-font tracking-wider font-medium text-white text-sm bg-gray-800">名称</th>
                                     <th className="px-4 py-3 title-font tracking-wider font-medium text-white text-sm bg-gray-800">域名</th>
+                                    <th className="px-4 py-3 title-font tracking-wider font-medium text-white text-sm bg-gray-800">IP</th>
                                     <th className="px-4 py-3 title-font tracking-wider font-medium text-white text-sm bg-gray-800">Enable ChatGPT</th>
                                     <th className="px-4 py-3 title-font tracking-wider font-medium text-white text-sm bg-gray-800">Enable Subscription</th>
                                     <th className="px-4 py-3 title-font tracking-wider font-medium text-white text-sm bg-gray-800">UUID</th>
                                     <th className="px-4 py-3 title-font tracking-wider font-medium text-white text-sm bg-gray-800">PATH</th>
                                     <th className="px-4 py-3 title-font tracking-wider font-medium text-white text-sm bg-gray-800">SNI</th>
-                                    <th className="w-10 title-font tracking-wider font-medium text-white text-sm bg-gray-800 rounded-tr rounded-br">
-
-                                    </th>
+                                    <th className="w-10 title-font tracking-wider font-medium text-white text-sm bg-gray-800 rounded-tr rounded-br">button</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -106,6 +107,7 @@ const AddNode = () => {
                                         <td className="px-4 py-3">{node.type}</td>
                                         <td className="px-4 py-3">{node.remark}</td>
                                         <td className="px-4 py-3">{node.domain}</td>
+                                        <td className="px-4 py-3">{node.ip}</td>
                                         <td className="px-4 py-3">{node.enable_chatgpt ? "Yes" : "No"}</td>
                                         <td className="px-4 py-3">{node.enable_subscription ? "Yes" : "No"}</td>
                                         <td className="px-4 py-3">{node.uuid ? node.uuid : "None"}</td>
@@ -135,6 +137,7 @@ const AddNode = () => {
                                 className="mr-2 my-4 pl-4 w-1/12 text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
                             >
                                 <option value="vmess">Vmess</option>
+                                <option value="vmessws">VmessWS</option>
                                 <option value="vmessCDN">VmessCDN</option>
                                 <option value="vlessCDN">VLessCDN</option>
                             </select>
@@ -151,8 +154,16 @@ const AddNode = () => {
                                 name="domain"
                                 onChange={onChange}
                                 value={domain}
-                                className="mr-4 my-4 w-2/12 text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                                className="mr-4 my-4 w-1/12 text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
                                 placeholder="New domain"
+                            />
+                            <input
+                                type="text"
+                                name="ip"
+                                onChange={onChange}
+                                value={ip}
+                                className="mr-4 my-4 w-1/12 text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                                placeholder="New IP"
                             />
                             <input 
                                 type="checkbox" 
@@ -172,7 +183,7 @@ const AddNode = () => {
                                 name="uuid"
                                 onChange={onChange}
                                 value={uuid}
-                                className="m-4 w-3/12 text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                                className="m-4 w-2/12 text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
                                 placeholder="UUID"
                                 />
                             <input
@@ -201,6 +212,7 @@ const AddNode = () => {
                                                 type,
                                                 remark,
                                                 domain,
+                                                ip,
                                                 enable_chatgpt,
                                                 enable_subscription,
                                                 uuid,

@@ -62,7 +62,7 @@ func AddNode() gin.HandlerFunc {
 
 		// separate vmessDomains from comingDomains.
 		for _, domain := range comingDomains {
-			if domain.Type == "vmess" {
+			if domain.Type == "vmess" || domain.Type == "vmessws" {
 				vmessDomains = append(vmessDomains, domain)
 			}
 		}
@@ -102,7 +102,7 @@ func AddNode() gin.HandlerFunc {
 			if _, ok := allNodeStatus[domain.Domain]; ok {
 				// update remark and updated_at in nodeCollection
 				filter := bson.D{primitive.E{Key: "domain", Value: domain.Domain}}
-				update := bson.M{"$set": bson.M{"remark": domain.Remark, "updated_at": time.Now().Local()}}
+				update := bson.M{"$set": bson.M{"remark": domain.Remark, "ip": domain.IP, "updated_at": time.Now().Local()}}
 				_, err = nodeCollection.UpdateOne(ctx, filter, update)
 				if err != nil {
 					c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -114,6 +114,7 @@ func AddNode() gin.HandlerFunc {
 				node.Domain = domain.Domain
 				node.Status = "active"
 				node.Remark = domain.Remark
+				node.IP = domain.IP
 				node.NodeAtCurrentYear = NodeAtPeriod{
 					Period:              current.Format("2006"),
 					Amount:              0,
@@ -198,6 +199,7 @@ func AddNode() gin.HandlerFunc {
 					"status":                "active",
 					"updated_at":            time.Now().Local(),
 					"remark":                domain.Remark,
+					"ip":                    domain.IP,
 					"node_at_current_year":  nodeAtCurrentYear,
 					"node_at_current_month": nodeAtCurrentMonth,
 					"node_at_current_day":   nodeAtCurrentDay,

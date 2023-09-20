@@ -145,29 +145,61 @@ func (u *User) ProduceSuburl(activeGlobalNodes []Domain) {
 	}
 
 	subscription := ""
+	var port string
+
+	switch u.Path {
+	case "ray":
+		port = "8008"
+	case "kay":
+		port = "8080"
+	case "cas":
+		port = "8443"
+	}
+
 	for _, item := range activeGlobalNodes {
 
-		if item.Domain == "localhost" || (item.Type == "vmess" && !u.NodeInUseStatus[item.Domain]) || !item.EnableSubcription {
+		if item.Domain == "localhost" || !item.EnableSubcription || ((item.Type == "vmess" || item.Type == "vmessws") && !u.NodeInUseStatus[item.Domain]) {
 			continue
 		}
 
 		var node Node
 
 		switch item.Type {
+		case "vmessws":
+			node = Node{
+				Version:  "2",
+				Remark:   item.Remark,
+				Domain:   item.IP,
+				Port:     port,
+				UUID:     u.UUID,
+				Aid:      "4",
+				Security: "none",
+				Type:     "none",
+				Path:     "/" + u.Path,
+				Net:      "ws",
+			}
+			jsonedNode, _ := json.Marshal(node)
+			if len(subscription) == 0 {
+				subscription = "vmess://" + b64.StdEncoding.EncodeToString(jsonedNode)
+			} else {
+				subscription = subscription + "\n" + "vmess://" + b64.StdEncoding.EncodeToString(jsonedNode)
+			}
+
 		case "vmess", "vmessCDN":
 			node = Node{
-				Domain:  item.Domain,
-				Path:    "/" + u.Path,
-				UUID:    u.UUID,
-				Remark:  item.Remark,
-				Version: "2",
-				Port:    "443",
-				Aid:     "4",
-				Net:     "ws",
-				Type:    "none",
-				Tls:     "tls",
-				Host:    item.SNI,
-				SNI:     item.SNI,
+				Domain:   item.Domain,
+				Path:     "/" + u.Path,
+				UUID:     u.UUID,
+				Remark:   item.Remark,
+				Version:  "2",
+				Port:     "443",
+				Security: "none",
+				Aid:      "4",
+				Net:      "ws",
+				Type:     "none",
+				Tls:      "tls",
+				Host:     item.SNI,
+				SNI:      item.SNI,
 			}
 			jsonedNode, _ := json.Marshal(node)
 			if len(subscription) == 0 {
@@ -178,18 +210,19 @@ func (u *User) ProduceSuburl(activeGlobalNodes []Domain) {
 
 		case "vlessCDN":
 			node = Node{
-				Domain:  item.Domain,
-				Path:    item.PATH,
-				UUID:    item.UUID,
-				Remark:  item.Remark,
-				Version: "2",
-				Port:    "443",
-				Aid:     "4",
-				Net:     "ws",
-				Type:    "none",
-				Tls:     "tls",
-				Host:    item.SNI,
-				SNI:     item.SNI,
+				Domain:   item.Domain,
+				Path:     item.PATH,
+				UUID:     item.UUID,
+				Remark:   item.Remark,
+				Security: "none",
+				Version:  "2",
+				Port:     "443",
+				Aid:      "4",
+				Net:      "ws",
+				Type:     "none",
+				Tls:      "tls",
+				Host:     item.SNI,
+				SNI:      item.SNI,
 			}
 			jsonedNode, _ := json.Marshal(node)
 			if len(subscription) == 0 {
@@ -218,7 +251,7 @@ func (u *User) UpdateNodeStatusInUse(activeGlobalNodes []Domain) {
 	var updatedNodes = map[string]bool{}
 	var simplifiedNodes = map[string]string{}
 	for _, node := range activeGlobalNodes {
-		if node.Type == "vmess" {
+		if node.Type == "vmess" || node.Type == "vmessws" {
 			simplifiedNodes[node.Domain] = node.Remark
 		}
 	}
@@ -255,11 +288,23 @@ func (u *User) GenerateYAML(nodes []Domain) error {
 	}
 
 	if u.Status == "plain" {
+
 		var noVlessNodes []Domain
 		for _, item := range nodes {
 			if item.Type != "vlessCDN" {
 				noVlessNodes = append(noVlessNodes, item)
 			}
+		}
+
+		var port int
+
+		switch u.Path {
+		case "ray":
+			port = 8008
+		case "kay":
+			port = 8080
+		case "cas":
+			port = 8443
 		}
 
 		err = yaml.Unmarshal(yamlFile, &yamlTemplate)
@@ -270,28 +315,46 @@ func (u *User) GenerateYAML(nodes []Domain) error {
 
 		for _, node := range noVlessNodes {
 
-			if node.Domain == "localhost" || (node.Type == "vmess" && !u.NodeInUseStatus[node.Domain]) || !node.EnableSubcription {
+			if node.Domain == "localhost" || ((node.Type == "vmess" || node.Type == "vmessws") && !u.NodeInUseStatus[node.Domain]) || !node.EnableSubcription {
 				continue
 			}
 
-			yamlTemplate.Proxies = append(yamlTemplate.Proxies, Proxies{
-				Name:           node.Remark,
-				Server:         node.Domain,
-				Port:           443,
-				Type:           "vmess",
-				UUID:           u.UUID,
-				AlterID:        4,
-				Cipher:         "none",
-				TLS:            true,
-				SkipCertVerify: false,
-				Network:        "ws",
-				SNI:            node.SNI,
-				UDP:            false,
-				WsOpts: WsOpts{
-					Path:    "/" + u.Path,
-					Headers: Headers{Host: node.SNI},
-				},
-			})
+			if node.Type == "vmessws" {
+				yamlTemplate.Proxies = append(yamlTemplate.Proxies, Proxies{
+					Name:    node.Remark,
+					Server:  node.IP,
+					Port:    port,
+					Type:    "vmess",
+					UUID:    u.UUID,
+					AlterID: 4,
+					Cipher:  "none",
+					TLS:     false,
+					Network: "ws",
+					UDP:     false,
+					WsOpts: WsOpts{
+						Path: "/" + u.Path,
+					},
+				})
+			} else {
+				yamlTemplate.Proxies = append(yamlTemplate.Proxies, Proxies{
+					Name:           node.Remark,
+					Server:         node.Domain,
+					Port:           443,
+					Type:           "vmess",
+					UUID:           u.UUID,
+					AlterID:        4,
+					Cipher:         "none",
+					TLS:            true,
+					SkipCertVerify: false,
+					Network:        "ws",
+					SNI:            node.SNI,
+					UDP:            false,
+					WsOpts: WsOpts{
+						Path:    "/" + u.Path,
+						Headers: Headers{Host: node.SNI},
+					},
+				})
+			}
 
 			for index, value := range yamlTemplate.ProxyGroups {
 				if value.Name == "manual-select" || value.Name == "auto-select" || value.Name == "fallback" {
@@ -299,7 +362,7 @@ func (u *User) GenerateYAML(nodes []Domain) error {
 				}
 			}
 
-			if node.Type == "vmess" && node.EnableChatgpt {
+			if (node.Type == "vmess" || node.Type == "vmessws") && node.EnableChatgpt {
 				for index, value := range yamlTemplate.ProxyGroups {
 					if value.Name == "chatGPT" || value.Name == "gpt-auto" {
 						yamlTemplate.ProxyGroups[index].Proxies = append(yamlTemplate.ProxyGroups[index].Proxies, node.Remark)

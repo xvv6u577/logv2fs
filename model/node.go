@@ -5,6 +5,7 @@ import "time"
 type CurrentNode struct {
 	Status             string         `json:"status" bson:"status" validate:"required,eq=active|eq=inactive"` // status: "active", "inactive"
 	Domain             string         `json:"domain" bson:"domain" validate:"required,min=2,max=100"`
+	IP                 string         `json:"ip" bson:"ip"`
 	Remark             string         `json:"remark" bson:"remark"`
 	NodeAtCurrentYear  NodeAtPeriod   `json:"node_at_current_year" bson:"node_at_current_year"`
 	NodeAtCurrentMonth NodeAtPeriod   `json:"node_at_current_month" bson:"node_at_current_month"`
@@ -33,6 +34,7 @@ type GlobalVariable struct {
 type Domain struct {
 	Type              string `json:"type" bason:"type"`
 	Domain            string `json:"domain" bson:"domain" validate:"required,min=2,max=100"`
+	IP                string `json:"ip" bason:"ip"`
 	Remark            string `json:"remark" bson:"remark"`
 	EnableSubcription bool   `json:"enable_subscription" bson:"enable_subscription"`
 	EnableChatgpt     bool   `json:"enable_chatgpt" bson:"enable_chatgpt"`

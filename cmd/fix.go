@@ -23,78 +23,12 @@ var fixCmd = &cobra.Command{
 		var ctx, cancel = context.WithTimeout(context.Background(), 5*time.Minute)
 		defer cancel()
 
-		// query userCollection by email in emailArray, get used_by_current_day, used_by_current_month, used_by_current_year, then print them
-		var emailArray = []string{
-			"wangju",
-			"m6v377",
-			"2ym8g926p",
-		}
+		// query nodesCollection, upinsert ip string field to every document.
+		nodesCollection.UpdateMany(ctx, bson.M{}, bson.M{"$set": bson.M{"ip": ""}}, options.Update().SetUpsert(true))
 
-		var projection = bson.M{
-			"used_by_current_day":   1,
-			"used_by_current_month": 1,
-			"used_by_current_year":  1,
-			"name":                  1,
-			"email":                 1,
-		}
-
-		var findOptions = options.Find()
-		findOptions.SetProjection(projection)
-
-		var filter = bson.M{
-			"email": bson.M{
-				"$in": emailArray,
-			},
-		}
-
-		var users []User
-		cusor, err := userCollection.Find(ctx, filter, findOptions)
-		if err != nil {
-			panic(err)
-		}
-
-		if err = cusor.All(ctx, &users); err != nil {
-			panic(err)
-		}
-
-		for _, user := range users {
-
-			var update = bson.M{
-				"$set": bson.M{
-					"used_by_current_day": TrafficAtPeriod{
-						Period:       user.UsedByCurrentDay.Period,
-						Amount:       user.UsedByCurrentDay.Amount,
-						UsedByDomain: map[string]int64{},
-					},
-					"used_by_current_month": TrafficAtPeriod{
-						Period:       user.UsedByCurrentMonth.Period,
-						Amount:       user.UsedByCurrentMonth.Amount,
-						UsedByDomain: map[string]int64{},
-					},
-					"used_by_current_year": TrafficAtPeriod{
-						Period:       user.UsedByCurrentYear.Period,
-						Amount:       user.UsedByCurrentYear.Amount,
-						UsedByDomain: map[string]int64{},
-					},
-				},
-			}
-
-			var filter = bson.M{
-				"email": user.Email,
-			}
-
-			var updateOptions = options.Update()
-			updateOptions.SetUpsert(true)
-
-			var result, err = userCollection.UpdateOne(ctx, filter, update, updateOptions)
-			if err != nil {
-				panic(err)
-			}
-
-			if result.MatchedCount != 0 {
-				println("update user: ", user.Email, " successfully")
-			}
-		}
+		// query globalCollection with "GLOBAL" name, upinsert ip string field to every object in work_related_domain_list array and active_global_nodes array.
+		globalCollection.UpdateMany(ctx, bson.M{"name": "GLOBAL"}, bson.M{"$set": bson.M{"work_related_domain_list.$[].ip": ""}}, options.Update().SetUpsert(true))
+		globalCollection.UpdateMany(ctx, bson.M{"name": "GLOBAL"}, bson.M{"$set": bson.M{"active_global_nodes.$[].ip": ""}}, options.Update().SetUpsert(true))
 
 	},
 }
