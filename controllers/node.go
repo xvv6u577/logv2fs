@@ -38,7 +38,7 @@ func AddNode() gin.HandlerFunc {
 		var ctx, cancel = context.WithTimeout(context.Background(), 60*time.Second)
 		defer cancel()
 
-		var domainsOfWebForm, vmessWsDomains []Domain
+		var domainsOfWebForm, vmessDomains []Domain
 		var current = time.Now().Local()
 
 		if err := c.BindJSON(&domainsOfWebForm); err != nil {
@@ -60,10 +60,13 @@ func AddNode() gin.HandlerFunc {
 			return
 		}
 
-		// separate vmessWsDomains from domainsOfWebForm.
+		// separate "vmessws" and "vmess" type from domainsOfWebForm, store it into vmessDomains.
+		// if any two of vmessDomains have the same domain, keep the one with "vmessws" type.
 		for _, domain := range domainsOfWebForm {
-			if domain.Type == "vmessws" {
-				vmessWsDomains = append(vmessWsDomains, domain)
+			if domain.Type == "vmessws" || domain.Type == "vmess" {
+				if !IsDomainInDomainList(domain.Domain, vmessDomains) {
+					vmessDomains = append(vmessDomains, domain)
+				}
 			}
 		}
 
@@ -91,8 +94,8 @@ func AddNode() gin.HandlerFunc {
 			allNodeStatus[t.Domain] = t.Status
 		}
 
-		// for domain in vmessWsDomains, if it is not in allNodes, insert new one into nodeCollection; if yes, check if it is inactive, if yes, enable it.
-		for _, domain := range vmessWsDomains {
+		// for domain in vmessDomains, if it is not in allNodes, insert new one into nodeCollection; if yes, check if it is inactive, if yes, enable it.
+		for _, domain := range vmessDomains {
 
 			// if it is a local mode, only localhost is checked; if it is a remote(main/attached) mode, all remote domain are checked.
 			// if NODE_TYPE == "local" && domain.Domain != "localhost" {
@@ -224,7 +227,7 @@ func AddNode() gin.HandlerFunc {
 
 		// for node in allNodes, if it is not in domains, set it to inactive.
 		for node := range allNodeStatus {
-			if !IsDomainInDomainList(node, vmessWsDomains) {
+			if !IsDomainInDomainList(node, vmessDomains) {
 				filter := bson.D{primitive.E{Key: "domain", Value: node}}
 				update := bson.M{"$set": bson.M{"status": "inactive", "updated_at": time.Now().Local()}}
 				_, err = nodeCollection.UpdateOne(ctx, filter, update)
