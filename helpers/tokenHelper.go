@@ -20,7 +20,7 @@ type SignedDetails struct {
 
 var SECRET_KEY string = os.Getenv("SECRET_KEY")
 
-// GenerateAllTokens generates both teh detailed token and refresh token
+// GenerateAllTokens generates both the detailed token and refresh token
 func GenerateAllTokens(email string, uuid string, path string, userType string, uid string) (signedToken string, signedRefreshToken string, err error) {
 	claims := &SignedDetails{
 		Email: email,

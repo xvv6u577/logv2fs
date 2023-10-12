@@ -45,7 +45,6 @@ const AddNode = () => {
 
     const handleAddNode = (e) => {
         e.preventDefault();
-        console.log(nodes);
         axios({
             method: "put",
             url: process.env.REACT_APP_API_HOST + "759b0v",

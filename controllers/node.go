@@ -38,20 +38,20 @@ func AddNode() gin.HandlerFunc {
 		var ctx, cancel = context.WithTimeout(context.Background(), 60*time.Second)
 		defer cancel()
 
-		var comingDomains, vmessDomains []Domain
+		var domainsOfWebForm, vmessWsDomains []Domain
 		var current = time.Now().Local()
 
-		if err := c.BindJSON(&comingDomains); err != nil {
+		if err := c.BindJSON(&domainsOfWebForm); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			log.Printf("BindJSON error: %v", err)
 			return
 		}
 
-		// replace ActiveGlobalNodes in globalCollection with comingDomains
+		// replace ActiveGlobalNodes in globalCollection with domainsOfWebForm
 		var replacedDocument GlobalVariable
 		err := globalCollection.FindOneAndUpdate(ctx,
 			bson.M{"name": "GLOBAL"},
-			bson.M{"$set": bson.M{"active_global_nodes": comingDomains}},
+			bson.M{"$set": bson.M{"active_global_nodes": domainsOfWebForm}},
 			options.FindOneAndUpdate().SetReturnDocument(1),
 		).Decode(&replacedDocument)
 		if err != nil {
@@ -60,10 +60,10 @@ func AddNode() gin.HandlerFunc {
 			return
 		}
 
-		// separate vmessDomains from comingDomains.
-		for _, domain := range comingDomains {
-			if domain.Type == "vmess" || domain.Type == "vmessws" {
-				vmessDomains = append(vmessDomains, domain)
+		// separate vmessWsDomains from domainsOfWebForm.
+		for _, domain := range domainsOfWebForm {
+			if domain.Type == "vmessws" {
+				vmessWsDomains = append(vmessWsDomains, domain)
 			}
 		}
 
@@ -91,8 +91,8 @@ func AddNode() gin.HandlerFunc {
 			allNodeStatus[t.Domain] = t.Status
 		}
 
-		// for domain in vmessDomains, if it is not in allNodes, insert new one into nodeCollection; if yes, check if it is inactive, if yes, enable it.
-		for _, domain := range vmessDomains {
+		// for domain in vmessWsDomains, if it is not in allNodes, insert new one into nodeCollection; if yes, check if it is inactive, if yes, enable it.
+		for _, domain := range vmessWsDomains {
 
 			// if it is a local mode, only localhost is checked; if it is a remote(main/attached) mode, all remote domain are checked.
 			// if NODE_TYPE == "local" && domain.Domain != "localhost" {
@@ -102,7 +102,11 @@ func AddNode() gin.HandlerFunc {
 			if _, ok := allNodeStatus[domain.Domain]; ok {
 				// update remark and updated_at in nodeCollection
 				filter := bson.D{primitive.E{Key: "domain", Value: domain.Domain}}
-				update := bson.M{"$set": bson.M{"remark": domain.Remark, "ip": domain.IP, "updated_at": time.Now().Local()}}
+				update := bson.M{"$set": bson.M{
+					"remark":     domain.Remark,
+					"ip":         domain.IP,
+					"updated_at": time.Now().Local(),
+				}}
 				_, err = nodeCollection.UpdateOne(ctx, filter, update)
 				if err != nil {
 					c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -220,7 +224,7 @@ func AddNode() gin.HandlerFunc {
 
 		// for node in allNodes, if it is not in domains, set it to inactive.
 		for node := range allNodeStatus {
-			if !IsDomainInDomainList(node, vmessDomains) {
+			if !IsDomainInDomainList(node, vmessWsDomains) {
 				filter := bson.D{primitive.E{Key: "domain", Value: node}}
 				update := bson.M{"$set": bson.M{"status": "inactive", "updated_at": time.Now().Local()}}
 				_, err = nodeCollection.UpdateOne(ctx, filter, update)
@@ -253,10 +257,10 @@ func AddNode() gin.HandlerFunc {
 
 		for _, user := range allUsers {
 
-			user.UpdateNodeStatusInUse(comingDomains)
-			user.ProduceSuburl(comingDomains)
+			user.UpdateNodeStatusInUse(domainsOfWebForm)
+			user.ProduceSuburl(domainsOfWebForm)
 
-			err = user.GenerateYAML(comingDomains)
+			err = user.GenerateYAML(domainsOfWebForm)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 				log.Printf("error: %v", err)
