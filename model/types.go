@@ -149,11 +149,11 @@ func (u *User) ProduceSuburl(activeGlobalNodes []Domain) {
 
 	switch u.Path {
 	case "ray":
-		port = "8008"
+		port = "7008"
 	case "kay":
-		port = "8080"
+		port = "7080"
 	case "cas":
-		port = "8443"
+		port = "7443"
 	}
 
 	for _, item := range activeGlobalNodes {
@@ -300,11 +300,11 @@ func (u *User) GenerateYAML(nodes []Domain) error {
 
 		switch u.Path {
 		case "ray":
-			port = 8008
+			port = 7008
 		case "kay":
-			port = 8080
+			port = 7080
 		case "cas":
-			port = 8443
+			port = 7443
 		}
 
 		err = yaml.Unmarshal(yamlFile, &yamlTemplate)

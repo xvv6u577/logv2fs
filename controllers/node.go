@@ -61,7 +61,7 @@ func AddNode() gin.HandlerFunc {
 		}
 
 		// separate "vmessws" and "vmess" type from domainsOfWebForm, store it into vmessDomains.
-		// if any two of vmessDomains have the same domain, keep the one with "vmessws" type.
+		// if any two of vmessDomains have the same domain, keep only one.
 		for _, domain := range domainsOfWebForm {
 			if domain.Type == "vmessws" || domain.Type == "vmess" {
 				if !IsDomainInDomainList(domain.Domain, vmessDomains) {
