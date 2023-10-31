@@ -102,7 +102,7 @@ const AddNode = () => {
                             </thead>
                             <tbody>
                                 {nodes.map((node, index) => (
-                                    <tr key={index + 1000} className="border-b">
+                                    <tr key={index + 1000} className="border-b hover:bg-gray-100 dark:hover:bg-gray-700">
                                         <td className="px-4 py-3">{node.type}</td>
                                         <td className="px-4 py-3">{node.remark}</td>
                                         <td className="px-4 py-3">{node.domain}</td>
