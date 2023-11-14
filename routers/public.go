@@ -39,6 +39,8 @@ func PublicRoutes(incomingRoutes *gin.Engine) {
 	incomingRoutes.GET("/static/:name", controller.GetSubscripionURL())
 	incomingRoutes.GET("/config/:name", controller.GetUserSimpleInfo())
 	incomingRoutes.Use(static.Serve("/clash/", static.LocalFile("./config/results/", false)))
+	incomingRoutes.GET("/singbox/:name", controller.ReturnSingboxJson())
+	incomingRoutes.GET("/verge/:name", controller.ReturnVergeYAML())
 
 	// incomingRoutes.NoRoute(func(c *gin.Context) {
 	// 	c.JSON(http.StatusNotFound, gin.H{"error": "page not found."})

@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"encoding/json"
 	"log"
 	"os"
 	"strconv"
@@ -13,6 +14,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 	uuid "github.com/nu7hatch/gouuid"
+	"gopkg.in/yaml.v2"
 
 	localCron "github.com/caster8013/logv2rayfullstack/cron"
 	"github.com/caster8013/logv2rayfullstack/database"
@@ -59,6 +61,8 @@ type (
 	GlobalVariable  = model.GlobalVariable
 	Domain          = model.Domain
 	DomainInfo      = model.DomainInfo
+	SingboxYAML     = model.SingboxYAML
+	SingboxJSON     = model.SingboxJSON
 )
 
 //HashPassword is used to encrypt the password before it is stored in the DB
@@ -960,5 +964,59 @@ func EnableNodePerUser() gin.HandlerFunc {
 
 		log.Printf("Enable user: %v, node: %v by hand!", helper.SanitizeStr(email), helper.SanitizeStr(node))
 		c.JSON(http.StatusOK, gin.H{"message": "Enable user: " + email + " at node: " + node + " successfully!"})
+	}
+}
+
+// ReturnSingboxJson
+func ReturnSingboxJson() gin.HandlerFunc {
+	return func(c *gin.Context) {
+
+		// name := helper.SanitizeStr(c.Param("name"))
+
+		// read json file from sing-box-full-platform/sing-box.json, and return it.
+		var singboxJSON = SingboxJSON{}
+		jsonFile, err := os.ReadFile(helper.CurrentPath() + "/sing-box-full-platform/sing-box.json")
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			log.Printf("error: %v", err)
+			return
+		}
+
+		err = json.Unmarshal(jsonFile, &singboxJSON)
+		if err != nil {
+			log.Fatalf("error: %v", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		// return json file
+		c.JSON(http.StatusOK, singboxJSON)
+	}
+}
+
+// ReturnVergeYAML: return yaml file
+func ReturnVergeYAML() gin.HandlerFunc {
+	return func(c *gin.Context) {
+
+		name := helper.SanitizeStr(c.Param("name"))
+
+		var singboxYAML = SingboxYAML{}
+		yamlFile, err := os.ReadFile(helper.CurrentPath() + "/sing-box-full-platform/sing-box.yaml")
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			log.Printf("error: %v", err)
+			return
+		}
+
+		err = yaml.Unmarshal(yamlFile, &singboxYAML)
+		if err != nil {
+			log.Fatalf("error: %v", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		// return yaml file as attachment.
+		c.Header("Content-Disposition", "attachment; filename="+name+".yaml")
+		c.Data(http.StatusOK, "application/octet-stream", yamlFile)
 	}
 }
