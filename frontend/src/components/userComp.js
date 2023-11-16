@@ -256,6 +256,18 @@ const UserComp = (props) => {
                             {process.env.REACT_APP_FILE_AND_SUB_URL + "/clash/" + user.email + ".yaml"}
                         </TapToCopied>
                     </div>
+                    <div className="py-1 flex justify-between items-center">
+                        <pre className="inline  text-sm font-medium text-gray-900 dark:text-white">Verge:</pre>
+                        <TapToCopied>
+                            {process.env.REACT_APP_FILE_AND_SUB_URL + "/verge/" + user.email }
+                        </TapToCopied>
+                    </div>
+                    <div className="py-1 flex justify-between items-center">
+                        <pre className="inline  text-sm font-medium text-gray-900 dark:text-white">Sing-box:</pre>
+                        <TapToCopied>
+                            {process.env.REACT_APP_FILE_AND_SUB_URL + "/singbox/" + user.email}
+                        </TapToCopied>
+                    </div>
                     {user && user.node_in_use_status &&
                         Object.entries(user.node_in_use_status).map(
                             ([key, value]) => (
