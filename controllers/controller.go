@@ -773,24 +773,6 @@ func GetUserByName() gin.HandlerFunc {
 	}
 }
 
-func GetSubscripionURL() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		name := c.Param("name")
-
-		var projections = bson.D{
-			{Key: "suburl", Value: 1},
-		}
-		user, err := database.GetUserByName(name, projections)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			log.Printf("GetUserByName failed: %s", err.Error())
-			return
-		}
-
-		c.String(http.StatusOK, user.Suburl)
-	}
-}
-
 func WriteToDB() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
@@ -967,11 +949,57 @@ func EnableNodePerUser() gin.HandlerFunc {
 	}
 }
 
+func GetSubscripionURL() gin.HandlerFunc {
+	return func(c *gin.Context) {
+
+		name := helper.SanitizeStr(c.Param("name"))
+		var projections = bson.D{
+			{Key: "status", Value: 1},
+		}
+		user, err := database.GetUserByName(name, projections)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			log.Printf("GetUserByName failed: %s", err.Error())
+			return
+		}
+
+		if user.Status != "plain" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "there is problem with this user, please contact admin"})
+			log.Printf(user.Name + ": GetSubscripionURL Error!")
+			return
+		}
+
+		file, err := os.ReadFile(helper.CurrentPath() + "/sing-box-full-platform/sing-box.txt")
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			log.Printf("GetSubscripionURL error: %v", err)
+			return
+		}
+
+		c.Data(http.StatusOK, "text/plain", file)
+	}
+}
+
 // ReturnSingboxJson
 func ReturnSingboxJson() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
-		// name := helper.SanitizeStr(c.Param("name"))
+		name := helper.SanitizeStr(c.Param("name"))
+		var projections = bson.D{
+			{Key: "status", Value: 1},
+		}
+		user, err := database.GetUserByName(name, projections)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			log.Printf("ReturnSingboxJson failed: %s", err.Error())
+			return
+		}
+
+		if user.Status != "plain" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "there is problem with this user, please contact admin"})
+			log.Printf(user.Name + ": ReturnSingboxJson Error!")
+			return
+		}
 
 		// read json file from sing-box-full-platform/sing-box.json, and return it.
 		var singboxJSON = SingboxJSON{}
@@ -999,6 +1027,22 @@ func ReturnVergeYAML() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
 		name := helper.SanitizeStr(c.Param("name"))
+
+		var projections = bson.D{
+			{Key: "status", Value: 1},
+		}
+		user, err := database.GetUserByName(name, projections)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			log.Printf("ReturnSingboxJson failed: %s", err.Error())
+			return
+		}
+
+		if user.Status != "plain" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "there is problem with this user, please contact admin"})
+			log.Printf(user.Name + ": ReturnVergeYAML Error!")
+			return
+		}
 
 		var singboxYAML = SingboxYAML{}
 		yamlFile, err := os.ReadFile(helper.CurrentPath() + "/sing-box-full-platform/sing-box.yaml")
