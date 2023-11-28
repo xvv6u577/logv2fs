@@ -953,6 +953,8 @@ func GetSubscripionURL() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
 		name := helper.SanitizeStr(c.Param("name"))
+		var file []byte
+		var err error
 		var projections = bson.D{
 			{Key: "status", Value: 1},
 		}
@@ -963,13 +965,11 @@ func GetSubscripionURL() gin.HandlerFunc {
 			return
 		}
 
-		if user.Status != "plain" {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "there is problem with this user, please contact admin"})
-			log.Printf(user.Name + ": GetSubscripionURL Error!")
-			return
+		if user.Status == "plain" {
+			file, err = os.ReadFile(helper.CurrentPath() + "/sing-box-full-platform/sing-box.txt")
+		} else {
+			file, err = os.ReadFile(helper.CurrentPath() + "/sing-box-full-platform/error.txt")
 		}
-
-		file, err := os.ReadFile(helper.CurrentPath() + "/sing-box-full-platform/sing-box.txt")
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			log.Printf("GetSubscripionURL error: %v", err)
@@ -985,6 +985,9 @@ func ReturnSingboxJson() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
 		name := helper.SanitizeStr(c.Param("name"))
+		var singboxJSON = SingboxJSON{}
+		var jsonFile []byte
+		var err error
 		var projections = bson.D{
 			{Key: "status", Value: 1},
 		}
@@ -995,15 +998,12 @@ func ReturnSingboxJson() gin.HandlerFunc {
 			return
 		}
 
-		if user.Status != "plain" {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "there is problem with this user, please contact admin"})
-			log.Printf(user.Name + ": ReturnSingboxJson Error!")
-			return
-		}
-
 		// read json file from sing-box-full-platform/sing-box.json, and return it.
-		var singboxJSON = SingboxJSON{}
-		jsonFile, err := os.ReadFile(helper.CurrentPath() + "/sing-box-full-platform/sing-box.json")
+		if user.Status == "plain" {
+			jsonFile, err = os.ReadFile(helper.CurrentPath() + "/sing-box-full-platform/sing-box.json")
+		} else {
+			jsonFile, err = os.ReadFile(helper.CurrentPath() + "/sing-box-full-platform/error.json")
+		}
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			log.Printf("error: %v", err)
@@ -1012,12 +1012,11 @@ func ReturnSingboxJson() gin.HandlerFunc {
 
 		err = json.Unmarshal(jsonFile, &singboxJSON)
 		if err != nil {
-			log.Fatalf("error: %v", err)
+			log.Printf("error: %v", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
 
-		// return json file
 		c.JSON(http.StatusOK, singboxJSON)
 	}
 }
@@ -1027,7 +1026,9 @@ func ReturnVergeYAML() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
 		name := helper.SanitizeStr(c.Param("name"))
-
+		var singboxYAML = SingboxYAML{}
+		var yamlFile []byte
+		var err error
 		var projections = bson.D{
 			{Key: "status", Value: 1},
 		}
@@ -1038,14 +1039,11 @@ func ReturnVergeYAML() gin.HandlerFunc {
 			return
 		}
 
-		if user.Status != "plain" {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "there is problem with this user, please contact admin"})
-			log.Printf(user.Name + ": ReturnVergeYAML Error!")
-			return
+		if user.Status == "plain" {
+			yamlFile, err = os.ReadFile(helper.CurrentPath() + "/sing-box-full-platform/sing-box.yaml")
+		} else {
+			yamlFile, err = os.ReadFile(helper.CurrentPath() + "/sing-box-full-platform/error.yaml")
 		}
-
-		var singboxYAML = SingboxYAML{}
-		yamlFile, err := os.ReadFile(helper.CurrentPath() + "/sing-box-full-platform/sing-box.yaml")
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			log.Printf("error: %v", err)
