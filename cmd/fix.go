@@ -10,7 +10,6 @@ import (
 
 	"github.com/spf13/cobra"
 	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 // fixCmd represents the fix command
@@ -23,13 +22,8 @@ var fixCmd = &cobra.Command{
 		var ctx, cancel = context.WithTimeout(context.Background(), 5*time.Minute)
 		defer cancel()
 
-		// query nodesCollection, upinsert ip string field to every document.
-		nodesCollection.UpdateMany(ctx, bson.M{}, bson.M{"$set": bson.M{"ip": ""}}, options.Update().SetUpsert(true))
-
-		// query globalCollection with "GLOBAL" name, upinsert ip string field to every object in work_related_domain_list array and active_global_nodes array.
-		globalCollection.UpdateMany(ctx, bson.M{"name": "GLOBAL"}, bson.M{"$set": bson.M{"work_related_domain_list.$[].ip": ""}}, options.Update().SetUpsert(true))
-		globalCollection.UpdateMany(ctx, bson.M{"name": "GLOBAL"}, bson.M{"$set": bson.M{"active_global_nodes.$[].ip": ""}}, options.Update().SetUpsert(true))
-
+		// query userCollection, update credit field of every document to 10995116277760.
+		userCollection.UpdateMany(ctx, bson.M{}, bson.M{"$set": bson.M{"credit": 10995116277760}})
 	},
 }
 

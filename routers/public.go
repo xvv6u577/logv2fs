@@ -1,8 +1,8 @@
 package routes
 
 import (
-	controller "github.com/caster8013/logv2rayfullstack/controllers"
 	"github.com/gin-contrib/static"
+	controller "github.com/xvv6u577/logv2fs/controllers"
 
 	"github.com/gin-gonic/gin"
 )

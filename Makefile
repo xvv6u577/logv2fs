@@ -14,19 +14,19 @@ v2ray-local:
 	./development/v2ray-macos-v4.23.4/v2ray -config ./development/local/config.json
 
 link:
-	ln -s /Users/guestuser/go/src/github/logv2rayfullstack/development/nginx/grpc_nginx_80.conf /opt/homebrew/etc/nginx/servers;
+	ln -s /Users/guestuser/go/src/github/logv2fs/development/nginx/grpc_nginx_80.conf /opt/homebrew/etc/nginx/servers;
 	nginx -s reload;
 
 nginx-senario-3:
-	ln -s /Users/guestuser/go/src/github/logv2rayfullstack/development/nginx/senario-3.conf /opt/homebrew/etc/nginx/servers;
+	ln -s /Users/guestuser/go/src/github/logv2fs/development/nginx/senario-3.conf /opt/homebrew/etc/nginx/servers;
 	nginx -s reload;
 
 nginx-senario-4:
-	ln -s /Users/guestuser/go/src/github/logv2rayfullstack/development/nginx/senario-4.conf /opt/homebrew/etc/nginx/servers;
+	ln -s /Users/guestuser/go/src/github/logv2fs/development/nginx/senario-4.conf /opt/homebrew/etc/nginx/servers;
 	nginx -s reload;
 
 nginx-senario-5:
-	ln -s /Users/guestuser/go/src/github/logv2rayfullstack/development/nginx/senario-5.conf /opt/homebrew/etc/nginx/servers;
+	ln -s /Users/guestuser/go/src/github/logv2fs/development/nginx/senario-5.conf /opt/homebrew/etc/nginx/servers;
 	nginx -s reload;
 
 server:

@@ -5,8 +5,8 @@ import (
 	"log"
 	"os"
 
-	helper "github.com/caster8013/logv2rayfullstack/helpers"
-	"github.com/caster8013/logv2rayfullstack/model"
+	helper "github.com/xvv6u577/logv2fs/helpers"
+	"github.com/xvv6u577/logv2fs/model"
 	"gopkg.in/yaml.v2"
 )
 

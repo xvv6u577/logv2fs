@@ -6,6 +6,7 @@ frontend/build
 frontend/.env
 frontend/tool
 sing-box-full-platform/
+setup-rocket.chat/
 
 config/results/*
 development/

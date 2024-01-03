@@ -1,26 +1,25 @@
 /*
 Copyright © 2023 NAME HERE <EMAIL ADDRESS>
-
 */
 package cmd
 
 import (
 	"os"
 
-	"github.com/caster8013/logv2rayfullstack/database"
-	"github.com/caster8013/logv2rayfullstack/model"
 	"github.com/spf13/cobra"
+	"github.com/xvv6u577/logv2fs/database"
+	"github.com/xvv6u577/logv2fs/model"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
 var (
 	trafficCollection *mongo.Collection = database.OpenCollection(database.Client, "TRAFFIC")
 	nodesCollection   *mongo.Collection = database.OpenCollection(database.Client, "NODES")
-	// userCollection    *mongo.Collection = database.OpenCollection(database.Client, "USERS")
-	globalCollection *mongo.Collection = database.OpenCollection(database.Client, "GLOBAL")
-	address          string
-	tlsStatus        bool
-	authrRequired    bool
+	userCollection    *mongo.Collection = database.OpenCollection(database.Client, "USERS")
+	// globalCollection  *mongo.Collection = database.OpenCollection(database.Client, "GLOBAL")
+	address       string
+	tlsStatus     bool
+	authrRequired bool
 )
 
 type (

@@ -19,7 +19,7 @@ protoc --go_out=. --go_opt=paths=source_relative \
 > v2ray v4.23.4
 
 ```
-cd logv2rayfullstack
+cd logv2fs
 
 # 运行程序
 go run . 
@@ -32,11 +32,11 @@ go install
 ```
 sudo systemctl daemon-reload
 
-sudo systemctl enable logv2rayfullstack.service
-sudo systemctl start logv2rayfullstack.service
+sudo systemctl enable logv2fs.service
+sudo systemctl start logv2fs.service
 
-sudo systemctl stop logv2rayfullstack.service
-sudo systemctl status logv2rayfullstack.service
+sudo systemctl stop logv2fs.service
+sudo systemctl status logv2fs.service
 ```
 
 ## Frontend
@@ -47,7 +47,7 @@ sudo systemctl status logv2rayfullstack.service
 
 ### 生成生产环境文件
 ```
-cd logv2rayfullstack/frontend
+cd logv2fs/frontend
 npm i
 npm run build
 ```

@@ -1,6 +1,5 @@
 /*
 Copyright © 2023 NAME HERE <EMAIL ADDRESS>
-
 */
 package cmd
 
@@ -8,8 +7,8 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/caster8013/logv2rayfullstack/v2ray"
 	"github.com/spf13/cobra"
+	"github.com/xvv6u577/logv2fs/v2ray"
 	"google.golang.org/grpc"
 )
 

@@ -39,59 +39,17 @@ type Hysteria2JSON struct {
 	} `json:"tls"`
 }
 
-type OutboundsSelector struct {
-	Tag       string   `json:"tag"`
-	Type      string   `json:"type"`
-	Default   string   `json:"default"`
-	Outbounds []string `json:"outbounds"`
-}
-
 type SingboxJSON struct {
-	DNS struct {
-		Servers []struct {
-			Tag     string `json:"tag"`
-			Address string `json:"address"`
-			Detour  string `json:"detour,omitempty"`
-		} `json:"servers"`
-		Rules []struct {
-			Outbound     []string `json:"outbound,omitempty"`
-			Server       string   `json:"server"`
-			DisableCache bool     `json:"disable_cache,omitempty"`
-			Geosite      string   `json:"geosite,omitempty"`
-			ClashMode    string   `json:"clash_mode,omitempty"`
-		} `json:"rules"`
-		Strategy string `json:"strategy"`
-	} `json:"dns"`
-	Inbounds     []interface{} `json:"inbounds"`
-	Experimental struct {
-		ClashAPI struct {
-			ExternalController string `json:"external_controller"`
-			Secret             string `json:"secret"`
-			StoreSelected      bool   `json:"store_selected"`
-		} `json:"clash_api"`
-	} `json:"experimental"`
 	Log struct {
 		Disabled  bool   `json:"disabled"`
 		Level     string `json:"level"`
 		Timestamp bool   `json:"timestamp"`
 	} `json:"log"`
-	Outbounds []interface{} `json:"outbounds"`
-	Route     struct {
-		AutoDetectInterface bool `json:"auto_detect_interface"`
-		Rules               []struct {
-			Geosite   string   `json:"geosite,omitempty"`
-			Outbound  string   `json:"outbound"`
-			Protocol  string   `json:"protocol,omitempty"`
-			ClashMode string   `json:"clash_mode,omitempty"`
-			Geoip     []string `json:"geoip,omitempty"`
-		} `json:"rules"`
-		Geoip struct {
-			DownloadDetour string `json:"download_detour"`
-		} `json:"geoip"`
-		Geosite struct {
-			DownloadDetour string `json:"download_detour"`
-		} `json:"geosite"`
-	} `json:"route"`
+	DNS          interface{}   `json:"dns"`
+	Inbounds     []interface{} `json:"inbounds"`
+	Experimental interface{}   `json:"experimental"`
+	Outbounds    []interface{} `json:"outbounds"`
+	Route        interface{}   `json:"route"`
 }
 
 type SingboxYAML struct {

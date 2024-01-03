@@ -16,15 +16,15 @@ import (
 	uuid "github.com/nu7hatch/gouuid"
 	"gopkg.in/yaml.v2"
 
-	localCron "github.com/caster8013/logv2rayfullstack/cron"
-	"github.com/caster8013/logv2rayfullstack/database"
-	"github.com/caster8013/logv2rayfullstack/v2ray"
+	localCron "github.com/xvv6u577/logv2fs/cron"
+	"github.com/xvv6u577/logv2fs/database"
+	"github.com/xvv6u577/logv2fs/v2ray"
 
-	helper "github.com/caster8013/logv2rayfullstack/helpers"
+	helper "github.com/xvv6u577/logv2fs/helpers"
 
-	yamlTools "github.com/caster8013/logv2rayfullstack/config"
-	"github.com/caster8013/logv2rayfullstack/grpctools"
-	"github.com/caster8013/logv2rayfullstack/model"
+	yamlTools "github.com/xvv6u577/logv2fs/config"
+	"github.com/xvv6u577/logv2fs/grpctools"
+	"github.com/xvv6u577/logv2fs/model"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -65,7 +65,7 @@ type (
 	SingboxJSON     = model.SingboxJSON
 )
 
-//HashPassword is used to encrypt the password before it is stored in the DB
+// HashPassword is used to encrypt the password before it is stored in the DB
 func HashPassword(password string) string {
 	bytes, err := bcrypt.GenerateFromPassword([]byte(password), 14)
 	if err != nil {
@@ -74,7 +74,7 @@ func HashPassword(password string) string {
 	return string(bytes)
 }
 
-//VerifyPassword checks the input password while verifying it with the passward in the DB.
+// VerifyPassword checks the input password while verifying it with the passward in the DB.
 func VerifyPassword(userPassword string, providedPassword string) (bool, string) {
 	err := bcrypt.CompareHashAndPassword([]byte(providedPassword), []byte(userPassword))
 	check := true
@@ -119,7 +119,7 @@ func UpdateAllTokens(signedToken string, signedRefreshToken string, userId strin
 
 }
 
-//CreateUser is the api used to tget a single user
+// CreateUser is the api used to tget a single user
 func SignUp() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
@@ -275,7 +275,7 @@ func SignUp() gin.HandlerFunc {
 	}
 }
 
-//Login is the api used to get a single user
+// Login is the api used to get a single user
 func Login() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var ctx, cancel = context.WithTimeout(context.Background(), 60*time.Second)
