@@ -17,7 +17,6 @@ import (
 	"github.com/robfig/cron"
 	"github.com/shomali11/parallelizer"
 	"github.com/spf13/cobra"
-	localCron "github.com/xvv6u577/logv2fs/cron"
 	"github.com/xvv6u577/logv2fs/database"
 	"github.com/xvv6u577/logv2fs/grpctools"
 	"github.com/xvv6u577/logv2fs/middleware"
@@ -58,7 +57,7 @@ var serverCmd = &cobra.Command{
 	Long:  `run server, which is the entry of this program.`,
 	Run: func(cmd *cobra.Command, args []string) {
 
-		logFile, err := os.OpenFile("./log_file.log", os.O_CREATE|os.O_APPEND|os.O_RDWR, 0644)
+		logFile, err := os.OpenFile("./logs/log_file.log", os.O_CREATE|os.O_APPEND|os.O_RDWR, 0644)
 		if err != nil {
 			log.Fatalln(err)
 		}
@@ -119,7 +118,7 @@ func RunServer() *gin.Engine {
 		{Key: "credit", Value: 1},
 	}
 
-	allUsersInDB, _ := database.GetAllUsersPartialInfo(projections)
+	allUsersInDB, _ := database.GetAllUsersPortionInfo(projections)
 	if len(allUsersInDB) != 0 {
 
 		cmdConn, err := grpc.Dial(fmt.Sprintf("%s:%s", V2_API_ADDRESS, V2_API_PORT), grpc.WithInsecure())
@@ -142,7 +141,7 @@ func RunServer() *gin.Engine {
 		wg.Wait()
 	}
 	// add cron
-	localCron.Cron_loggingJobs(cronInstance)
+	// localCron.Cron_loggingJobs(cronInstance)
 
 	if GIN_MODE == "release" {
 		gin.SetMode(gin.ReleaseMode)

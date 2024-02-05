@@ -15,11 +15,11 @@ import (
 var (
 	trafficCollection *mongo.Collection = database.OpenCollection(database.Client, "TRAFFIC")
 	nodesCollection   *mongo.Collection = database.OpenCollection(database.Client, "NODES")
-	userCollection    *mongo.Collection = database.OpenCollection(database.Client, "USERS")
-	// globalCollection  *mongo.Collection = database.OpenCollection(database.Client, "GLOBAL")
-	address       string
-	tlsStatus     bool
-	authrRequired bool
+	// userCollection    *mongo.Collection = database.OpenCollection(database.Client, "USERS")
+	globalCollection *mongo.Collection = database.OpenCollection(database.Client, "GLOBAL")
+	address          string
+	tlsStatus        bool
+	authrRequired    bool
 )
 
 type (
@@ -51,13 +51,4 @@ func Execute() {
 }
 
 func init() {
-	// Here you will define your flags and configuration settings.
-	// Cobra supports persistent flags, which, if defined here,
-	// will be global for your application.
-
-	// rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.cmd.yaml)")
-
-	// Cobra also supports local flags, which will only run
-	// when this action is called directly.
-	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }

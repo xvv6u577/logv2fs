@@ -52,7 +52,7 @@ func DelUsersTable() error {
 	var projections = bson.D{
 		{Key: "email", Value: 1},
 	}
-	users, err := GetAllUsersPartialInfo(projections)
+	users, err := GetAllUsersPortionInfo(projections)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
 		return err
@@ -114,7 +114,7 @@ func CreateUserByName(user *User) error {
 	return err
 }
 
-func GetAllUsersPartialInfo(projections bson.D) ([]*User, error) {
+func GetAllUsersPortionInfo(projections bson.D) ([]*User, error) {
 	var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
 	defer cancel()
 

@@ -24,25 +24,24 @@ func PublicRoutes(incomingRoutes *gin.Engine) {
 		"/addnode",
 		"/",
 	}
-
 	for _, route := range frontendRoutes {
 		incomingRoutes.Use(static.Serve(route, static.LocalFile("./frontend/build/", true)))
 	}
 
-	// http://127.0.0.1:8079/v1/login
-	// body:
-	// {
-	// 	"email":"testuser",
-	// 	"password":"testuser"
-	// }
+	// login
 	incomingRoutes.POST("/v1/login", controller.Login())
+
+	// shadowrocket config
 	incomingRoutes.GET("/static/:name", controller.GetSubscripionURL())
-	incomingRoutes.GET("/config/:name", controller.GetUserSimpleInfo())
-	incomingRoutes.Use(static.Serve("/clash/", static.LocalFile("./config/results/", false)))
+
+	// singbox config
 	incomingRoutes.GET("/singbox/:name", controller.ReturnSingboxJson())
+
+	// verge config
 	incomingRoutes.GET("/verge/:name", controller.ReturnVergeYAML())
 
-	// incomingRoutes.NoRoute(func(c *gin.Context) {
-	// 	c.JSON(http.StatusNotFound, gin.H{"error": "page not found."})
-	// })
+	// clash config
+	// incomingRoutes.Use(static.Serve("/clash/", static.LocalFile("./config/results/", false)))
+	incomingRoutes.GET("/clash/:filename", controller.ReturnClashYAML())
+
 }

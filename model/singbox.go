@@ -52,51 +52,46 @@ type SingboxJSON struct {
 	Route        interface{}   `json:"route"`
 }
 
+type RealityYAML struct {
+	Name              string `yaml:"name"`
+	Type              string `yaml:"type"`
+	Server            string `yaml:"server"`
+	Port              int    `yaml:"port"`
+	UUID              string `yaml:"uuid"`
+	Network           string `yaml:"network"`
+	UDP               bool   `yaml:"udp"`
+	TLS               bool   `yaml:"tls"`
+	Flow              string `yaml:"flow"`
+	Servername        string `yaml:"servername"`
+	ClientFingerprint string `yaml:"client-fingerprint"`
+	RealityOpts       struct {
+		PublicKey string `yaml:"public-key"`
+		ShortID   string `yaml:"short-id"`
+	} `yaml:"reality-opts"`
+}
+
+type Hysteria2YAML struct {
+	Name           string   `yaml:"name"`
+	Type           string   `yaml:"type"`
+	Server         string   `yaml:"server"`
+	Port           int      `yaml:"port"`
+	Password       string   `yaml:"password"`
+	Sni            string   `yaml:"sni"`
+	SkipCertVerify bool     `yaml:"skip-cert-verify"`
+	Alpn           []string `yaml:"alpn"`
+}
+
 type SingboxYAML struct {
-	Port                    int    `yaml:"port"`
-	AllowLan                bool   `yaml:"allow-lan"`
-	Mode                    string `yaml:"mode"`
-	LogLevel                string `yaml:"log-level"`
-	UnifiedDelay            bool   `yaml:"unified-delay"`
-	GlobalClientFingerprint string `yaml:"global-client-fingerprint"`
-	Ipv6                    bool   `yaml:"ipv6"`
-	DNS                     struct {
-		Enable            bool     `yaml:"enable"`
-		Listen            string   `yaml:"listen"`
-		Ipv6              bool     `yaml:"ipv6"`
-		EnhancedMode      string   `yaml:"enhanced-mode"`
-		FakeIPRange       string   `yaml:"fake-ip-range"`
-		DefaultNameserver []string `yaml:"default-nameserver"`
-		Nameserver        []string `yaml:"nameserver"`
-		Fallback          []string `yaml:"fallback"`
-		FallbackFilter    struct {
-			Geoip     bool     `yaml:"geoip"`
-			GeoipCode string   `yaml:"geoip-code"`
-			Ipcidr    []string `yaml:"ipcidr"`
-		} `yaml:"fallback-filter"`
-	} `yaml:"dns"`
-	Proxies []struct {
-		Name              string `yaml:"name"`
-		Type              string `yaml:"type"`
-		Server            string `yaml:"server"`
-		Port              int    `yaml:"port"`
-		UUID              string `yaml:"uuid,omitempty"`
-		Network           string `yaml:"network,omitempty"`
-		UDP               bool   `yaml:"udp,omitempty"`
-		TLS               bool   `yaml:"tls,omitempty"`
-		Flow              string `yaml:"flow,omitempty"`
-		Servername        string `yaml:"servername,omitempty"`
-		ClientFingerprint string `yaml:"client-fingerprint,omitempty"`
-		RealityOpts       struct {
-			PublicKey string `yaml:"public-key"`
-			ShortID   string `yaml:"short-id"`
-		} `yaml:"reality-opts,omitempty"`
-		Password       string   `yaml:"password,omitempty"`
-		Sni            string   `yaml:"sni,omitempty"`
-		SkipCertVerify bool     `yaml:"skip-cert-verify,omitempty"`
-		Alpn           []string `yaml:"alpn,omitempty"`
-	} `yaml:"proxies"`
-	ProxyGroups []struct {
+	Port                    int           `yaml:"port"`
+	AllowLan                bool          `yaml:"allow-lan"`
+	Mode                    string        `yaml:"mode"`
+	LogLevel                string        `yaml:"log-level"`
+	UnifiedDelay            bool          `yaml:"unified-delay"`
+	GlobalClientFingerprint string        `yaml:"global-client-fingerprint"`
+	Ipv6                    bool          `yaml:"ipv6"`
+	DNS                     interface{}   `yaml:"dns"`
+	Proxies                 []interface{} `yaml:"proxies"`
+	ProxyGroups             []struct {
 		Name      string   `yaml:"name"`
 		Type      string   `yaml:"type"`
 		Proxies   []string `yaml:"proxies"`
@@ -105,4 +100,38 @@ type SingboxYAML struct {
 		Tolerance int      `yaml:"tolerance,omitempty"`
 	} `yaml:"proxy-groups"`
 	Rules []string `yaml:"rules"`
+}
+
+type ClashYAML struct {
+	Port               int           `default:"7890" yaml:"mixed-port"`
+	AllowLan           bool          `yaml:"allow-lan"`
+	BindAddress        string        `yaml:"bind-address"`
+	Mode               string        `yaml:"mode"`
+	LogLevel           string        `yaml:"log-level"`
+	ExternalController string        `yaml:"external-controller"`
+	Dns                interface{}   `yaml:"dns"`
+	Proxies            []interface{} `yaml:"proxies"`
+	ProxyGroups        []ProxyGroups `yaml:"proxy-groups"`
+	Rules              []string      `yaml:"rules"`
+}
+
+type Vmess struct {
+	Name           string `yaml:"name"`
+	Server         string `yaml:"server"`
+	Port           int    `yaml:"port"`
+	Type           string `yaml:"type"`
+	UUID           string `yaml:"uuid"`
+	AlterID        int    `yaml:"alterId"`
+	Cipher         string `yaml:"cipher"`
+	TLS            bool   `yaml:"tls"`
+	SkipCertVerify bool   `yaml:"skip-cert-verify"`
+	Sni            string `yaml:"sni"`
+	UDP            bool   `yaml:"udp"`
+	Network        string `yaml:"network"`
+	WsOpts         struct {
+		Path    string `yaml:"path"`
+		Headers struct {
+			Host string `yaml:"Host"`
+		} `yaml:"headers"`
+	} `yaml:"ws-opts"`
 }

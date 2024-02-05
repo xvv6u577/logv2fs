@@ -41,4 +41,7 @@ func AuthorizedRoutes(incomingRoutes *gin.Engine) {
 
 	incomingRoutes.GET("/v1/c47kr8", controller.GetNodePartial())
 	incomingRoutes.GET("/v1/t7k033", controller.GetActiveGlobalNodesInfo())
+
+	incomingRoutes.GET("/v1/7b3f3f", controller.GetLegacyClashNodes())
+	incomingRoutes.PUT("/v1/v242j6", controller.AddLegacyNodes())
 }

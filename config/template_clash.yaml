@@ -20,21 +20,11 @@ dns:
       "tls://8.8.4.4:853",
     ]
   fallback-filter: { geoip: true, ipcidr: [240.0.0.0/4, 0.0.0.0/32] }
+
 proxies:
+
 proxy-groups:
-  - { name: manual-select, type: select, proxies: [auto-select, fallback] }
-  - {
-      name: chatGPT,
-      type: select,
-      proxies: [gpt-auto],
-    }
-  - {
-      name: gpt-auto,
-      type: url-test,
-      proxies: [],
-      url: "http://www.gstatic.com/generate_204",
-      interval: 86400,
-    }
+  - { name: manual-select, type: select, proxies: [auto-select] }
   - {
       name: auto-select,
       type: url-test,
@@ -42,22 +32,16 @@ proxy-groups:
       url: "http://www.gstatic.com/generate_204",
       interval: 86400,
     }
-  - {
-      name: fallback,
-      type: fallback,
-      proxies: [],
-      url: "http://www.gstatic.com/generate_204",
-      interval: 7200,
-    }
+
 rules:
-  - "DOMAIN-SUFFIX,ai.com,chatGPT"
-  - "DOMAIN-SUFFIX,openai.com,chatGPT"
-  - "DOMAIN-SUFFIX,chat.openai.com,chatGPT"
-  - "DOMAIN-SUFFIX,platform.openai.com,chatGPT"
-  - "DOMAIN-SUFFIX,openaiapi-site.azureedge.net,chatGPT"
-  - "DOMAIN-SUFFIX,identrust.com,chatGPT"
-  - "DOMAIN-SUFFIX,auth0.com,chatGPT"
-  - "DOMAIN-SUFFIX,challenges.cloudflare.com,chatGPT"
+  - "DOMAIN-SUFFIX,ai.com,manual-select"
+  - "DOMAIN-SUFFIX,openai.com,manual-select"
+  - "DOMAIN-SUFFIX,chat.openai.com,manual-select"
+  - "DOMAIN-SUFFIX,platform.openai.com,manual-select"
+  - "DOMAIN-SUFFIX,openaiapi-site.azureedge.net,manual-select"
+  - "DOMAIN-SUFFIX,identrust.com,manual-select"
+  - "DOMAIN-SUFFIX,auth0.com,manual-select"
+  - "DOMAIN-SUFFIX,challenges.cloudflare.com,manual-select"
   - "DOMAIN,unicorncloud.club,DIRECT"
   - "DOMAIN-SUFFIX,undervineyard.com,DIRECT"
   - "DOMAIN-SUFFIX,kakao.com,manual-select"

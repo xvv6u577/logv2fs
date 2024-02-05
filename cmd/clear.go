@@ -25,7 +25,7 @@ var clearCmd = &cobra.Command{
 		var projections = bson.D{
 			{Key: "email", Value: 1},
 		}
-		users, err := database.GetAllUsersPartialInfo(projections)
+		users, err := database.GetAllUsersPortionInfo(projections)
 		if err != nil {
 			panic(err)
 		}
@@ -44,14 +44,4 @@ var clearCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(clearCmd)
-
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// clearCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// clearCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }

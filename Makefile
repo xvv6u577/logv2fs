@@ -4,6 +4,15 @@ backend:
 web:
 	cd frontend; npm start;
 
+dev:
+	go run -tags="with_gvisor,with_quic,with_wireguard,with_utls,with_reality_server,with_clash_api,with_v2ray_api,with_grpc" ./ singbox
+
+local:
+	sing-box version && sing-box run -c /Users/guestuser/go/src/github/logv2fs/development/singbox/transit-client.json
+
+2rd-local:
+	sing-box version && sing-box run -c /Users/guestuser/go/src/github/logv2fs/development/singbox/transit-2rd-client.json
+
 install:
 	go build; go install;
 

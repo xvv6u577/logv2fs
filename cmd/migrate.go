@@ -31,7 +31,7 @@ var migrateCmd = &cobra.Command{
 		var projections = bson.D{
 			{Key: "email", Value: 1},
 		}
-		users, err := database.GetAllUsersPartialInfo(projections)
+		users, err := database.GetAllUsersPortionInfo(projections)
 		if err != nil {
 			panic(err)
 		}

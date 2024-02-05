@@ -2,10 +2,12 @@ package controllers
 
 import (
 	"context"
+	b64 "encoding/base64"
 	"encoding/json"
 	"log"
 	"os"
 	"strconv"
+	"strings"
 	"sync"
 
 	"net/http"
@@ -16,7 +18,6 @@ import (
 	uuid "github.com/nu7hatch/gouuid"
 	"gopkg.in/yaml.v2"
 
-	localCron "github.com/xvv6u577/logv2fs/cron"
 	"github.com/xvv6u577/logv2fs/database"
 	"github.com/xvv6u577/logv2fs/v2ray"
 
@@ -45,6 +46,8 @@ var (
 	MIXED_PORT                         = os.Getenv("MIXED_PORT")
 	ADMINUSERID                        = os.Getenv("ADMINUSERID")
 	CREDIT                             = os.Getenv("CREDIT")
+	PUBLIC_KEY                         = os.Getenv("PUBLIC_KEY")
+	SHORT_ID                           = os.Getenv("SHORT_ID")
 )
 
 type (
@@ -63,6 +66,12 @@ type (
 	DomainInfo      = model.DomainInfo
 	SingboxYAML     = model.SingboxYAML
 	SingboxJSON     = model.SingboxJSON
+	RealityJSON     = model.RealityJSON
+	Hysteria2JSON   = model.Hysteria2JSON
+	RealityYAML     = model.RealityYAML
+	Hysteria2YAML   = model.Hysteria2YAML
+	ClashYAML       = model.ClashYAML
+	Vmess           = model.Vmess
 )
 
 // HashPassword is used to encrypt the password before it is stored in the DB
@@ -228,34 +237,6 @@ func SignUp() gin.HandlerFunc {
 		user.Refresh_token = &refreshToken
 		user.UpdateNodeStatusInUse(globalVariable.ActiveGlobalNodes)
 
-		var wg sync.WaitGroup
-		var waitQueueLength = 0
-
-		if NODE_TYPE == "local" {
-			wg.Add(waitQueueLength + 1)
-			go func() {
-				defer wg.Done()
-				err = grpctools.GrpcClientToAddUser("0.0.0.0", "50051", user, false)
-				if err != nil {
-					log.Printf("error occured while adding user: %v", err)
-					c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-					return
-				}
-			}()
-		} else {
-			wg.Add(waitQueueLength + helper.CountNodesInUse(user.NodeInUseStatus))
-			for node, available := range user.NodeInUseStatus {
-				if available {
-					go func(domain string) {
-						defer wg.Done()
-						grpctools.GrpcClientToAddUser(domain, MIXED_PORT, user, true)
-					}(node)
-				}
-			}
-		}
-
-		wg.Wait()
-
 		user.ProduceSuburl(globalVariable.ActiveGlobalNodes)
 		err = user.GenerateYAML(globalVariable.ActiveGlobalNodes)
 		if err != nil {
@@ -319,33 +300,6 @@ func Login() gin.HandlerFunc {
 		}
 
 		c.JSON(http.StatusOK, user)
-	}
-}
-
-func GetUserSimpleInfo() gin.HandlerFunc {
-	return func(c *gin.Context) {
-
-		var name string
-		if c.Query("name") != "" {
-			name = c.Query("name")
-		} else {
-			name = c.Param("name")
-		}
-
-		var projections = bson.D{
-			{Key: "email", Value: 1},
-			{Key: "uuid", Value: 1},
-			{Key: "path", Value: 1},
-			{Key: "node_in_use_status", Value: 1},
-		}
-		user, err := database.GetUserByName(name, projections)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			log.Printf("error: %v", err)
-			return
-		}
-
-		c.JSON(http.StatusOK, gin.H{"email": user.Email, "uuid": user.UUID, "path": user.Path, "nodeinuse": user.NodeInUseStatus})
 	}
 }
 
@@ -714,7 +668,7 @@ func GetAllUsers() gin.HandlerFunc {
 			{Key: "used_by_current_year", Value: 1},
 		}
 
-		allUsers, err := database.GetAllUsersPartialInfo(projections)
+		allUsers, err := database.GetAllUsersPortionInfo(projections)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			log.Printf("GetAllUsers failed: %s", err.Error())
@@ -781,12 +735,12 @@ func WriteToDB() gin.HandlerFunc {
 			return
 		}
 
-		err := localCron.Log_basicAction()
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			log.Printf("Write to DB failed: %s", err.Error())
-			return
-		}
+		// err := localCron.Log_basicAction()
+		// if err != nil {
+		// 	c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		// 	log.Printf("Write to DB failed: %s", err.Error())
+		// 	return
+		// }
 
 		log.Println("Write to DB by hand!")
 		c.JSON(http.StatusOK, gin.H{"message": "Write to DB successfully!"})
@@ -952,11 +906,27 @@ func EnableNodePerUser() gin.HandlerFunc {
 func GetSubscripionURL() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
-		name := helper.SanitizeStr(c.Param("name"))
-		var file []byte
+		var subscription []byte
 		var err error
+		name := helper.SanitizeStr(c.Param("name"))
+
+		// get globalVariable from GlobelCollection ActiveGlobalNodes
+		var globalVariable GlobalVariable
+		var ctx, cancel = context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+
+		err = globalCollection.FindOne(ctx, bson.M{"name": "GLOBAL"}).Decode(&globalVariable)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "error occured while getting globalVariable"})
+			log.Printf("Getting globalVariable error: %s", err.Error())
+			return
+		}
+
+		// projections include status, user_id, uuid,
 		var projections = bson.D{
 			{Key: "status", Value: 1},
+			{Key: "user_id", Value: 1},
+			{Key: "uuid", Value: 1},
 		}
 		user, err := database.GetUserByName(name, projections)
 		if err != nil {
@@ -966,17 +936,36 @@ func GetSubscripionURL() gin.HandlerFunc {
 		}
 
 		if user.Status == "plain" {
-			file, err = os.ReadFile(helper.CurrentPath() + "/sing-box-full-platform/sing-box.txt")
+			var sub string
+			for _, node := range globalVariable.ActiveGlobalNodes {
+				if node.Type == "reality" {
+					if len(sub) == 0 {
+						sub = "vless://" + user.UUID + "@" + node.IP + ":" + node.SERVER_PORT + "?encryption=none&flow=xtls-rprx-vision&security=reality&sni=itunes.apple.com&fp=chrome&pbk=" + node.PUBLIC_KEY + "&sid=" + node.SHORT_ID + "&type=tcp&headerType=none#" + node.Remark
+					} else {
+						sub = sub + "\n" + "vless://" + user.UUID + "@" + node.IP + ":" + node.SERVER_PORT + "?encryption=none&flow=xtls-rprx-vision&security=reality&sni=itunes.apple.com&fp=chrome&pbk=" + node.PUBLIC_KEY + "&sid=" + node.SHORT_ID + "&type=tcp&headerType=none#" + node.Remark
+					}
+				}
+
+				if node.Type == "hysteria2" {
+					if len(sub) == 0 {
+						sub = "hysteria2://" + user.User_id + "@" + node.IP + ":" + node.SERVER_PORT + "?insecure=1&sni=bing.com#" + node.Remark
+					} else {
+						sub = sub + "\n" + "hysteria2://" + user.User_id + "@" + node.IP + ":" + node.SERVER_PORT + "?insecure=1&sni=bing.com#" + node.Remark
+					}
+				}
+			}
+
+			subscription = []byte(b64.StdEncoding.EncodeToString([]byte(sub)))
 		} else {
-			file, err = os.ReadFile(helper.CurrentPath() + "/sing-box-full-platform/error.txt")
-		}
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			log.Printf("GetSubscripionURL error: %v", err)
-			return
+			subscription, err = os.ReadFile(helper.CurrentPath() + "/sing-box-full-platform/error.txt")
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				log.Printf("GetSubscripionURL error: %v", err)
+				return
+			}
 		}
 
-		c.Data(http.StatusOK, "text/plain", file)
+		c.Data(http.StatusOK, "text/plain", subscription)
 	}
 }
 
@@ -985,11 +974,15 @@ func ReturnSingboxJson() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
 		name := helper.SanitizeStr(c.Param("name"))
-		var singboxJSON = SingboxJSON{}
-		var jsonFile []byte
+
 		var err error
+		var jsonFile []byte
+		var singboxJSON = SingboxJSON{}
+
 		var projections = bson.D{
 			{Key: "status", Value: 1},
+			{Key: "user_id", Value: 1},
+			{Key: "uuid", Value: 1},
 		}
 		user, err := database.GetUserByName(name, projections)
 		if err != nil {
@@ -998,23 +991,148 @@ func ReturnSingboxJson() gin.HandlerFunc {
 			return
 		}
 
-		// read json file from sing-box-full-platform/sing-box.json, and return it.
-		if user.Status == "plain" {
-			jsonFile, err = os.ReadFile(helper.CurrentPath() + "/sing-box-full-platform/sing-box.json")
-		} else {
-			jsonFile, err = os.ReadFile(helper.CurrentPath() + "/sing-box-full-platform/error.json")
-		}
+		// get globalVariable from GlobelCollection ActiveGlobalNodes
+		var globalVariable GlobalVariable
+		var ctx, cancel = context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+
+		err = globalCollection.FindOne(ctx, bson.M{"name": "GLOBAL"}).Decode(&globalVariable)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			log.Printf("error: %v", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "error occured while getting globalVariable"})
+			log.Printf("Getting globalVariable error: %s", err.Error())
 			return
 		}
 
-		err = json.Unmarshal(jsonFile, &singboxJSON)
-		if err != nil {
-			log.Printf("error: %v", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
+		// read json file from sing-box-full-platform/sing-box.json, and return it.
+		if user.Status == "plain" {
+
+			jsonFile, err = os.ReadFile(helper.CurrentPath() + "/config/template_singbox.json")
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				log.Printf("error: %v", err)
+				return
+			}
+
+			err = json.Unmarshal(jsonFile, &singboxJSON)
+			if err != nil {
+				log.Printf("error: %v", err)
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				return
+			}
+
+			// append reality and hysteria2 nodes to outbounds in jsonfile.
+			for _, node := range globalVariable.ActiveGlobalNodes {
+
+				server_port, _ := strconv.Atoi(node.SERVER_PORT)
+
+				if node.Type == "reality" {
+
+					for i, outbound := range singboxJSON.Outbounds {
+						if outboundMap, ok := outbound.(map[string]interface{}); ok {
+							if outboundMap["tag"] == "select" || outboundMap["tag"] == "urltest" {
+								if outbounds, ok := singboxJSON.Outbounds[i].(map[string]interface{}); ok {
+									if outboundsList, ok := outbounds["outbounds"].([]interface{}); ok {
+										singboxJSON.Outbounds[i].(map[string]interface{})["outbounds"] = append(outboundsList, node.Remark)
+									}
+								}
+							}
+						}
+					}
+
+					singboxJSON.Outbounds = append(singboxJSON.Outbounds, RealityJSON{
+						Tag:            node.Remark,
+						Type:           "vless",
+						UUID:           user.UUID,
+						ServerPort:     server_port,
+						Flow:           "xtls-rprx-vision",
+						PacketEncoding: "xudp",
+						Server:         node.IP,
+						TLS: struct {
+							Enabled    bool   `json:"enabled"`
+							ServerName string `json:"server_name"`
+							Utls       struct {
+								Enabled     bool   `json:"enabled"`
+								Fingerprint string `json:"fingerprint"`
+							} `json:"utls"`
+							Reality struct {
+								Enabled   bool   `json:"enabled"`
+								PublicKey string `json:"public_key"`
+								ShortID   string `json:"short_id"`
+							} `json:"reality"`
+						}{
+							Enabled:    true,
+							ServerName: "itunes.apple.com",
+							Utls: struct {
+								Enabled     bool   `json:"enabled"`
+								Fingerprint string `json:"fingerprint"`
+							}{
+								Enabled:     true,
+								Fingerprint: "chrome",
+							},
+							Reality: struct {
+								Enabled   bool   `json:"enabled"`
+								PublicKey string `json:"public_key"`
+								ShortID   string `json:"short_id"`
+							}{
+								Enabled:   true,
+								PublicKey: node.PUBLIC_KEY,
+								ShortID:   node.SHORT_ID,
+							},
+						},
+					})
+				}
+
+				if node.Type == "hysteria2" {
+
+					for i, outbound := range singboxJSON.Outbounds {
+						if outboundMap, ok := outbound.(map[string]interface{}); ok {
+							if outboundMap["tag"] == "select" || outboundMap["tag"] == "urltest" {
+								if outbounds, ok := singboxJSON.Outbounds[i].(map[string]interface{}); ok {
+									if outboundsList, ok := outbounds["outbounds"].([]interface{}); ok {
+										singboxJSON.Outbounds[i].(map[string]interface{})["outbounds"] = append(outboundsList, node.Remark)
+									}
+								}
+							}
+						}
+					}
+
+					singboxJSON.Outbounds = append(singboxJSON.Outbounds, Hysteria2JSON{
+						Tag:        node.Remark,
+						Type:       "hysteria2",
+						Server:     node.IP,
+						ServerPort: server_port,
+						UpMbps:     100,
+						DownMbps:   100,
+						Password:   user.User_id,
+						TLS: struct {
+							Enabled    bool     `json:"enabled"`
+							ServerName string   `json:"server_name"`
+							Insecure   bool     `json:"insecure"`
+							Alpn       []string `json:"alpn"`
+						}{
+							Enabled:    true,
+							ServerName: "bing.com",
+							Insecure:   true,
+							Alpn:       []string{"h3"},
+						},
+					})
+				}
+			}
+
+		} else {
+			jsonFile, err = os.ReadFile(helper.CurrentPath() + "/sing-box-full-platform/error.json")
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				log.Printf("error: %v", err)
+				return
+			}
+
+			err = json.Unmarshal(jsonFile, &singboxJSON)
+			if err != nil {
+				log.Printf("error: %v", err)
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				return
+			}
 		}
 
 		c.JSON(http.StatusOK, singboxJSON)
@@ -1026,11 +1144,15 @@ func ReturnVergeYAML() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
 		name := helper.SanitizeStr(c.Param("name"))
-		var singboxYAML = SingboxYAML{}
-		var yamlFile []byte
+
 		var err error
+		var yamlFile []byte
+		var singboxYAML = SingboxYAML{}
+
 		var projections = bson.D{
 			{Key: "status", Value: 1},
+			{Key: "user_id", Value: 1},
+			{Key: "uuid", Value: 1},
 		}
 		user, err := database.GetUserByName(name, projections)
 		if err != nil {
@@ -1039,26 +1161,268 @@ func ReturnVergeYAML() gin.HandlerFunc {
 			return
 		}
 
+		// get globalVariable from GlobelCollection ActiveGlobalNodes
+		var globalVariable GlobalVariable
+		var ctx, cancel = context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+
+		err = globalCollection.FindOne(ctx, bson.M{"name": "GLOBAL"}).Decode(&globalVariable)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "error occured while getting globalVariable"})
+			log.Printf("Getting globalVariable error: %s", err.Error())
+			return
+		}
+
 		if user.Status == "plain" {
-			yamlFile, err = os.ReadFile(helper.CurrentPath() + "/sing-box-full-platform/sing-box.yaml")
+			yamlFile, err = os.ReadFile(helper.CurrentPath() + "/config/template_verge.yaml")
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				log.Printf("error: %v", err)
+				return
+			}
+
+			err = yaml.Unmarshal(yamlFile, &singboxYAML)
+			if err != nil {
+				log.Printf("error: %v", err)
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				return
+			}
+
+			// append reality and hysteria2 nodes to outbounds in yamlfile.
+			for _, node := range globalVariable.ActiveGlobalNodes {
+
+				server_port, _ := strconv.Atoi(node.SERVER_PORT)
+
+				if node.Type == "reality" {
+
+					for i, proxy := range singboxYAML.ProxyGroups {
+						if proxy.Type == "select" || proxy.Type == "url-test" {
+							singboxYAML.ProxyGroups[i].Proxies = append(singboxYAML.ProxyGroups[i].Proxies, node.Remark)
+						}
+					}
+
+					singboxYAML.Proxies = append(singboxYAML.Proxies, RealityYAML{
+						Name:              node.Remark,
+						Type:              "vless",
+						Server:            node.IP,
+						Port:              server_port,
+						UUID:              user.UUID,
+						Network:           "tcp",
+						UDP:               true,
+						TLS:               true,
+						Flow:              "xtls-rprx-vision",
+						Servername:        "itunes.apple.com",
+						ClientFingerprint: "chrome",
+						RealityOpts: struct {
+							PublicKey string `yaml:"public-key"`
+							ShortID   string `yaml:"short-id"`
+						}{
+							PublicKey: node.PUBLIC_KEY,
+							ShortID:   node.SHORT_ID,
+						},
+					})
+				}
+
+				if node.Type == "hysteria2" {
+
+					for i, proxy := range singboxYAML.ProxyGroups {
+						if proxy.Type == "select" || proxy.Type == "url-test" {
+							singboxYAML.ProxyGroups[i].Proxies = append(singboxYAML.ProxyGroups[i].Proxies, node.Remark)
+						}
+					}
+
+					singboxYAML.Proxies = append(singboxYAML.Proxies, Hysteria2YAML{
+						Name:           node.Remark,
+						Type:           "hysteria2",
+						Server:         node.IP,
+						Port:           server_port,
+						Password:       user.User_id,
+						Sni:            "bing.com",
+						SkipCertVerify: true,
+						Alpn:           []string{"h3"},
+					})
+				}
+			}
+
+			// if DIRECT type is not at the end of singboxYAML.ProxyGroups at select type, set it to the end.
+			for i, proxy := range singboxYAML.ProxyGroups {
+				if proxy.Type == "select" {
+					for j, p := range proxy.Proxies {
+						if p == "DIRECT" {
+							singboxYAML.ProxyGroups[i].Proxies = append(singboxYAML.ProxyGroups[i].Proxies[:j], singboxYAML.ProxyGroups[i].Proxies[j+1:]...)
+							singboxYAML.ProxyGroups[i].Proxies = append(singboxYAML.ProxyGroups[i].Proxies, "DIRECT")
+						}
+					}
+				}
+			}
+
 		} else {
 			yamlFile, err = os.ReadFile(helper.CurrentPath() + "/sing-box-full-platform/error.yaml")
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				log.Printf("error: %v", err)
+				return
+			}
+
+			err = yaml.Unmarshal(yamlFile, &singboxYAML)
+			if err != nil {
+				log.Fatalf("error: %v", err)
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				return
+			}
 		}
+
+		c.YAML(http.StatusOK, singboxYAML)
+	}
+}
+
+// return clash yaml file
+func ReturnClashYAML() gin.HandlerFunc {
+	return func(c *gin.Context) {
+
+		filename := helper.SanitizeStr(c.Param("filename"))
+		name := strings.Split(filename, ".")[0]
+
+		// print filename, name
+		log.Printf("filename: %v, name: %v", filename, name)
+		var err error
+		var yamlFile []byte
+		var clashYAML = ClashYAML{}
+
+		var projections = bson.D{
+			{Key: "status", Value: 1},
+			{Key: "user_id", Value: 1},
+			{Key: "uuid", Value: 1},
+		}
+		user, err := database.GetUserByName(name, projections)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			log.Printf("error: %v", err)
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			log.Printf("ReturnSingboxJson failed: %s", err.Error())
 			return
 		}
 
-		err = yaml.Unmarshal(yamlFile, &singboxYAML)
+		// get globalVariable from GlobelCollection ActiveGlobalNodes
+		var globalVariable GlobalVariable
+		var ctx, cancel = context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+
+		err = globalCollection.FindOne(ctx, bson.M{"name": "GLOBAL"}).Decode(&globalVariable)
 		if err != nil {
-			log.Fatalf("error: %v", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "error occured while getting globalVariable"})
+			log.Printf("Getting globalVariable error: %s", err.Error())
 			return
 		}
 
-		// return yaml file as attachment.
-		c.Header("Content-Disposition", "attachment; filename="+name+".yaml")
-		c.Data(http.StatusOK, "application/octet-stream", yamlFile)
+		if user.Status == "plain" {
+			yamlFile, err = os.ReadFile(helper.CurrentPath() + "/config/template_clash.yaml")
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				log.Printf("error: %v", err)
+				return
+			}
+
+			err = yaml.Unmarshal(yamlFile, &clashYAML)
+			if err != nil {
+				log.Printf("error: %v", err)
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				return
+			}
+
+			// append vmessws, vmesstls to proxies in yamlfile according to globalVariable.ClashLegacyNodes
+			for _, node := range globalVariable.ClashLegacyNodes {
+				server_port, _ := strconv.Atoi(node.SERVER_PORT)
+
+				if node.Type == "vmessws" {
+
+					for i, proxy := range clashYAML.ProxyGroups {
+						if proxy.Type == "select" || proxy.Type == "url-test" {
+							clashYAML.ProxyGroups[i].Proxies = append(clashYAML.ProxyGroups[i].Proxies, node.Remark)
+						}
+					}
+
+					clashYAML.Proxies = append(clashYAML.Proxies, Vmess{
+						Name:           node.Remark,
+						Type:           "vmess",
+						Server:         node.IP,
+						Port:           server_port,
+						UUID:           user.UUID,
+						AlterID:        4,
+						Cipher:         "none",
+						Network:        "ws",
+						SkipCertVerify: true,
+						Sni:            "",
+						UDP:            false,
+						TLS:            false,
+						WsOpts: struct {
+							Path    string "yaml:\"path\""
+							Headers struct {
+								Host string "yaml:\"Host\""
+							} "yaml:\"headers\""
+						}{
+							Path: node.PATH,
+							Headers: struct {
+								Host string "yaml:\"Host\""
+							}{
+								Host: "",
+							},
+						},
+					})
+				}
+
+				if node.Type == "vmesstls" {
+
+					for i, proxy := range clashYAML.ProxyGroups {
+						if proxy.Type == "select" || proxy.Type == "url-test" {
+							clashYAML.ProxyGroups[i].Proxies = append(clashYAML.ProxyGroups[i].Proxies, node.Remark)
+						}
+					}
+
+					clashYAML.Proxies = append(clashYAML.Proxies, Vmess{
+						Name:           node.Remark,
+						Type:           "vmess",
+						Server:         node.Domain,
+						Port:           443,
+						UUID:           user.UUID,
+						AlterID:        4,
+						Cipher:         "none",
+						Network:        "ws",
+						SkipCertVerify: false,
+						Sni:            "",
+						UDP:            false,
+						TLS:            true,
+						WsOpts: struct {
+							Path    string "yaml:\"path\""
+							Headers struct {
+								Host string "yaml:\"Host\""
+							} "yaml:\"headers\""
+						}{
+							Path: node.PATH,
+							Headers: struct {
+								Host string "yaml:\"Host\""
+							}{
+								Host: node.Domain,
+							},
+						},
+					})
+				}
+			}
+
+		} else {
+			yamlFile, err = os.ReadFile(helper.CurrentPath() + "/config/error_clash.yaml")
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				log.Printf("error: %v", err)
+				return
+			}
+
+			err = yaml.Unmarshal(yamlFile, &clashYAML)
+			if err != nil {
+				log.Fatalf("error: %v", err)
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				return
+			}
+		}
+
+		c.YAML(http.StatusOK, clashYAML)
 	}
 }
