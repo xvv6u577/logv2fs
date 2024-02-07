@@ -34,11 +34,15 @@ var singboxCmd = &cobra.Command{
 	Long:  `long - singbox start here`,
 	Run: func(cmd *cobra.Command, args []string) {
 
-		// logFile, err := os.OpenFile("./logs/singbox.log", os.O_CREATE|os.O_APPEND|os.O_RDWR, 0644)
-		// if err != nil {
-		// 	log.Fatalln(err)
-		// }
-		// log.SetOutput(logFile)
+		// check if logs directory exists, if not create it
+		if _, err := os.Stat("./logs"); os.IsNotExist(err) {
+			os.Mkdir("./logs", 0755)
+		}
+		logFile, err := os.OpenFile("./logs/singbox.log", os.O_CREATE|os.O_APPEND|os.O_RDWR, 0644)
+		if err != nil {
+			log.Fatalln(err)
+		}
+		log.SetOutput(logFile)
 
 		osSignals := make(chan os.Signal, 1)
 		signal.Notify(osSignals, os.Interrupt, syscall.SIGTERM, syscall.SIGHUP, syscall.SIGINT)

@@ -30,21 +30,46 @@ var devCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		// check if type is vmess in globalVariable.ActiveGlobalNodes, if yes, copy to globalVariable.ClashLegacyNodes
-		for _, domain := range globalVariable.ActiveGlobalNodes {
-			if domain.Type == "vmess" {
-				globalVariable.ClashLegacyNodes = append(globalVariable.ClashLegacyNodes, domain)
-			}
-		}
+		// init a reality/hysteria2 type nodes, append to globalVariable.ActiveGlobalNodes;
+		// init vmesstls/vmessws type nodes, append to globalVariable.ClashLegacyNodes;
 
-		// update globalVariable
+		globalVariable.ActiveGlobalNodes = append(globalVariable.ActiveGlobalNodes, Domain{
+			Type:        "reality",
+			Remark:      "team",
+			Domain:      "www.google.com",
+			IP:          "89.54.237.248",
+			SNI:         "",
+			UUID:        "",
+			PATH:        "",
+			SERVER_PORT: "7443",
+			PASSWORD:    "",
+			PUBLIC_KEY:  "",
+			SHORT_ID:    "",
+		})
+
+		globalVariable.ClashLegacyNodes = append(globalVariable.ClashLegacyNodes, Domain{
+			Type:        "vmesstls",
+			Remark:      "cave",
+			Domain:      "www.facebook.com",
+			IP:          "211.129.65.7",
+			SNI:         "",
+			UUID:        "",
+			PATH:        "",
+			SERVER_PORT: "",
+			PASSWORD:    "",
+			PUBLIC_KEY:  "",
+			SHORT_ID:    "",
+		})
+
+		// save globalVariable back to database
+		ctx, cancel = context.WithTimeout(context.Background(), time.Second*10)
+		defer cancel()
+
 		_, err = globalCollection.UpdateOne(ctx, bson.M{"name": "GLOBAL"}, bson.M{"$set": globalVariable})
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
 		}
-
-		fmt.Println(globalVariable)
 
 	},
 }

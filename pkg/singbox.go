@@ -33,6 +33,7 @@ func UpdateOptionsFromDB(options option.Options) (option.Options, error) {
 		{Key: "status", Value: 1},
 		{Key: "uuid", Value: 1},
 		{Key: "node_in_use_status", Value: 1},
+		{Key: "user_id", Value: 1},
 	}
 
 	users, err := database.GetAllUsersPortionInfo(projections)
@@ -67,7 +68,7 @@ func UpdateOptionsFromDB(options option.Options) (option.Options, error) {
 						if options.Inbounds[inbound].Type == "hysteria2" {
 							options.Inbounds[inbound].Hysteria2Options.Users = append(options.Inbounds[inbound].Hysteria2Options.Users, option.Hysteria2User{
 								Name:     user.Email + "-hysteria2",
-								Password: user.Email,
+								Password: user.User_id,
 							})
 						}
 

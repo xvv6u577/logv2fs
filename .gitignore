@@ -8,7 +8,10 @@ frontend/tool
 sing-box-full-platform/
 setup-rocket.chat/
 ui/
-logs/
+
+# include logs, but exclude everything else in the directory
+logs/*
+!logs/
 cloudflare-CDN/
 
 config/results/*
