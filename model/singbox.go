@@ -39,6 +39,37 @@ type Hysteria2JSON struct {
 	} `json:"tls"`
 }
 
+type CFVlessJSON struct {
+	Tag        string `json:"tag"`
+	Type       string `json:"type"`
+	Server     string `json:"server"`
+	ServerPort int    `json:"server_port"`
+	UUID       string `json:"uuid"`
+	Flow       string `json:"flow"`
+	TLS        struct {
+		Enabled    bool   `json:"enabled"`
+		ServerName string `json:"server_name"`
+		Insecure   bool   `json:"insecure"`
+		Utls       struct {
+			Enabled     bool   `json:"enabled"`
+			Fingerprint string `json:"fingerprint"`
+		} `json:"utls"`
+	} `json:"tls"`
+	Multiplex struct {
+		Enabled    bool   `json:"enabled"`
+		Protocol   string `json:"protocol"`
+		MaxStreams int    `json:"max_streams"`
+	} `json:"multiplex"`
+	PacketEncoding string `json:"packet_encoding"`
+	Transport      struct {
+		Type    string `json:"type"`
+		Path    string `json:"path"`
+		Headers struct {
+			Host string `json:"Host"`
+		} `json:"headers"`
+	} `json:"transport"`
+}
+
 type SingboxJSON struct {
 	Log struct {
 		Disabled  bool   `json:"disabled"`
@@ -79,6 +110,25 @@ type Hysteria2YAML struct {
 	Sni            string   `yaml:"sni"`
 	SkipCertVerify bool     `yaml:"skip-cert-verify"`
 	Alpn           []string `yaml:"alpn"`
+}
+
+type CFVlessYAML struct {
+	Type              string `yaml:"type"`
+	Name              string `yaml:"name"`
+	Server            string `yaml:"server"`
+	Port              int    `yaml:"port"`
+	UUID              string `yaml:"uuid"`
+	Network           string `yaml:"network"`
+	TLS               bool   `yaml:"tls"`
+	UDP               bool   `yaml:"udp"`
+	Servername        string `yaml:"servername"`
+	ClientFingerprint string `yaml:"client-fingerprint"`
+	WsOpts            struct {
+		Path    string `yaml:"path"`
+		Headers struct {
+			Host string `yaml:"Host"`
+		} `yaml:"headers"`
+	} `yaml:"ws-opts"`
 }
 
 type SingboxYAML struct {

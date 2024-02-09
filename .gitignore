@@ -14,7 +14,6 @@ logs/*
 !logs/
 cloudflare-CDN/
 
-config/results/*
 development/
 CA
 setup-script*

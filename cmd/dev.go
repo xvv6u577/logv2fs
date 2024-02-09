@@ -47,20 +47,6 @@ var devCmd = &cobra.Command{
 			SHORT_ID:    "",
 		})
 
-		globalVariable.ClashLegacyNodes = append(globalVariable.ClashLegacyNodes, Domain{
-			Type:        "vmesstls",
-			Remark:      "cave",
-			Domain:      "www.facebook.com",
-			IP:          "211.129.65.7",
-			SNI:         "",
-			UUID:        "",
-			PATH:        "",
-			SERVER_PORT: "",
-			PASSWORD:    "",
-			PUBLIC_KEY:  "",
-			SHORT_ID:    "",
-		})
-
 		// save globalVariable back to database
 		ctx, cancel = context.WithTimeout(context.Background(), time.Second*10)
 		defer cancel()

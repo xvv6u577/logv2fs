@@ -72,6 +72,8 @@ type (
 	Hysteria2YAML   = model.Hysteria2YAML
 	ClashYAML       = model.ClashYAML
 	Vmess           = model.Vmess
+	CFVlessJSON     = model.CFVlessJSON
+	CFVlessYAML     = model.CFVlessYAML
 )
 
 // HashPassword is used to encrypt the password before it is stored in the DB
@@ -953,15 +955,23 @@ func GetSubscripionURL() gin.HandlerFunc {
 						sub = sub + "\n" + "hysteria2://" + user.User_id + "@" + node.IP + ":" + node.SERVER_PORT + "?insecure=1&sni=bing.com#" + node.Remark
 					}
 				}
+
+				if node.Type == "vlessCDN" {
+					if len(sub) == 0 {
+						sub = "vless://" + node.UUID + "@" + node.IP + ":" + node.SERVER_PORT + "?encryption=none&security=tls&sni=" + node.Domain + "&fp=randomized&type=ws&host=" + node.Domain + "&path=%2F%3Fed%3D2048#" + node.Remark
+					} else {
+						sub = sub + "\n" + "vless://" + node.UUID + "@" + node.IP + ":" + node.SERVER_PORT + "?encryption=none&security=tls&sni=" + node.Domain + "&fp=randomized&type=ws&host=" + node.Domain + "&path=%2F%3Fed%3D2048#" + node.Remark
+					}
+				}
 			}
 
 			subscription = []byte(b64.StdEncoding.EncodeToString([]byte(sub)))
 		} else {
-			subscription, err = os.ReadFile(helper.CurrentPath() + "/sing-box-full-platform/error.txt")
+			subscription, err = os.ReadFile(helper.CurrentPath() + "/config/error.txt")
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 				log.Printf("GetSubscripionURL error: %v", err)
-				return
+				// return
 			}
 		}
 
@@ -1117,10 +1127,80 @@ func ReturnSingboxJson() gin.HandlerFunc {
 						},
 					})
 				}
+
+				if node.Type == "vlessCDN" {
+
+					for i, outbound := range singboxJSON.Outbounds {
+						if outboundMap, ok := outbound.(map[string]interface{}); ok {
+							if outboundMap["tag"] == "select" || outboundMap["tag"] == "urltest" {
+								if outbounds, ok := singboxJSON.Outbounds[i].(map[string]interface{}); ok {
+									if outboundsList, ok := outbounds["outbounds"].([]interface{}); ok {
+										singboxJSON.Outbounds[i].(map[string]interface{})["outbounds"] = append(outboundsList, node.Remark)
+									}
+								}
+							}
+						}
+					}
+
+					singboxJSON.Outbounds = append(singboxJSON.Outbounds, CFVlessJSON{
+						Tag:        node.Remark,
+						Type:       "vless",
+						Server:     node.IP,
+						ServerPort: server_port,
+						UUID:       node.UUID,
+						Flow:       "",
+						TLS: struct {
+							Enabled    bool   `json:"enabled"`
+							ServerName string `json:"server_name"`
+							Insecure   bool   `json:"insecure"`
+							Utls       struct {
+								Enabled     bool   `json:"enabled"`
+								Fingerprint string `json:"fingerprint"`
+							} `json:"utls"`
+						}{
+							Enabled:    true,
+							ServerName: node.Domain,
+							Insecure:   false,
+							Utls: struct {
+								Enabled     bool   `json:"enabled"`
+								Fingerprint string `json:"fingerprint"`
+							}{
+								Enabled:     true,
+								Fingerprint: "chrome",
+							},
+						},
+						Multiplex: struct {
+							Enabled    bool   `json:"enabled"`
+							Protocol   string `json:"protocol"`
+							MaxStreams int    `json:"max_streams"`
+						}{
+							Enabled:    false,
+							Protocol:   "smux",
+							MaxStreams: 32,
+						},
+						PacketEncoding: "xudp",
+						Transport: struct {
+							Type    string `json:"type"`
+							Path    string `json:"path"`
+							Headers struct {
+								Host string `json:"Host"`
+							} `json:"headers"`
+						}{
+							Type: "ws",
+							Path: "/?ed=2048",
+							Headers: struct {
+								Host string `json:"Host"`
+							}{
+								Host: node.Domain,
+							},
+						},
+					})
+
+				}
 			}
 
 		} else {
-			jsonFile, err = os.ReadFile(helper.CurrentPath() + "/sing-box-full-platform/error.json")
+			jsonFile, err = os.ReadFile(helper.CurrentPath() + "/config/error.json")
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 				log.Printf("error: %v", err)
@@ -1242,6 +1322,41 @@ func ReturnVergeYAML() gin.HandlerFunc {
 						Alpn:           []string{"h3"},
 					})
 				}
+
+				if node.Type == "vlessCDN" {
+
+					for i, proxy := range singboxYAML.ProxyGroups {
+						if proxy.Type == "select" || proxy.Type == "url-test" {
+							singboxYAML.ProxyGroups[i].Proxies = append(singboxYAML.ProxyGroups[i].Proxies, node.Remark)
+						}
+					}
+
+					singboxYAML.Proxies = append(singboxYAML.Proxies, CFVlessYAML{
+						Name:              node.Remark,
+						Type:              "vless",
+						Server:            node.IP,
+						Port:              server_port,
+						UUID:              node.UUID,
+						Network:           "ws",
+						TLS:               true,
+						UDP:               false,
+						Servername:        node.Domain,
+						ClientFingerprint: "chrome",
+						WsOpts: struct {
+							Path    string `yaml:"path"`
+							Headers struct {
+								Host string `yaml:"Host"`
+							} `yaml:"headers"`
+						}{
+							Path: node.PATH,
+							Headers: struct {
+								Host string `yaml:"Host"`
+							}{
+								Host: node.Domain,
+							},
+						},
+					})
+				}
 			}
 
 			// if DIRECT type is not at the end of singboxYAML.ProxyGroups at select type, set it to the end.
@@ -1257,7 +1372,7 @@ func ReturnVergeYAML() gin.HandlerFunc {
 			}
 
 		} else {
-			yamlFile, err = os.ReadFile(helper.CurrentPath() + "/sing-box-full-platform/error.yaml")
+			yamlFile, err = os.ReadFile(helper.CurrentPath() + "/config/error.yaml")
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 				log.Printf("error: %v", err)
@@ -1328,8 +1443,9 @@ func ReturnClashYAML() gin.HandlerFunc {
 				return
 			}
 
-			// append vmessws, vmesstls to proxies in yamlfile according to globalVariable.ClashLegacyNodes
-			for _, node := range globalVariable.ClashLegacyNodes {
+			// append vmessws, vmesstls to proxies in yamlfile according to globalVariable.ActiveGlobalNodes
+			for _, node := range globalVariable.ActiveGlobalNodes {
+
 				server_port, _ := strconv.Atoi(node.SERVER_PORT)
 
 				if node.Type == "vmessws" {

@@ -26,15 +26,6 @@ func IsDomainInDomainList(domain string, domainList []Domain) bool {
 	return false
 }
 
-func stringInSlice(str string, list []string) bool {
-	for _, v := range list {
-		if v == str {
-			return true
-		}
-	}
-	return false
-}
-
 func AddNode() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
@@ -43,11 +34,10 @@ func AddNode() gin.HandlerFunc {
 			return
 		}
 
-		var ctx, cancel = context.WithTimeout(context.Background(), 60*time.Second)
+		var ctx, cancel = context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 
-		var dataCollectableNodes = []string{"vmesstls", "vmessws", "reality", "hysteria2"}
-		var domainsOfWebForm, singboxNodes []Domain
+		var domainsOfWebForm, dataCollectableNodes []Domain
 		var current = time.Now().Local()
 
 		if err := c.BindJSON(&domainsOfWebForm); err != nil {
@@ -56,11 +46,21 @@ func AddNode() gin.HandlerFunc {
 			return
 		}
 
-		// loop through domainsOfWebForm, if type is reality, reassgin public_key and short_id
+		// types: reality, hysteria2, vmesstls, vmessws, vlessCDN! if type is reality, reassgin public_key and short_id
 		for i, domain := range domainsOfWebForm {
 			if domain.Type == "reality" {
 				domainsOfWebForm[i].PUBLIC_KEY = PUBLIC_KEY
 				domainsOfWebForm[i].SHORT_ID = SHORT_ID
+				if !IsDomainInDomainList(domain.Domain, dataCollectableNodes) {
+					dataCollectableNodes = append(dataCollectableNodes, domain)
+				}
+			}
+			if domain.Type == "hysteria2" && IsDomainInDomainList(domain.Domain, dataCollectableNodes) {
+				dataCollectableNodes = append(dataCollectableNodes, domain)
+			}
+
+			if (domain.Type == "vmesstls" || domain.Type == "vmessws") && IsDomainInDomainList(domain.Domain, dataCollectableNodes) {
+				dataCollectableNodes = append(dataCollectableNodes, domain)
 			}
 		}
 
@@ -68,21 +68,16 @@ func AddNode() gin.HandlerFunc {
 		var replacedDocument GlobalVariable
 		err := globalCollection.FindOneAndUpdate(ctx,
 			bson.M{"name": "GLOBAL"},
-			bson.M{"$set": bson.M{"active_global_nodes": domainsOfWebForm}},
+			bson.M{"$set": bson.M{
+				"active_global_nodes": domainsOfWebForm,
+			}},
+
 			options.FindOneAndUpdate().SetReturnDocument(1),
 		).Decode(&replacedDocument)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			log.Printf("FindOneAndUpdate error: %v", err)
 			return
-		}
-
-		// separate "vmessws" and "vmess" type from domainsOfWebForm, store it into singboxNodes.
-		// if any two of singboxNodes have the same domain, keep only one.
-		for _, domain := range domainsOfWebForm {
-			if stringInSlice(domain.Type, dataCollectableNodes) && !IsDomainInDomainList(domain.Domain, singboxNodes) {
-				singboxNodes = append(singboxNodes, domain)
-			}
 		}
 
 		// query all nodes by projections, combine domain and status into a map
@@ -109,7 +104,7 @@ func AddNode() gin.HandlerFunc {
 		}
 
 		// for domain in singboxNodes, if it is not in allNodes, insert new one into nodeCollection; if yes, check if it is inactive, if yes, enable it.
-		for _, domain := range singboxNodes {
+		for _, domain := range dataCollectableNodes {
 
 			// if it is a local mode, only localhost is checked; if it is a remote(main/attached) mode, all remote domain are checked.
 			// if NODE_TYPE == "local" && domain.Domain != "localhost" {
@@ -225,9 +220,9 @@ func AddNode() gin.HandlerFunc {
 		}
 
 		// for nodes in allNodes, if it is not in domains, set it to inactive.
-		for node := range allNodeStatus {
-			if !IsDomainInDomainList(node, singboxNodes) {
-				filter := bson.D{primitive.E{Key: "domain", Value: node}}
+		for domain := range allNodeStatus {
+			if !IsDomainInDomainList(domain, dataCollectableNodes) {
+				filter := bson.D{primitive.E{Key: "domain", Value: domain}}
 				update := bson.M{"$set": bson.M{"status": "inactive", "updated_at": time.Now().Local()}}
 				_, err = nodeCollection.UpdateOne(ctx, filter, update)
 				if err != nil {
@@ -239,40 +234,6 @@ func AddNode() gin.HandlerFunc {
 		}
 
 		c.JSON(http.StatusOK, gin.H{"message": "Congrats! Nodes updated in success!"})
-	}
-}
-
-func AddLegacyNodes() gin.HandlerFunc {
-	return func(c *gin.Context) {
-
-		if err := helper.CheckUserType(c, "admin"); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
-		}
-
-		var ctx, cancel = context.WithTimeout(context.Background(), 10*time.Second)
-		defer cancel()
-
-		var legacyClashNodes []Domain
-		if err := c.BindJSON(&legacyClashNodes); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			log.Printf("BindJSON error: %v", err)
-			return
-		}
-
-		var replacedDocument GlobalVariable
-		err := globalCollection.FindOneAndUpdate(ctx,
-			bson.M{"name": "GLOBAL"},
-			bson.M{"$set": bson.M{"clash_legacy_nodes": legacyClashNodes}},
-			options.FindOneAndUpdate().SetReturnDocument(1),
-		).Decode(&replacedDocument)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			log.Printf("FindOneAndUpdate error: %v", err)
-			return
-		}
-
-		c.JSON(http.StatusOK, gin.H{"message": "Update GLOBAL clash legacy nodes successfully!"})
 	}
 }
 
@@ -297,29 +258,6 @@ func GetActiveGlobalNodesInfo() gin.HandlerFunc {
 		}
 
 		c.JSON(http.StatusOK, activeGlobalNodesInfo.ActiveGlobalNodes)
-	}
-}
-
-func GetLegacyClashNodes() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		if err := helper.CheckUserType(c, "admin"); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
-		}
-
-		var ctx, cancel = context.WithTimeout(context.Background(), 60*time.Second)
-		defer cancel()
-
-		var legacyClashNodesInfo GlobalVariable
-		var filter = bson.D{bson.E{Key: "name", Value: "GLOBAL"}}
-		err := globalCollection.FindOne(ctx, filter).Decode(&legacyClashNodesInfo)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			log.Printf("FindOne error: %v", err)
-			return
-		}
-
-		c.JSON(http.StatusOK, legacyClashNodesInfo.ClashLegacyNodes)
 	}
 }
 

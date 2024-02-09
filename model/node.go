@@ -28,7 +28,6 @@ type GlobalVariable struct {
 	Name                  string   `json:"name" bson:"name" validate:"required,min=2,max=100"`
 	WorkRelatedDomainList []Domain `json:"work_related_domain_list" bson:"work_related_domain_list"`
 	ActiveGlobalNodes     []Domain `json:"active_global_nodes" bson:"active_global_nodes"`
-	ClashLegacyNodes      []Domain `json:"clash_legacy_nodes" bson:"clash_legacy_nodes"`
 }
 
 // Domain type: "work", "vmesstls", "vmessws", "reality", "hysteria2", "vlessCDN"
