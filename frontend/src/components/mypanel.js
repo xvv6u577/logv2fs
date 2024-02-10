@@ -73,14 +73,6 @@ function Mypanel() {
 						<TapToCopied>{user.email}</TapToCopied>
 					</div>
 					<div className="py-1 flex justify-between items-center">
-						<pre className="inline  text-sm font-medium text-gray-900 dark:text-white">Path:</pre>
-						<TapToCopied>{user.path}</TapToCopied>
-					</div>
-					<div className="py-1 flex justify-between items-center">
-						<pre className="inline  text-sm font-medium text-gray-900 dark:text-white">UUID:</pre>
-						<TapToCopied>{user.uuid}</TapToCopied>
-					</div>
-					<div className="py-1 flex justify-between items-center">
 						<pre className="inline  text-sm font-medium text-gray-900 dark:text-white">SubUrl:</pre>
 						<TapToCopied>
 							{process.env.REACT_APP_FILE_AND_SUB_URL + "/static/" + user.email}
@@ -92,6 +84,18 @@ function Mypanel() {
 							{process.env.REACT_APP_FILE_AND_SUB_URL + "/clash/" + user.email + ".yaml"}
 						</TapToCopied>
 					</div>
+					<div className="py-1 flex justify-between items-center">
+                        <pre className="inline  text-sm font-medium text-gray-900 dark:text-white">Verge:</pre>
+                        <TapToCopied>
+                            {process.env.REACT_APP_FILE_AND_SUB_URL + "/verge/" + user.email }
+                        </TapToCopied>
+                    </div>
+                    <div className="py-1 flex justify-between items-center">
+                        <pre className="inline  text-sm font-medium text-gray-900 dark:text-white">Sing-box:</pre>
+                        <TapToCopied>
+                            {process.env.REACT_APP_FILE_AND_SUB_URL + "/singbox/" + user.email}
+                        </TapToCopied>
+                    </div>
 				</div>
 			</div>
 

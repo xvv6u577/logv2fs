@@ -5,8 +5,8 @@ import (
 	"log"
 	"os"
 
-	helper "github.com/caster8013/logv2rayfullstack/helpers"
-	"github.com/caster8013/logv2rayfullstack/model"
+	helper "github.com/xvv6u577/logv2fs/helpers"
+	"github.com/xvv6u577/logv2fs/model"
 	"gopkg.in/yaml.v2"
 )
 
@@ -61,10 +61,6 @@ func (u UserInstance) GenerateYAML(nodes []Domain) error {
 
 	for _, node := range noVlessNodes {
 
-		if !u.NodeInUseStatus[node.Domain] || !node.EnableSubcription {
-			continue
-		}
-
 		yamlTemplate.Proxies = append(yamlTemplate.Proxies, Proxies{
 			Name:           node.Remark,
 			Server:         node.Domain,
@@ -87,14 +83,6 @@ func (u UserInstance) GenerateYAML(nodes []Domain) error {
 		for index, value := range yamlTemplate.ProxyGroups {
 			if value.Name == "manual-select" || value.Name == "auto-select" || value.Name == "fallback" {
 				yamlTemplate.ProxyGroups[index].Proxies = append(yamlTemplate.ProxyGroups[index].Proxies, node.Remark)
-			}
-		}
-
-		if node.Type == "vmess" && node.EnableChatgpt {
-			for index, value := range yamlTemplate.ProxyGroups {
-				if value.Name == "chatGPT" || value.Name == "gpt-auto" {
-					yamlTemplate.ProxyGroups[index].Proxies = append(yamlTemplate.ProxyGroups[index].Proxies, node.Remark)
-				}
 			}
 		}
 	}
