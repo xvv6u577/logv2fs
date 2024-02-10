@@ -27,50 +27,33 @@ dns:
       - 240.0.0.0/4
 
 proxies:
-  - type: vless
-    name: cf-uvp-443
-    server: 172.67.148.181
-    port: 443
-    uuid: 7d2a8695-ee88-484d-8bea-ad86c95e6ff6
-    network: ws
+  - name: 你的账号已停用
+    type: vless
+    server: 193.123.210.188
+    port: 7443
+    uuid: ac7bc61e-f5cd-4d66-ad95-faf5cd3b2775
+    network: tcp
+    udp: true
     tls: true
-    udp: false
-    servername: uvp-1.undervineyard.link
+    flow: xtls-rprx-vision
+    servername: itunes.apple.com
     client-fingerprint: chrome
-    ws-opts:
-      path: "/?ed=2048"
-      headers:
-        Host: uvp-1.undervineyard.link
-
-  - type: vless
-    name: cf-uvp-80
-    server: 172.67.148.181
-    port: 80
-    uuid: 7d2a8695-ee88-484d-8bea-ad86c95e6ff6
-    network: ws
-    tls: false
-    udp: false
-    servername: uvp-1.undervineyard.link
-    client-fingerprint: chrome
-    ws-opts:
-      path: "/?ed=2048"
-      headers:
-        Host: uvp-1.undervineyard.link
+    reality-opts:
+      public-key: txAhCYEz70FRNazyf0echZco6QrkUblGuJBiOTXWXHA
+      short-id: de5d15ce1eb1981f
 
 proxy-groups:
   - name: 节点选择
     type: select
     proxies:
       - 自动选择
-      - cf-uvp-443
-      - cf-uvp-80
+      - 你的账号已停用
       - DIRECT
 
   - name: 自动选择
     type: url-test #选出延迟最低的机场节点
     proxies:
-      - cf-uvp-443
-      - cf-uvp-80
+      - 你的账号已停用
     url: "http://www.gstatic.com/generate_204"
     interval: 300
     tolerance: 50
