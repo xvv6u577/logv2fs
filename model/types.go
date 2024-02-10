@@ -9,7 +9,7 @@ import (
 
 	b64 "encoding/base64"
 
-	helper "github.com/caster8013/logv2rayfullstack/helpers"
+	helper "github.com/xvv6u577/logv2fs/helpers"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"gopkg.in/yaml.v2"
 )
@@ -149,16 +149,16 @@ func (u *User) ProduceSuburl(activeGlobalNodes []Domain) {
 
 	switch u.Path {
 	case "ray":
-		port = "8008"
+		port = "7008"
 	case "kay":
-		port = "8080"
+		port = "7080"
 	case "cas":
-		port = "8443"
+		port = "7443"
 	}
 
 	for _, item := range activeGlobalNodes {
 
-		if item.Domain == "localhost" || !item.EnableSubcription || ((item.Type == "vmess" || item.Type == "vmessws") && !u.NodeInUseStatus[item.Domain]) {
+		if item.Domain == "localhost" || ((item.Type == "vmess" || item.Type == "vmessws") && !u.NodeInUseStatus[item.Domain]) {
 			continue
 		}
 
@@ -300,11 +300,11 @@ func (u *User) GenerateYAML(nodes []Domain) error {
 
 		switch u.Path {
 		case "ray":
-			port = 8008
+			port = 7008
 		case "kay":
-			port = 8080
+			port = 7080
 		case "cas":
-			port = 8443
+			port = 7443
 		}
 
 		err = yaml.Unmarshal(yamlFile, &yamlTemplate)
@@ -315,7 +315,7 @@ func (u *User) GenerateYAML(nodes []Domain) error {
 
 		for _, node := range noVlessNodes {
 
-			if node.Domain == "localhost" || ((node.Type == "vmess" || node.Type == "vmessws") && !u.NodeInUseStatus[node.Domain]) || !node.EnableSubcription {
+			if node.Domain == "localhost" || ((node.Type == "vmess" || node.Type == "vmessws") && !u.NodeInUseStatus[node.Domain]) {
 				continue
 			}
 
@@ -362,7 +362,7 @@ func (u *User) GenerateYAML(nodes []Domain) error {
 				}
 			}
 
-			if (node.Type == "vmess" || node.Type == "vmessws") && node.EnableChatgpt {
+			if node.Type == "vmess" || node.Type == "vmessws" {
 				for index, value := range yamlTemplate.ProxyGroups {
 					if value.Name == "chatGPT" || value.Name == "gpt-auto" {
 						yamlTemplate.ProxyGroups[index].Proxies = append(yamlTemplate.ProxyGroups[index].Proxies, node.Remark)

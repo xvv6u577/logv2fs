@@ -2,19 +2,18 @@ package cron
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"os"
 	"time"
 
-	"github.com/caster8013/logv2rayfullstack/database"
-	"github.com/caster8013/logv2rayfullstack/model"
-	"github.com/caster8013/logv2rayfullstack/v2ray"
 	"github.com/robfig/cron"
+	box "github.com/sagernet/sing-box"
+	"github.com/xvv6u577/logv2fs/database"
+	"github.com/xvv6u577/logv2fs/model"
+	thirdparty "github.com/xvv6u577/logv2fs/pkg"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo/options"
-	"google.golang.org/grpc"
 )
 
 type (
@@ -100,21 +99,21 @@ func CronLoggingByUser(traffic Traffic) {
 		primitive.E{Key: "updated_at", Value: current},
 	}}}
 
-	if traffic.Total+user.Usedtraffic > user.Credittraffic {
+	// if traffic.Total+user.Usedtraffic > user.Credittraffic {
 
-		cmdConn, err := grpc.Dial(fmt.Sprintf("%s:%s", V2_API_ADDRESS, V2_API_PORT), grpc.WithInsecure())
-		if err != nil {
-			log.Printf("%v", "v2ray service connection failed.")
-		}
+	// 	cmdConn, err := grpc.Dial(fmt.Sprintf("%s:%s", V2_API_ADDRESS, V2_API_PORT), grpc.WithInsecure())
+	// 	if err != nil {
+	// 		log.Printf("%v", "v2ray service connection failed.")
+	// 	}
 
-		NHSClient := v2ray.NewHandlerServiceClient(cmdConn, user.Path)
-		err = NHSClient.DelUser(traffic.Name)
-		if err != nil {
-			log.Printf("%v", "v2ray service delete user failed.")
-		}
+	// 	NHSClient := v2ray.NewHandlerServiceClient(cmdConn, user.Path)
+	// 	err = NHSClient.DelUser(traffic.Name)
+	// 	if err != nil {
+	// 		log.Printf("%v", "v2ray service delete user failed.")
+	// 	}
 
-		update[0].Value.(primitive.D)[4] = primitive.E{Key: "status", Value: "overdue"}
-	}
+	// 	update[0].Value.(primitive.D)[4] = primitive.E{Key: "status", Value: "overdue"}
+	// }
 
 	result := userCollection.FindOneAndUpdate(ctx, filter, update, &opt)
 	if result.Err() != nil {
@@ -183,38 +182,31 @@ func CronLoggingByNode(traffics []Traffic) {
 
 }
 
-func Log_basicAction() error {
+func Log_basicAction(instance *box.Box) error {
 
-	cmdConn, err := grpc.Dial(fmt.Sprintf("%s:%s", V2_API_ADDRESS, V2_API_PORT), grpc.WithInsecure())
+	usageData, err := thirdparty.GetUsageDataOfAllUsers(instance)
 	if err != nil {
-		log.Printf("%v", "v2ray service connection failed.")
-		return err
-	}
-
-	NSSClient := v2ray.NewStatsServiceClient(cmdConn)
-	allUserTraffic, err := NSSClient.GetAllUserTraffic(true)
-	if err != nil {
-		log.Printf("%v", "v2ray service get all user traffic failed.")
+		log.Printf("error getting usage data: %v\n", err)
 		return err
 	}
 
 	// log allUserTraffic by user
-	if len(allUserTraffic) != 0 {
-		for _, perUser := range allUserTraffic {
+	if len(usageData) != 0 {
+		for _, perUser := range usageData {
 			CronLoggingByUser(perUser)
 		}
 	}
 
-	// log allUserTraffic by node
-	CronLoggingByNode(allUserTraffic)
+	// log usageData by node
+	CronLoggingByNode(usageData)
 
 	return nil
 }
 
-func Cron_loggingJobs(c *cron.Cron) {
+func Cron_loggingJobs(c *cron.Cron, instance *box.Box) {
 
 	c.AddFunc(CRON_INTERVAL_BY_HOUR, func() {
-		Log_basicAction()
+		Log_basicAction(instance)
 		log.Printf("Written by hour: %v", time.Now().Local().Format("2006010215"))
 	})
 

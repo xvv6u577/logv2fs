@@ -1,6 +1,5 @@
 /*
 Copyright © 2023 NAME HERE <EMAIL ADDRESS>
-
 */
 package cmd
 
@@ -8,9 +7,9 @@ import (
 	"log"
 	"net"
 
-	"github.com/caster8013/logv2rayfullstack/grpctools"
-	pb "github.com/caster8013/logv2rayfullstack/proto"
 	"github.com/spf13/cobra"
+	"github.com/xvv6u577/logv2fs/grpctools"
+	pb "github.com/xvv6u577/logv2fs/proto"
 	"google.golang.org/grpc"
 )
 

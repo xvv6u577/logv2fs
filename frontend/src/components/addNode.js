@@ -8,21 +8,20 @@ import axios from "axios";
 const AddNode = () => {
 
     const [nodes, setnodes] = useState([]);
-    const[enable_chatgpt, setChatgptChecked] = useState(false);
-    const[enable_subscription, setSubscriptionChecked] = useState(false);
+    const [enable_subscription, setSubscriptionChecked] = useState(false);
     const initialState = {
-        type: "vmess",
+        type: "reality",
         remark: "",
         domain: "",
         ip: "",
         uuid: "",
         path: "",
-        sni: ""
-	};
-
-    const [{ type, remark, domain, uuid, path, sni, ip }, setState] = useState(initialState);
+        sni: "",
+        server_port: "",
+    };
+    const [{ type, remark, domain, uuid, path, sni, ip, server_port }, setState] = useState(initialState);
     const clearState = () => {
-        setState({ ...initialState }); 
+        setState({ ...initialState });
     };
 
     const dispatch = useDispatch();
@@ -68,12 +67,26 @@ const AddNode = () => {
     };
 
     useEffect(() => {
-		if (message.show === true) {
-			setTimeout(() => {
-				dispatch(alert({ show: false }));
-			}, 5000);
-		}
-	}, [message, dispatch]);
+        if (message.show === true) {
+            setTimeout(() => {
+                dispatch(alert({ show: false }));
+            }, 5000);
+        }
+    }, [message, dispatch]);
+
+    const returnType = (type) => {
+        if (type === "reality") {
+            return "Reality";
+        } else if (type === "hysteria2") {
+            return "Hysteria2";
+        } else if (type === "vmessws") {
+            return "VmessWS";
+        } else if (type === "vmesstls") {
+            return "VmessTLS";
+        } else if (type === "vlessCDN") {
+            return "VLessCDN";
+        }
+    }
 
     return (
         <>
@@ -92,7 +105,7 @@ const AddNode = () => {
                                     <th className="px-4 py-3 title-font tracking-wider font-medium text-white text-sm bg-gray-800">名称</th>
                                     <th className="px-4 py-3 title-font tracking-wider font-medium text-white text-sm bg-gray-800">域名</th>
                                     <th className="px-4 py-3 title-font tracking-wider font-medium text-white text-sm bg-gray-800">IP</th>
-                                    <th className="px-4 py-3 title-font tracking-wider font-medium text-white text-sm bg-gray-800">Enable ChatGPT</th>
+                                    <th className="px-4 py-3 title-font tracking-wider font-medium text-white text-sm bg-gray-800">Port</th>
                                     <th className="px-4 py-3 title-font tracking-wider font-medium text-white text-sm bg-gray-800">Enable Subscription</th>
                                     <th className="px-4 py-3 title-font tracking-wider font-medium text-white text-sm bg-gray-800">UUID</th>
                                     <th className="px-4 py-3 title-font tracking-wider font-medium text-white text-sm bg-gray-800">PATH</th>
@@ -101,43 +114,45 @@ const AddNode = () => {
                                 </tr>
                             </thead>
                             <tbody>
-                                {nodes.map((node, index) => (
-                                    <tr key={index + 1000} className="border-b">
-                                        <td className="px-4 py-3">{node.type}</td>
-                                        <td className="px-4 py-3">{node.remark}</td>
-                                        <td className="px-4 py-3">{node.domain}</td>
-                                        <td className="px-4 py-3">{node.ip}</td>
-                                        <td className="px-4 py-3">{node.enable_chatgpt ? "Yes" : "No"}</td>
-                                        <td className="px-4 py-3">{node.enable_subscription ? "Yes" : "No"}</td>
-                                        <td className="px-4 py-3">{node.uuid ? node.uuid : "None"}</td>
-                                        <td className="px-4 py-3">{node.path ? node.path : "None"}</td>
-                                        <td className="px-4 py-3">{node.sni ? node.sni : "None"}</td>
-                                        <td className="w-10 text-center">
-                                            <span 
-                                                onClick={() => {
-                                                    // delete node from nodes
-                                                    setnodes(nodes.filter((node, i) => i !== index));
-                                                }}
-                                                className="cursor-pointer inline-flex items-center justify-center px-2 py-0.5 ml-3 text-xs font-medium text-gray-500 bg-gray-200 rounded dark:bg-gray-700 dark:text-gray-400" >
-                                                Delete
-                                            </span>
-                                        </td>
-                                    </tr>
-                                ))}
+                                {nodes.reduce((acc, node) => { if (node.type === "vmessws" || node.type === "vmesstls") { return [node, ...acc]; } return [...acc, node]; }, [])
+                                    .map((node, index) => (
+                                        <tr key={index + 1000} className={`border-b ${node.type === "vmessws" || node.type === "vmesstls" ? 'dark:bg-gray-600' : ''} hover:bg-gray-100 dark:hover:bg-gray-700`}>
+                                            <td className="px-4 py-3">{returnType(node.type)}</td>
+                                            <td className="w-2/12 px-4 py-3">{node.remark}</td>
+                                            <td className="w-2/12 px-4 py-3">{node.domain}</td>
+                                            <td className="px-4 py-3">{node.ip ? node.ip : "None"}</td>
+                                            <td className="px-4 py-3">{node.server_port ? node.server_port : "None"}</td>
+                                            <td className="px-4 py-3">{node.enable_subscription ? "Yes" : "No"}</td>
+                                            <td className="px-4 py-3">{node.uuid ? node.uuid : "None"}</td>
+                                            <td className="px-4 py-3">{node.path ? node.path : "None"}</td>
+                                            <td className="px-4 py-3">{node.sni ? node.sni : "None"}</td>
+                                            <td className="w-10 text-center">
+                                                <span
+                                                    onClick={() => {
+                                                        // delete node from nodes
+                                                        setnodes(nodes.filter((node, i) => i !== index));
+                                                    }}
+                                                    className="cursor-pointer inline-flex items-center justify-center px-2 py-0.5 ml-3 text-xs font-medium text-gray-500 bg-gray-200 rounded dark:bg-gray-700 dark:text-gray-400" >
+                                                    Delete
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    ))}
                             </tbody>
                         </table>
                     </div>
                     <form className="" onSubmit={handleAddNode}>
                         <div className="flex w-full mx-auto">
-                            <select id="countries"
+                            <select id="type"
                                 name="type"
                                 onChange={onChange}
                                 value={type}
                                 className="mr-2 my-4 pl-4 w-1/12 text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
                             >
-                                <option value="vmess">Vmess</option>
+                                <option value="reality">Reality</option>
+                                <option value="hysteria2">Hysteria2</option>
                                 <option value="vmessws">VmessWS</option>
-                                <option value="vmessCDN">VmessCDN</option>
+                                <option value="vmesstls">VmessTLS</option>
                                 <option value="vlessCDN">VLessCDN</option>
                             </select>
                             <input
@@ -145,7 +160,7 @@ const AddNode = () => {
                                 name="remark"
                                 onChange={onChange}
                                 value={remark}
-                                className="mr-4 my-4 w-1/12 text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                                className="mr-4 my-4 w-2/12 text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
                                 placeholder="Remark"
                             />
                             <input
@@ -153,7 +168,7 @@ const AddNode = () => {
                                 name="domain"
                                 onChange={onChange}
                                 value={domain}
-                                className="mr-4 my-4 w-1/12 text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                                className="mr-4 my-4 w-2/12 text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
                                 placeholder="New domain"
                             />
                             <input
@@ -164,18 +179,20 @@ const AddNode = () => {
                                 className="mr-4 my-4 w-1/12 text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
                                 placeholder="New IP"
                             />
-                            <input 
-                                type="checkbox" 
-                                name="enable_chatgpt"
-                                onChange={(e)=>setChatgptChecked(e.target.checked)}
-                               checked={enable_chatgpt}
-                                className="w-4 h-4 m-4 p-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600" />
-                            <input 
-                                type="checkbox" 
+                            <input
+                                type="text"
+                                name="server_port"
+                                onChange={onChange}
+                                value={server_port}
+                                className="mr-4 my-4 w-1/12 text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                                placeholder="New Port"
+                            />
+                            <input
+                                type="checkbox"
                                 name="enable_subscription"
-                                onChange={(e)=>setSubscriptionChecked(e.target.checked)}
+                                onChange={(e) => setSubscriptionChecked(e.target.checked)}
                                 checked={enable_subscription}
-                                id="default-checkbox" 
+                                id="default-checkbox"
                                 className="w-4 h-4 m-4 p-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600" />
                             <input
                                 type="text"
@@ -184,7 +201,7 @@ const AddNode = () => {
                                 value={uuid}
                                 className="m-4 w-2/12 text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
                                 placeholder="UUID"
-                                />
+                            />
                             <input
                                 type="text"
                                 name="path"
@@ -192,7 +209,7 @@ const AddNode = () => {
                                 value={path}
                                 placeholder="Path"
                                 className="m-4 w-1/12 text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-                                />
+                            />
                             <input
                                 type="text"
                                 name="sni"
@@ -203,7 +220,6 @@ const AddNode = () => {
                             />
                             <button type="button"
                                 onClick={() => {
-                                    // append {type, remark, domain, enable_chatgpt, enable_subscription, uuid, path, sni} to nodes
                                     if (domain.length > 0 && remark.length > 0) {
                                         setnodes((prevState) => ([
                                             ...prevState,
@@ -212,7 +228,7 @@ const AddNode = () => {
                                                 remark,
                                                 domain,
                                                 ip,
-                                                enable_chatgpt,
+                                                server_port,
                                                 enable_subscription,
                                                 uuid,
                                                 path,
@@ -221,7 +237,6 @@ const AddNode = () => {
                                         ]));
                                         clearState();
                                         setSubscriptionChecked(false);
-                                        setChatgptChecked(false);
                                     } else {
                                         dispatch(alert({ show: true, content: "Either the domain or remark field should be left empty." }));
                                     }

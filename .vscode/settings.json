@@ -1,8 +1,9 @@
 {
     "yaml.schemas": {
         "https://json.schemastore.org/yamllint.json": [
-            "file:///Users/guestuser/go/src/github/logv2rayfullstack/cloudflare-CDN/template.yaml",
-            "file:///Users/guestuser/go/src/github/logv2rayfullstack/config/template.yaml"
+            "file:///Users/guestuser/go/src/github/logv2fs/cloudflare-CDN/template.yaml",
+            "file:///Users/guestuser/go/src/github/logv2fs/config/template.yaml",
+            "file:///Users/guestuser/Downloads/data.yaml"
         ]
     }
 }

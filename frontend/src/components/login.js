@@ -27,7 +27,7 @@ const Login = () => {
 				if (response.data) {
 					localStorage.setItem("token", JSON.stringify(response.data.token));
 					dispatch(login({ token: response.data.token }));
-					navigate("/mypanel");
+					// navigate("/mypanel");
 				}
 			})
 			.catch((err) => {

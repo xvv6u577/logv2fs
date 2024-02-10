@@ -3,8 +3,8 @@ package routes
 import (
 	"os"
 
-	controller "github.com/caster8013/logv2rayfullstack/controllers"
-	"github.com/caster8013/logv2rayfullstack/middleware"
+	controller "github.com/xvv6u577/logv2fs/controllers"
+	"github.com/xvv6u577/logv2fs/middleware"
 
 	"github.com/gin-gonic/gin"
 )

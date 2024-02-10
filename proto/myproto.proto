@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package myproto;
 
-option go_package = "github.com/caster8013/logv2rayfullstack/proto";
+option go_package = "github.com/xvv6u577/logv2fs/proto";
 
 service manageV2rayUserBygRPC {
   rpc AddUser (GRPCRequest) returns (GRPCReply) {}
