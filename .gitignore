@@ -6,8 +6,14 @@ frontend/build
 frontend/.env
 frontend/tool
 sing-box-full-platform/
+setup-rocket.chat/
+ui/
 
-config/results/*
+# include logs, but exclude everything else in the directory
+logs/*
+!logs/
+cloudflare-CDN/
+
 development/
 CA
 setup-script*

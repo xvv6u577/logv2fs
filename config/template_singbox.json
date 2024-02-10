@@ -1,0 +1,157 @@
+{
+    "dns": {
+      "servers": [
+        {
+          "tag": "remote",
+          "address": "https://1.1.1.1/dns-query",
+          "detour": "select"
+        },
+        {
+          "tag": "local",
+          "address": "https://223.5.5.5/dns-query",
+          "detour": "direct"
+        },
+        {
+          "address": "rcode://success",
+          "tag": "block"
+        }
+      ],
+      "rules": [
+        {
+          "outbound": [
+            "any"
+          ],
+          "server": "local"
+        },
+        {
+          "disable_cache": true,
+          "geosite": "category-ads-all",
+          "server": "block"
+        },
+        {
+          "clash_mode": "global",
+          "server": "remote"
+        },
+        {
+          "clash_mode": "direct",
+          "server": "local"
+        },
+        {
+          "geosite": "cn",
+          "server": "local"
+        }
+      ],
+      "strategy": "prefer_ipv4"
+    },
+    "inbounds": [
+      {
+        "type": "tun",
+        "inet4_address": "172.19.0.1/30",
+        "inet6_address": "2001:0470:f9da:fdfa::1/64",
+        "sniff": true,
+        "sniff_override_destination": true,
+        "domain_strategy": "prefer_ipv4",
+        "stack": "mixed",
+        "strict_route": true,
+        "mtu": 9000,
+        "endpoint_independent_nat": true,
+        "auto_route": true
+      },
+      {
+        "type": "socks",
+        "tag": "socks-in",
+        "listen": "127.0.0.1",
+        "sniff": true,
+        "sniff_override_destination": true,
+        "domain_strategy": "prefer_ipv4",
+        "listen_port": 2333,
+        "users": []
+      },
+      {
+        "type": "mixed",
+        "tag": "mixed-in",
+        "sniff": true,
+        "sniff_override_destination": true,
+        "domain_strategy": "prefer_ipv4",
+        "listen": "127.0.0.1",
+        "listen_port": 2334,
+        "users": []
+      }
+    ],
+    "experimental": {},
+    "log": {
+      "disabled": false,
+      "level": "info",
+      "timestamp": true
+    },
+    "outbounds": [
+      {
+        "tag": "select",
+        "type": "selector",
+        "default": "urltest",
+        "outbounds": [
+          "urltest"
+        ]
+      },
+      {
+        "tag": "urltest",
+        "type": "urltest",
+        "outbounds": [
+        ]
+      },
+      {
+        "tag": "direct",
+        "type": "direct"
+      },
+      {
+        "tag": "block",
+        "type": "block"
+      },
+      {
+        "tag": "dns-out",
+        "type": "dns"
+      }
+    ],
+    "route": {
+      "auto_detect_interface": true,
+      "rules": [
+        {
+          "geosite": "category-ads-all",
+          "outbound": "block"
+        },
+        {
+          "outbound": "dns-out",
+          "protocol": "dns"
+        },
+        {
+          "clash_mode": "direct",
+          "outbound": "direct"
+        },
+        {
+          "clash_mode": "global",
+          "outbound": "select"
+        },
+        {
+          "geoip": [
+            "cn",
+            "private"
+          ],
+          "outbound": "direct"
+        },
+        {
+          "geosite": "geolocation-!cn",
+          "outbound": "select"
+        },
+        {
+          "geosite": "cn",
+          "outbound": "direct"
+        }
+      ],
+      "geoip": {
+        "download_detour": "select"
+      },
+      "geosite": {
+        "download_detour": "select"
+      }
+    }
+  }

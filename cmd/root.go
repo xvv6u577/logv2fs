@@ -1,15 +1,14 @@
 /*
 Copyright © 2023 NAME HERE <EMAIL ADDRESS>
-
 */
 package cmd
 
 import (
 	"os"
 
-	"github.com/caster8013/logv2rayfullstack/database"
-	"github.com/caster8013/logv2rayfullstack/model"
 	"github.com/spf13/cobra"
+	"github.com/xvv6u577/logv2fs/database"
+	"github.com/xvv6u577/logv2fs/model"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
@@ -52,13 +51,4 @@ func Execute() {
 }
 
 func init() {
-	// Here you will define your flags and configuration settings.
-	// Cobra supports persistent flags, which, if defined here,
-	// will be global for your application.
-
-	// rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.cmd.yaml)")
-
-	// Cobra also supports local flags, which will only run
-	// when this action is called directly.
-	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }

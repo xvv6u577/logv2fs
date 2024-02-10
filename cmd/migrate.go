@@ -1,6 +1,5 @@
 /*
 Copyright © 2023 NAME HERE <EMAIL ADDRESS>
-
 */
 package cmd
 
@@ -10,7 +9,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/caster8013/logv2rayfullstack/database"
+	"github.com/xvv6u577/logv2fs/database"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -32,7 +31,7 @@ var migrateCmd = &cobra.Command{
 		var projections = bson.D{
 			{Key: "email", Value: 1},
 		}
-		users, err := database.GetAllUsersPartialInfo(projections)
+		users, err := database.GetAllUsersPortionInfo(projections)
 		if err != nil {
 			panic(err)
 		}
