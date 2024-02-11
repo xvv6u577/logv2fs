@@ -23,7 +23,6 @@ import (
 
 	helper "github.com/xvv6u577/logv2fs/helpers"
 
-	yamlTools "github.com/xvv6u577/logv2fs/config"
 	"github.com/xvv6u577/logv2fs/grpctools"
 	"github.com/xvv6u577/logv2fs/model"
 
@@ -631,13 +630,6 @@ func DeleteUserByUserName() gin.HandlerFunc {
 			return
 		}
 
-		err = yamlTools.RemoveOne(user.Name)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			log.Printf("Remove yaml file by user name: %s", err.Error())
-			return
-		}
-
 		log.Printf("Delete user %s successfully!", user.Name)
 		c.JSON(http.StatusOK, gin.H{"message": "Delete user " + user.Name + " successfully!"})
 	}
@@ -1013,7 +1005,6 @@ func ReturnSingboxJson() gin.HandlerFunc {
 			return
 		}
 
-		// read json file from sing-box-full-platform/sing-box.json, and return it.
 		if user.Status == "plain" {
 
 			jsonFile, err = os.ReadFile(helper.CurrentPath() + "/config/template_singbox.json")

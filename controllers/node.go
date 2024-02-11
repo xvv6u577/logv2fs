@@ -55,11 +55,11 @@ func AddNode() gin.HandlerFunc {
 					dataCollectableNodes = append(dataCollectableNodes, domain)
 				}
 			}
-			if domain.Type == "hysteria2" && IsDomainInDomainList(domain.Domain, dataCollectableNodes) {
+			if domain.Type == "hysteria2" && !IsDomainInDomainList(domain.Domain, dataCollectableNodes) {
 				dataCollectableNodes = append(dataCollectableNodes, domain)
 			}
 
-			if (domain.Type == "vmesstls" || domain.Type == "vmessws") && IsDomainInDomainList(domain.Domain, dataCollectableNodes) {
+			if (domain.Type == "vmesstls" || domain.Type == "vmessws") && !IsDomainInDomainList(domain.Domain, dataCollectableNodes) {
 				dataCollectableNodes = append(dataCollectableNodes, domain)
 			}
 		}
