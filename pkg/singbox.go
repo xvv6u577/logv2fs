@@ -166,23 +166,24 @@ func InitOptionsFromConfig(config string) (option.Options, error) {
 	return options, nil
 }
 
-func InstanceFromOptions(options option.Options) (*box.Box, context.CancelFunc, option.Options, error) {
+func InstanceFromOptions(options option.Options) (*box.Box, option.Options, error) {
 
 	var instance *box.Box
 	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	instance, err := box.New(box.Options{
 		Context: ctx,
 		Options: options,
 	})
 	if err != nil {
-		return nil, cancel, options, err
+		return nil, options, err
 	}
 
 	err = instance.Start()
 	if err != nil {
-		return nil, cancel, options, err
+		return nil, options, err
 	}
 
-	return instance, cancel, options, nil
+	return instance, options, nil
 }

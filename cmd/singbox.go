@@ -4,12 +4,10 @@ Copyright © 2024 NAME HERE <EMAIL ADDRESS>
 package cmd
 
 import (
-	"context"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
-	"os/signal"
-	"syscall"
 
 	"github.com/gin-gonic/gin"
 	"github.com/robfig/cron"
@@ -34,7 +32,6 @@ var singboxCmd = &cobra.Command{
 	Long:  `long - singbox start here`,
 	Run: func(cmd *cobra.Command, args []string) {
 
-		// check if logs directory exists, if not create it
 		if _, err := os.Stat("./logs"); os.IsNotExist(err) {
 			os.Mkdir("./logs", 0755)
 		}
@@ -44,11 +41,8 @@ var singboxCmd = &cobra.Command{
 		}
 		log.SetOutput(logFile)
 
-		osSignals := make(chan os.Signal, 1)
-		signal.Notify(osSignals, os.Interrupt, syscall.SIGTERM, syscall.SIGHUP, syscall.SIGINT)
-
-		var cancel context.CancelFunc
 		group := parallelizer.NewGroup()
+		defer group.Close()
 
 		// init sing-box service, data usage logging service
 		group.Add(func() {
@@ -66,7 +60,7 @@ var singboxCmd = &cobra.Command{
 				log.Printf("error updating options from db: %v\n", err)
 			}
 
-			instance, cancel, _, err = thirdparty.InstanceFromOptions(options)
+			instance, _, err = thirdparty.InstanceFromOptions(options)
 			if err != nil {
 				log.Fatalf("error initializing box instance: %v\n", err)
 			}
@@ -90,32 +84,18 @@ var singboxCmd = &cobra.Command{
 			routers.PublicRoutes(router)
 			routers.AuthorizedRoutes(router)
 
-			log.Printf("API Server runs at %s:%s", SERVER_ADDRESS, SERVER_PORT)
-			err := router.Run(fmt.Sprintf("%s:%s", SERVER_ADDRESS, SERVER_PORT))
-			if err != nil {
+			srv := &http.Server{
+				Addr:    fmt.Sprintf("%s:%s", SERVER_ADDRESS, SERVER_PORT),
+				Handler: router,
+			}
+
+			if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 				log.Panic("Start API Server Error: ", err)
 			}
 
 		})
 
 		group.Wait()
-
-		for {
-			log.Printf("Waiting for OS signal...")
-
-			osSignal := <-osSignals
-			switch osSignal {
-			case syscall.SIGHUP:
-				log.Printf("Received SIGHUP, ignoring...")
-				continue
-			case os.Interrupt, syscall.SIGTERM, syscall.SIGINT:
-				log.Printf("Received OS interrupt signal, shutting down...")
-				group.Close()
-				signal.Stop(osSignals)
-				cancel()
-				os.Exit(1)
-			}
-		}
 	},
 }
 
