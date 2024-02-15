@@ -151,39 +151,19 @@ func GetUsageDataOfAllUsers(instance *box.Box) ([]Traffic, error) {
 
 func InitOptionsFromConfig(config string) (option.Options, error) {
 
+	var options = option.Options{}
+
 	configContent, err := os.ReadFile(config)
 	if err != nil {
 		log.Printf("error reading config file: %v\n", err)
-		return option.Options{}, err
+		return options, err
 	}
 
-	options, err := json.UnmarshalExtended[option.Options]([]byte(configContent))
+	options, err = json.UnmarshalExtended[option.Options]([]byte(configContent))
 	if err != nil {
 		log.Printf("error unmarshalling config file: %v\n", err)
 		return options, err
 	}
 
 	return options, nil
-}
-
-func InstanceFromOptions(options option.Options) (*box.Box, option.Options, error) {
-
-	var instance *box.Box
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	instance, err := box.New(box.Options{
-		Context: ctx,
-		Options: options,
-	})
-	if err != nil {
-		return nil, options, err
-	}
-
-	err = instance.Start()
-	if err != nil {
-		return nil, options, err
-	}
-
-	return instance, options, nil
 }
