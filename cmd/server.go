@@ -6,23 +6,18 @@ package cmd
 import (
 	"fmt"
 	"log"
-	"net/http"
 	"os"
 	"os/exec"
-	"runtime/debug"
 	"sync"
 	"time"
 
-	"github.com/gin-gonic/gin"
 	"github.com/robfig/cron"
 	"github.com/shomali11/parallelizer"
 	"github.com/spf13/cobra"
 	localCron "github.com/xvv6u577/logv2fs/cron"
 	"github.com/xvv6u577/logv2fs/database"
 	"github.com/xvv6u577/logv2fs/grpctools"
-	"github.com/xvv6u577/logv2fs/middleware"
 	"github.com/xvv6u577/logv2fs/model"
-	routers "github.com/xvv6u577/logv2fs/routers"
 	"github.com/xvv6u577/logv2fs/v2ray"
 	"go.mongodb.org/mongo-driver/bson"
 	"google.golang.org/grpc"
@@ -68,7 +63,7 @@ var serverCmd = &cobra.Command{
 		defer group.Close()
 
 		group.Add(func() {
-			log.Printf("V2ray process runs at 8070, 10000, 10001, 10002")
+			log.Printf("V2ray process runs at 8070, 1081")
 			var cmd = exec.Command(V2RAY, "-config", V2RAY_CONFIG)
 			if err := cmd.Run(); err != nil {
 				log.Panic("Panic: ", err)
@@ -76,11 +71,43 @@ var serverCmd = &cobra.Command{
 		})
 
 		group.Add(func() {
-			log.Printf("Server runs at %s:%s", SERVER_ADDRESS, SERVER_PORT)
-			err := RunServer().Run(fmt.Sprintf("%s:%s", SERVER_ADDRESS, SERVER_PORT))
-			if err != nil {
-				log.Panic("Panic: ", err)
+			time.Sleep(time.Second)
+
+			var projections = bson.D{
+				{Key: "email", Value: 1},
+				{Key: "name", Value: 1},
+				{Key: "path", Value: 1},
+				{Key: "status", Value: 1},
+				{Key: "uuid", Value: 1},
+				{Key: "role", Value: 1},
+				{Key: "used", Value: 1},
+				{Key: "credit", Value: 1},
 			}
+
+			allUsersInDB, _ := database.GetAllUsersPartialInfo(projections)
+			if len(allUsersInDB) != 0 {
+
+				cmdConn, err := grpc.Dial(fmt.Sprintf("%s:%s", V2_API_ADDRESS, V2_API_PORT), grpc.WithInsecure())
+				if err != nil {
+					log.Panic(err)
+				}
+				defer cmdConn.Close()
+
+				var wg sync.WaitGroup
+				for _, user := range allUsersInDB {
+					if user.Status == "plain" {
+						wg.Add(1)
+						go func(user User) {
+							defer wg.Done()
+							NHSClient := v2ray.NewHandlerServiceClient(cmdConn, user.Path)
+							NHSClient.AddUser(user)
+						}(*user)
+					}
+				}
+				wg.Wait()
+			}
+
+			localCron.Cron_loggingJobs(cronInstance)
 		})
 
 		group.Add(func() {
@@ -97,78 +124,4 @@ func init() {
 	rootCmd.AddCommand(serverCmd)
 	cronInstance = cron.New()
 	cronInstance.Start()
-}
-
-func RunServer() *gin.Engine {
-
-	time.Sleep(time.Second)
-
-	var projections = bson.D{
-		{Key: "email", Value: 1},
-		{Key: "name", Value: 1},
-		{Key: "path", Value: 1},
-		{Key: "status", Value: 1},
-		{Key: "uuid", Value: 1},
-		{Key: "node_in_use_status", Value: 1},
-		{Key: "role", Value: 1},
-		{Key: "used", Value: 1},
-		{Key: "credit", Value: 1},
-	}
-
-	allUsersInDB, _ := database.GetAllUsersPartialInfo(projections)
-	if len(allUsersInDB) != 0 {
-
-		cmdConn, err := grpc.Dial(fmt.Sprintf("%s:%s", V2_API_ADDRESS, V2_API_PORT), grpc.WithInsecure())
-		if err != nil {
-			log.Panic(err)
-		}
-		defer cmdConn.Close()
-
-		var wg sync.WaitGroup
-		for _, user := range allUsersInDB {
-			if user.Status == "plain" && user.NodeInUseStatus[CURRENT_DOMAIN] {
-				wg.Add(1)
-				go func(user User) {
-					defer wg.Done()
-					NHSClient := v2ray.NewHandlerServiceClient(cmdConn, user.Path)
-					NHSClient.AddUser(user)
-				}(*user)
-			}
-		}
-		wg.Wait()
-	}
-	// add cron
-	localCron.Cron_loggingJobs(cronInstance)
-
-	if GIN_MODE == "release" {
-		gin.SetMode(gin.ReleaseMode)
-
-	}
-	router := gin.New()
-
-	router.Use(middleware.CORS())
-	router.Use(gin.Logger())
-	router.Use(recoverFromError)
-
-	routers.PublicRoutes(router)
-	routers.AuthorizedRoutes(router)
-
-	router.NoRoute(func(c *gin.Context) {
-		c.JSON(http.StatusNotFound, gin.H{"error": "status: 404! no route found."})
-	})
-
-	return router
-}
-
-func recoverFromError(c *gin.Context) {
-	defer func() {
-		if r := recover(); r != nil {
-			log.Panicf("Panic: %v\n", r)
-			debug.PrintStack()
-
-			c.JSON(200, gin.H{"code": 4444, "message": "Server internal error!"})
-		}
-	}()
-
-	c.Next()
 }
