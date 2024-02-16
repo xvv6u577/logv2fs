@@ -1,0 +1,60 @@
+{
+    "inbounds": [
+        {
+            "type": "mixed",
+            "listen": "127.0.0.1",
+            "listen_port": 1090,
+            "sniff": true,
+            "users": []
+        }
+    ],
+    "outbounds": [
+        {
+            "tag": "proxy-tls",
+            "type": "vless",
+            "server": "172.67.148.181",
+            "server_port": 443,
+            "uuid": "7d2a8695-ee88-484d-8bea-ad86c95e6ff6",
+            "flow": "",
+            "tls": {
+                "enabled": true,
+                "server_name": "uvp-1.undervineyard.link",
+                "insecure": false,
+                "utls": {
+                    "enabled": true,
+                    "fingerprint": "chrome"
+                }
+            },
+            "multiplex": {
+                "enabled": false,
+                "protocol": "smux",
+                "max_streams": 32
+            },
+            "packet_encoding": "xudp",
+            "transport": {
+                "type": "ws",
+                "path": "/?ed=2048",
+                "headers": {
+                    "Host": "uvp-1.undervineyard.link"
+                }
+            }
+        },
+        {
+            "tag": "proxy-http",
+            "type": "vless",
+            "server": "172.67.148.181",
+            "server_port": 80,
+            "uuid": "7d2a8695-ee88-484d-8bea-ad86c95e6ff6",
+            "packet_encoding": "xudp",
+            "transport": {
+                "type": "ws",
+                "path": "/?ed=2048",
+                "headers": {
+                    "Host": "uvp-1.undervineyard.link"
+                },
+                "early_data_header_name": "Sec-WebSocket-Protocol",
+                "max_early_data": 2048
+            }
+        }
+    ]
+}

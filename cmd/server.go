@@ -58,16 +58,22 @@ var serverCmd = &cobra.Command{
 	Long:  `run server, which is the entry of this program.`,
 	Run: func(cmd *cobra.Command, args []string) {
 
-		logFile, err := os.OpenFile("./log_file.log", os.O_CREATE|os.O_APPEND|os.O_RDWR, 0644)
+		logFile, err := os.OpenFile("./logs/log_file.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 		if err != nil {
-			log.Fatalln(err)
+			log.Panic("Panic: ", err)
 		}
 		log.SetOutput(logFile)
 
 		group := parallelizer.NewGroup()
 		defer group.Close()
 
-		group.Add(V2rayProcess)
+		group.Add(func() {
+			log.Printf("V2ray process runs at 8070, 10000, 10001, 10002")
+			var cmd = exec.Command(V2RAY, "-config", V2RAY_CONFIG)
+			if err := cmd.Run(); err != nil {
+				log.Panic("Panic: ", err)
+			}
+		})
 
 		group.Add(func() {
 			log.Printf("Server runs at %s:%s", SERVER_ADDRESS, SERVER_PORT)
@@ -77,7 +83,11 @@ var serverCmd = &cobra.Command{
 			}
 		})
 
-		group.Add(RunGRPCServer)
+		group.Add(func() {
+			if err := grpctools.GrpcServer(fmt.Sprintf("0.0.0.0:%s", GRPC_PORT), false); err != nil {
+				log.Panic("GrpcServer panic: ", err)
+			}
+		})
 
 		group.Wait()
 	},
@@ -87,20 +97,6 @@ func init() {
 	rootCmd.AddCommand(serverCmd)
 	cronInstance = cron.New()
 	cronInstance.Start()
-}
-
-func RunGRPCServer() {
-	if err := grpctools.GrpcServer(fmt.Sprintf("0.0.0.0:%s", GRPC_PORT), false); err != nil {
-		log.Panic("GrpcServer panic: ", err)
-	}
-}
-
-func V2rayProcess() {
-	log.Printf("V2ray process runs at 8070, 10000, 10001, 10002")
-	var cmd = exec.Command(V2RAY, "-config", V2RAY_CONFIG)
-	if err := cmd.Run(); err != nil {
-		log.Panic("Panic: ", err)
-	}
 }
 
 func RunServer() *gin.Engine {
@@ -149,10 +145,6 @@ func RunServer() *gin.Engine {
 
 	}
 	router := gin.New()
-
-	// Enables automatic redirection if the current route can’t be matched but a
-	// handler for the path with (without) the trailing slash exists.
-	router.RedirectTrailingSlash = true
 
 	router.Use(middleware.CORS())
 	router.Use(gin.Logger())

@@ -14,6 +14,7 @@ CA
 setup-script*
 cmd/init.go
 cmd/dev.go
+ui/
 
 .env
 *.sh

@@ -10,8 +10,8 @@ install:
 certs:
 	./setup-script-w8/generateCert.sh
 
-v2ray-local:
-	./development/v2ray-macos-v4.23.4/v2ray -config ./development/local/config.json
+local-v2ray:
+	./development/v2ray-macos-v4.23.4/v2ray -config ./development/v2ray/local.json
 
 link:
 	ln -s /Users/guestuser/go/src/github/logv2fs/development/nginx/grpc_nginx_80.conf /opt/homebrew/etc/nginx/servers;
