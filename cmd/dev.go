@@ -20,7 +20,6 @@ var devCmd = &cobra.Command{
 	Long:  `dev command`,
 	Run: func(cmd *cobra.Command, args []string) {
 
-		// query GlobalVariable, print out
 		var globalVariable GlobalVariable
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 		defer cancel()
@@ -30,8 +29,8 @@ var devCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		// init a reality/hysteria2 type nodes, append to globalVariable.ActiveGlobalNodes;
-		// init vmesstls/vmessws type nodes, append to globalVariable.ClashLegacyNodes;
+		// empty globalVariable.ActiveGlobalNodes
+		globalVariable.ActiveGlobalNodes = nil
 
 		globalVariable.ActiveGlobalNodes = append(globalVariable.ActiveGlobalNodes, Domain{
 			Type:        "reality",
@@ -46,10 +45,6 @@ var devCmd = &cobra.Command{
 			PUBLIC_KEY:  "",
 			SHORT_ID:    "",
 		})
-
-		// save globalVariable back to database
-		ctx, cancel = context.WithTimeout(context.Background(), time.Second*10)
-		defer cancel()
 
 		_, err = globalCollection.UpdateOne(ctx, bson.M{"name": "GLOBAL"}, bson.M{"$set": globalVariable})
 		if err != nil {

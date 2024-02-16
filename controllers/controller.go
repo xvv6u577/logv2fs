@@ -1399,6 +1399,7 @@ func ReturnClashYAML() gin.HandlerFunc {
 			{Key: "status", Value: 1},
 			{Key: "user_id", Value: 1},
 			{Key: "uuid", Value: 1},
+			{Key: "path", Value: 1},
 		}
 		user, err := database.GetUserByName(name, projections)
 		if err != nil {
@@ -1461,12 +1462,12 @@ func ReturnClashYAML() gin.HandlerFunc {
 						UDP:            false,
 						TLS:            false,
 						WsOpts: struct {
-							Path    string "yaml:\"path\""
+							Path    string `yaml:"path"`
 							Headers struct {
 								Host string "yaml:\"Host\""
 							} "yaml:\"headers\""
 						}{
-							Path: node.PATH,
+							Path: "/" + user.Path,
 							Headers: struct {
 								Host string "yaml:\"Host\""
 							}{
@@ -1503,7 +1504,7 @@ func ReturnClashYAML() gin.HandlerFunc {
 								Host string "yaml:\"Host\""
 							} "yaml:\"headers\""
 						}{
-							Path: node.PATH,
+							Path: "/" + user.Path,
 							Headers: struct {
 								Host string "yaml:\"Host\""
 							}{

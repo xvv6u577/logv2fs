@@ -130,7 +130,7 @@ const AddNode = () => {
                                                 <span
                                                     onClick={() => {
                                                         // delete node from nodes
-                                                        setnodes(nodes.filter((node, i) => i !== index));
+                                                        setnodes((prevState) => (prevState.filter((n) => n.remark !== node.remark)));
                                                     }}
                                                     className="cursor-pointer inline-flex items-center justify-center px-2 py-0.5 ml-3 text-xs font-medium text-gray-500 bg-gray-200 rounded dark:bg-gray-700 dark:text-gray-400" >
                                                     Delete
