@@ -53,6 +53,9 @@ var serverCmd = &cobra.Command{
 	Long:  `run server, which is the entry of this program.`,
 	Run: func(cmd *cobra.Command, args []string) {
 
+		if _, err := os.Stat("./logs"); os.IsNotExist(err) {
+			os.Mkdir("./logs", 0755)
+		}
 		logFile, err := os.OpenFile("./logs/log_file.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 		if err != nil {
 			log.Panic("Panic: ", err)
