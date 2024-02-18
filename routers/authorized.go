@@ -23,18 +23,12 @@ func AuthorizedRoutes(incomingRoutes *gin.Engine) {
 	incomingRoutes.POST("/v1/edit/:name", controller.EditUser())
 
 	incomingRoutes.GET("/v1/n778cf", controller.GetAllUsers())
-
 	incomingRoutes.GET("/v1/user/:name", controller.GetUserByName())
-
-	incomingRoutes.GET("/v1/offlineuser/:name", controller.TakeItOfflineByUserName())
-	incomingRoutes.GET("/v1/onlineuser/:name", controller.TakeItOnlineByUserName())
 	incomingRoutes.GET("/v1/deluser/:name", controller.DeleteUserByUserName())
 
 	incomingRoutes.GET("/v1/cl6217", controller.WriteToDB())
 
 	incomingRoutes.PUT("/v1/759b0v", controller.AddNode())
-	incomingRoutes.GET("/v1/0l54vs", controller.DisableNodePerUser())
-	incomingRoutes.GET("/v1/9mu6g1", controller.EnableNodePerUser())
 
 	incomingRoutes.GET("/v1/681p32", controller.GetDomainInfo())
 	incomingRoutes.PUT("/v1/g7302b", controller.UpdateDomainInfo())

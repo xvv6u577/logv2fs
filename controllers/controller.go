@@ -8,7 +8,6 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"sync"
 
 	"net/http"
 	"time"
@@ -19,11 +18,9 @@ import (
 	"gopkg.in/yaml.v2"
 
 	"github.com/xvv6u577/logv2fs/database"
-	"github.com/xvv6u577/logv2fs/v2ray"
 
 	helper "github.com/xvv6u577/logv2fs/helpers"
 
-	"github.com/xvv6u577/logv2fs/grpctools"
 	"github.com/xvv6u577/logv2fs/model"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -170,15 +167,6 @@ func SignUp() gin.HandlerFunc {
 			return
 		}
 
-		// get ActiveGlobalNodes from globalCollection, seperate out vmess nodes and put them into vmessNodes
-		var globalVariable GlobalVariable
-		err = globalCollection.FindOne(ctx, bson.M{"name": "GLOBAL"}).Decode(&globalVariable)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "error occured while getting globalVariable"})
-			log.Printf("Getting globalVariable error: %s", err.Error())
-			return
-		}
-
 		if user.Name == "" {
 			user.Name = user_email
 		}
@@ -187,17 +175,16 @@ func SignUp() gin.HandlerFunc {
 			user.Path = "ray"
 		}
 
-		password := HashPassword(user.Password)
+		password := HashPassword(user_email)
 		user.Password = password
 
 		user.CreatedAt = current
 		user.UpdatedAt = current
 
-		if user.UUID == "" {
-			uuidV4, _ := uuid.NewV4()
-			user.UUID = uuidV4.String()
-		}
-		user_role := helper.SanitizeStr(user.Role)
+		uuidV4, _ := uuid.NewV4()
+		user.UUID = uuidV4.String()
+
+		user_role := "plain"
 
 		if user.Credittraffic == 0 {
 			credit, _ := strconv.ParseInt(CREDIT, 10, 64)
@@ -236,15 +223,6 @@ func SignUp() gin.HandlerFunc {
 		token, refreshToken, _ := helper.GenerateAllTokens(user_email, user.UUID, user.Path, user_role, user.User_id)
 		user.Token = &token
 		user.Refresh_token = &refreshToken
-		user.UpdateNodeStatusInUse(globalVariable.ActiveGlobalNodes)
-
-		user.ProduceSuburl(globalVariable.ActiveGlobalNodes)
-		err = user.GenerateYAML(globalVariable.ActiveGlobalNodes)
-		if err != nil {
-			log.Printf("error occured while generating yaml: %v", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
-		}
 
 		_, err = userCollection.InsertOne(ctx, user)
 		if err != nil {
@@ -375,199 +353,6 @@ func EditUser() gin.HandlerFunc {
 	}
 }
 
-func TakeItOfflineByUserName() gin.HandlerFunc {
-	return func(c *gin.Context) {
-
-		if err := helper.CheckUserType(c, "admin"); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
-		}
-
-		var ctx, cancel = context.WithTimeout(context.Background(), 60*time.Second)
-		defer cancel()
-
-		var globalVariable GlobalVariable
-		err := globalCollection.FindOne(ctx, bson.M{"name": "GLOBAL"}).Decode(&globalVariable)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "error occured while getting globalVariable"})
-			log.Printf("Getting globalVariable error: %s", err.Error())
-			return
-		}
-
-		name := helper.SanitizeStr(c.Param("name"))
-		var projections = bson.D{
-			{Key: "email", Value: 1},
-			{Key: "path", Value: 1},
-			{Key: "name", Value: 1},
-			{Key: "node_in_use_status", Value: 1},
-			{Key: "uuid", Value: 1},
-			{Key: "role", Value: 1},
-			{Key: "status", Value: 1},
-			{Key: "suburl", Value: 1},
-			{Key: "user_id", Value: 1},
-			{Key: "used", Value: 1},
-			{Key: "credit", Value: 1},
-			{Key: "created_at", Value: 1},
-			{Key: "updated_at", Value: 1},
-		}
-		user, err := database.GetUserByName(name, projections)
-		if err != nil {
-			msg := "database get user failed."
-			c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
-			log.Printf("%s", msg)
-			return
-		}
-
-		if NODE_TYPE == "local" {
-			err = grpctools.GrpcClientToDeleteUser("0.0.0.0", "50051", user, false)
-			if err != nil {
-				msg := "v2ray take user back online failed."
-				log.Panicf("%v", msg)
-				c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
-				return
-			}
-			for node, enable := range user.NodeInUseStatus {
-				if enable {
-					user.NodeInUseStatus[node] = false
-				}
-			}
-		} else {
-			var wg sync.WaitGroup
-			for node, available := range user.NodeInUseStatus {
-				if available {
-					wg.Add(1)
-					go func(domain string) {
-						defer wg.Done()
-						grpctools.GrpcClientToDeleteUser(domain, MIXED_PORT, user, true)
-					}(node)
-					user.NodeInUseStatus[node] = false
-				}
-			}
-			wg.Wait()
-		}
-
-		user.Status = v2ray.DELETE
-		user.UpdateNodeStatusInUse(globalVariable.ActiveGlobalNodes)
-		user.ProduceSuburl(globalVariable.ActiveGlobalNodes)
-		err = user.GenerateYAML(globalVariable.ActiveGlobalNodes)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			log.Printf("TakeItOfflineByUserName generating yaml error: %v", err)
-			return
-		}
-
-		filter := bson.D{primitive.E{Key: "email", Value: name}}
-		update := bson.M{"$set": bson.M{"status": v2ray.DELETE, "node_in_use_status": user.NodeInUseStatus, "suburl": user.Suburl}}
-		_, err = userCollection.UpdateOne(ctx, filter, update)
-		if err != nil {
-			msg := "database user info update failed."
-			c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
-			log.Printf("%s", msg)
-			return
-		}
-
-		log.Printf("user %s is offline", user.Name)
-		c.JSON(http.StatusOK, gin.H{"message": "User " + user.Name + " is offline!"})
-	}
-}
-
-func TakeItOnlineByUserName() gin.HandlerFunc {
-	return func(c *gin.Context) {
-
-		if err := helper.CheckUserType(c, "admin"); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
-		}
-
-		var ctx, cancel = context.WithTimeout(context.Background(), 60*time.Second)
-		defer cancel()
-		name := helper.SanitizeStr(c.Param("name"))
-
-		var globalVariable GlobalVariable
-		err := globalCollection.FindOne(ctx, bson.M{"name": "GLOBAL"}).Decode(&globalVariable)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "error occured while getting globalVariable"})
-			log.Printf("Getting globalVariable error: %s", err.Error())
-			return
-		}
-
-		var projections = bson.D{
-			{Key: "email", Value: 1},
-			{Key: "path", Value: 1},
-			{Key: "name", Value: 1},
-			{Key: "node_in_use_status", Value: 1},
-			{Key: "uuid", Value: 1},
-			{Key: "role", Value: 1},
-			{Key: "status", Value: 1},
-			{Key: "suburl", Value: 1},
-			{Key: "user_id", Value: 1},
-			{Key: "used", Value: 1},
-			{Key: "credit", Value: 1},
-			{Key: "created_at", Value: 1},
-			{Key: "updated_at", Value: 1},
-		}
-
-		user, err := database.GetUserByName(name, projections)
-		if err != nil {
-			msg := "database get user failed."
-			c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
-			log.Printf("%s", msg)
-			return
-		}
-
-		if NODE_TYPE == "local" {
-			err = grpctools.GrpcClientToAddUser("0.0.0.0", "50051", user, false)
-			if err != nil {
-				msg := "v2ray take user back online failed."
-				log.Panicf("%v", msg)
-				c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
-				return
-			}
-			for node, enable := range user.NodeInUseStatus {
-				if !enable {
-					user.NodeInUseStatus[node] = true
-				}
-			}
-		} else {
-			var wg sync.WaitGroup
-			for node, available := range user.NodeInUseStatus {
-				if !available {
-					wg.Add(1)
-					go func(domain string) {
-						defer wg.Done()
-						grpctools.GrpcClientToAddUser(node, MIXED_PORT, user, true)
-					}(node)
-					user.NodeInUseStatus[node] = true
-				}
-			}
-			wg.Wait()
-		}
-
-		user.Status = v2ray.PLAIN
-		user.UpdateNodeStatusInUse(globalVariable.ActiveGlobalNodes)
-		user.ProduceSuburl(globalVariable.ActiveGlobalNodes)
-		err = user.GenerateYAML(globalVariable.ActiveGlobalNodes)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			log.Printf("TakeItOnlineByUserName generating yaml error: %v", err)
-			return
-		}
-
-		filter := bson.D{primitive.E{Key: "email", Value: name}}
-		update := bson.M{"$set": bson.M{"status": v2ray.PLAIN, "node_in_use_status": user.NodeInUseStatus, "suburl": user.Suburl}}
-		_, err = userCollection.UpdateOne(ctx, filter, update)
-		if err != nil {
-			msg := "database user info update failed."
-			c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
-			log.Printf("%s", msg)
-			return
-		}
-
-		log.Printf("user %s is online", user.Name)
-		c.JSON(http.StatusOK, gin.H{"message": "User " + user.Name + " is online!"})
-	}
-}
-
 func DeleteUserByUserName() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
@@ -579,18 +364,7 @@ func DeleteUserByUserName() gin.HandlerFunc {
 		name := c.Param("name")
 		var projections = bson.D{
 			{Key: "email", Value: 1},
-			{Key: "path", Value: 1},
 			{Key: "name", Value: 1},
-			{Key: "node_in_use_status", Value: 1},
-			{Key: "uuid", Value: 1},
-			{Key: "role", Value: 1},
-			{Key: "status", Value: 1},
-			{Key: "suburl", Value: 1},
-			{Key: "user_id", Value: 1},
-			{Key: "used", Value: 1},
-			{Key: "credit", Value: 1},
-			{Key: "created_at", Value: 1},
-			{Key: "updated_at", Value: 1},
 		}
 		user, err := database.GetUserByName(name, projections)
 		if err != nil {
@@ -598,29 +372,6 @@ func DeleteUserByUserName() gin.HandlerFunc {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
 			log.Printf("%s", msg)
 			return
-		}
-
-		if user.Status == "plain" {
-			if NODE_TYPE == "local" {
-				err = grpctools.GrpcClientToDeleteUser("0.0.0.0", "50051", user, false)
-				if err != nil {
-					msg := "v2ray take user offline failed."
-					log.Panicf("%v", msg)
-					c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
-					return
-				}
-				for node, enable := range user.NodeInUseStatus {
-					if enable {
-						user.NodeInUseStatus[node] = false
-					}
-				}
-			} else {
-				for node, available := range user.NodeInUseStatus {
-					if available {
-						grpctools.GrpcClientToDeleteUser(node, MIXED_PORT, user, true)
-					}
-				}
-			}
 		}
 
 		err = database.DeleteUserByName(name)
@@ -738,162 +489,6 @@ func WriteToDB() gin.HandlerFunc {
 
 		log.Println("Write to DB by hand!")
 		c.JSON(http.StatusOK, gin.H{"message": "Write to DB successfully!"})
-	}
-}
-
-func DisableNodePerUser() gin.HandlerFunc {
-	return func(c *gin.Context) {
-
-		if err := helper.CheckUserType(c, "admin"); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
-		}
-
-		var ctx, cancel = context.WithTimeout(context.Background(), 60*time.Second)
-		defer cancel()
-
-		email := helper.SanitizeStr(c.Request.URL.Query().Get("email"))
-		node := helper.SanitizeStr(c.Request.URL.Query().Get("node"))
-
-		var globalVariable GlobalVariable
-		err := globalCollection.FindOne(ctx, bson.M{"name": "GLOBAL"}).Decode(&globalVariable)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "error occured while getting globalVariable"})
-			log.Printf("Getting globalVariable error: %s", err.Error())
-			return
-		}
-
-		var projections = bson.D{
-			{Key: "email", Value: 1},
-			{Key: "path", Value: 1},
-			{Key: "name", Value: 1},
-			{Key: "node_in_use_status", Value: 1},
-			{Key: "uuid", Value: 1},
-			{Key: "role", Value: 1},
-			{Key: "status", Value: 1},
-			{Key: "suburl", Value: 1},
-			{Key: "user_id", Value: 1},
-			{Key: "used", Value: 1},
-			{Key: "credit", Value: 1},
-			{Key: "created_at", Value: 1},
-			{Key: "updated_at", Value: 1},
-		}
-		user, err := database.GetUserByName(email, projections)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			log.Printf("Get user by name failed: %s", err.Error())
-			return
-		}
-
-		if NODE_TYPE == "local" {
-			if CURRENT_DOMAIN == node {
-
-				err = grpctools.GrpcClientToDeleteUser("0.0.0.0", "50051", user, false)
-				if err != nil {
-					c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-					log.Printf("Delete user on node failed: %s", err.Error())
-					return
-				}
-
-			}
-		} else {
-			grpctools.GrpcClientToDeleteUser(node, MIXED_PORT, user, true)
-		}
-
-		user.DeleteNodeInUse(node)
-		user.UpdateNodeStatusInUse(globalVariable.ActiveGlobalNodes)
-		user.ProduceSuburl(globalVariable.ActiveGlobalNodes)
-		user.GenerateYAML(globalVariable.ActiveGlobalNodes)
-
-		filter := bson.D{primitive.E{Key: "email", Value: email}}
-		update := bson.M{"$set": bson.M{"node_in_use_status": user.NodeInUseStatus, "suburl": user.Suburl}}
-		_, err = userCollection.UpdateOne(ctx, filter, update)
-		if err != nil {
-			msg := "database user info update failed."
-			c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
-			log.Printf("%s", msg)
-			return
-		}
-
-		log.Printf("Disable user: %v, node: %v by hand!", helper.SanitizeStr(email), helper.SanitizeStr(node))
-		c.JSON(http.StatusOK, gin.H{"message": "Disable user: " + email + " at node: " + node + " successfully!"})
-	}
-}
-
-func EnableNodePerUser() gin.HandlerFunc {
-	return func(c *gin.Context) {
-
-		if err := helper.CheckUserType(c, "admin"); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
-		}
-
-		var ctx, cancel = context.WithTimeout(context.Background(), 60*time.Second)
-		defer cancel()
-
-		email := helper.SanitizeStr(c.Request.URL.Query().Get("email"))
-		node := helper.SanitizeStr(c.Request.URL.Query().Get("node"))
-
-		var globalVariable GlobalVariable
-		err := globalCollection.FindOne(ctx, bson.M{"name": "GLOBAL"}).Decode(&globalVariable)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "error occured while getting globalVariable"})
-			log.Printf("Getting globalVariable error: %s", err.Error())
-			return
-		}
-
-		var projections = bson.D{
-			{Key: "email", Value: 1},
-			{Key: "path", Value: 1},
-			{Key: "name", Value: 1},
-			{Key: "node_in_use_status", Value: 1},
-			{Key: "uuid", Value: 1},
-			{Key: "role", Value: 1},
-			{Key: "status", Value: 1},
-			{Key: "suburl", Value: 1},
-			{Key: "user_id", Value: 1},
-			{Key: "used", Value: 1},
-			{Key: "credit", Value: 1},
-			{Key: "created_at", Value: 1},
-			{Key: "updated_at", Value: 1},
-		}
-		user, err := database.GetUserByName(email, projections)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			log.Printf("Get user by name failed: %s", err.Error())
-			return
-		}
-
-		if NODE_TYPE == "local" {
-			if CURRENT_DOMAIN == node {
-				err = grpctools.GrpcClientToAddUser("0.0.0.0", "50051", user, false)
-				if err != nil {
-					c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-					log.Printf("Add user on node failed: %s", err.Error())
-					return
-				}
-			}
-		} else {
-			grpctools.GrpcClientToAddUser(node, MIXED_PORT, user, true)
-		}
-
-		user.AddNodeInUse(node)
-		user.UpdateNodeStatusInUse(globalVariable.ActiveGlobalNodes)
-		user.ProduceSuburl(globalVariable.ActiveGlobalNodes)
-		user.GenerateYAML(globalVariable.ActiveGlobalNodes)
-
-		filter := bson.D{primitive.E{Key: "email", Value: email}}
-		update := bson.M{"$set": bson.M{"node_in_use_status": user.NodeInUseStatus, "suburl": user.Suburl}}
-		_, err = userCollection.UpdateOne(ctx, filter, update)
-		if err != nil {
-			msg := "database user info update failed."
-			c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
-			log.Printf("%s", msg)
-			return
-		}
-
-		log.Printf("Enable user: %v, node: %v by hand!", helper.SanitizeStr(email), helper.SanitizeStr(node))
-		c.JSON(http.StatusOK, gin.H{"message": "Enable user: " + email + " at node: " + node + " successfully!"})
 	}
 }
 
