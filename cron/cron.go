@@ -38,8 +38,10 @@ var (
 	nodesCollection        = database.OpenCollection(database.Client, "NODES")
 )
 
+// traffic: {Name: "tom", Total: 100}
 func CronLoggingByUser(traffic Traffic) {
-	var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
+
+	var ctx, cancel = context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	var current = time.Now().Local()
@@ -56,14 +58,14 @@ func CronLoggingByUser(traffic Traffic) {
 		{Key: "used_by_current_day", Value: 1},
 		{Key: "used_by_current_month", Value: 1},
 		{Key: "used_by_current_year", Value: 1},
-		// {Key: "traffic_by_day", Value: 1},
-		// {Key: "traffic_by_month", Value: 1},
-		// {Key: "traffic_by_year", Value: 1},
+		{Key: "traffic_by_day", Value: 1},
+		{Key: "traffic_by_month", Value: 1},
+		{Key: "traffic_by_year", Value: 1},
 	}
 
 	user, err := database.GetUserByName(traffic.Name, projections)
 	if err != nil {
-		log.Panic("Panic: ", err)
+		log.Printf("Error: %v", err)
 	}
 
 	trafficCollection.InsertOne(ctx, model.TrafficInDB{
@@ -73,15 +75,36 @@ func CronLoggingByUser(traffic Traffic) {
 		Email:     traffic.Name,
 	})
 
-	user.UsedByCurrentDay.Period = current_day
-	user.UsedByCurrentMonth.Period = current_month
-	user.UsedByCurrentYear.Period = current_year
-	user.UsedByCurrentDay.Amount += traffic.Total
-	user.UsedByCurrentMonth.Amount += traffic.Total
-	user.UsedByCurrentYear.Amount += traffic.Total
-	user.UsedByCurrentDay.UsedByDomain[CURRENT_DOMAIN] += traffic.Total
-	user.UsedByCurrentMonth.UsedByDomain[CURRENT_DOMAIN] += traffic.Total
-	user.UsedByCurrentYear.UsedByDomain[CURRENT_DOMAIN] += traffic.Total
+	if user.UsedByCurrentDay.Period == current_day {
+		user.UsedByCurrentDay.Amount += traffic.Total
+		user.UsedByCurrentDay.UsedByDomain[CURRENT_DOMAIN] += traffic.Total
+	} else if user.UsedByCurrentDay.Period < current_day {
+		user.TrafficByDay = append(user.TrafficByDay, user.UsedByCurrentDay)
+		user.UsedByCurrentDay.Period = current_day
+		user.UsedByCurrentDay.Amount = traffic.Total
+		user.UsedByCurrentDay.UsedByDomain[CURRENT_DOMAIN] = traffic.Total
+	}
+
+	if user.UsedByCurrentMonth.Period == current_month {
+		user.UsedByCurrentMonth.Amount += traffic.Total
+		user.UsedByCurrentMonth.UsedByDomain[CURRENT_DOMAIN] += traffic.Total
+	} else if user.UsedByCurrentMonth.Period < current_month {
+		user.TrafficByMonth = append(user.TrafficByMonth, user.UsedByCurrentMonth)
+		user.UsedByCurrentMonth.Period = current_month
+		user.UsedByCurrentMonth.Amount = traffic.Total
+		user.UsedByCurrentMonth.UsedByDomain[CURRENT_DOMAIN] = traffic.Total
+	}
+
+	if user.UsedByCurrentYear.Period == current_year {
+		user.UsedByCurrentYear.Amount += traffic.Total
+		user.UsedByCurrentYear.UsedByDomain[CURRENT_DOMAIN] += traffic.Total
+	} else if user.UsedByCurrentYear.Period < current_year {
+		user.TrafficByYear = append(user.TrafficByYear, user.UsedByCurrentYear)
+		user.UsedByCurrentYear.Period = current_year
+		user.UsedByCurrentYear.Amount = traffic.Total
+		user.UsedByCurrentYear.UsedByDomain[CURRENT_DOMAIN] = traffic.Total
+	}
+
 	user.Usedtraffic += traffic.Total
 
 	filter := bson.D{primitive.E{Key: "email", Value: traffic.Name}}
@@ -95,34 +118,23 @@ func CronLoggingByUser(traffic Traffic) {
 		primitive.E{Key: "used_by_current_day", Value: user.UsedByCurrentDay},
 		primitive.E{Key: "used_by_current_month", Value: user.UsedByCurrentMonth},
 		primitive.E{Key: "used_by_current_year", Value: user.UsedByCurrentYear},
+		primitive.E{Key: "traffic_by_day", Value: user.TrafficByDay},
+		primitive.E{Key: "traffic_by_month", Value: user.TrafficByMonth},
+		primitive.E{Key: "traffic_by_year", Value: user.TrafficByYear},
 		primitive.E{Key: "used", Value: user.Usedtraffic},
 		primitive.E{Key: "updated_at", Value: current},
 	}}}
-
-	// if traffic.Total+user.Usedtraffic > user.Credittraffic {
-
-	// 	cmdConn, err := grpc.Dial(fmt.Sprintf("%s:%s", V2_API_ADDRESS, V2_API_PORT), grpc.WithInsecure())
-	// 	if err != nil {
-	// 		log.Printf("%v", "v2ray service connection failed.")
-	// 	}
-
-	// 	NHSClient := v2ray.NewHandlerServiceClient(cmdConn, user.Path)
-	// 	err = NHSClient.DelUser(traffic.Name)
-	// 	if err != nil {
-	// 		log.Printf("%v", "v2ray service delete user failed.")
-	// 	}
-
-	// 	update[0].Value.(primitive.D)[4] = primitive.E{Key: "status", Value: "overdue"}
-	// }
 
 	result := userCollection.FindOneAndUpdate(ctx, filter, update, &opt)
 	if result.Err() != nil {
 		log.Printf("Error: %v", result.Err())
 	}
+
 }
 
 func CronLoggingByNode(traffics []Traffic) {
-	var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
+
+	var ctx, cancel = context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	var current = time.Now().Local()
@@ -136,29 +148,50 @@ func CronLoggingByNode(traffics []Traffic) {
 		{Key: "node_at_current_year", Value: 1},
 		{Key: "node_at_current_month", Value: 1},
 		{Key: "node_at_current_day", Value: 1},
-		// {Key: "node_by_year", Value: 1},
-		// {Key: "node_by_month", Value: 1},
-		// {Key: "node_by_day", Value: 1},
+		{Key: "node_by_year", Value: 1},
+		{Key: "node_by_month", Value: 1},
+		{Key: "node_by_day", Value: 1},
 		{Key: "domain", Value: 1},
 		{Key: "status", Value: 1},
 	}
 	var queriedNode CurrentNode
 	err := nodesCollection.FindOne(ctx, filter, options.FindOne().SetProjection(projection)).Decode(&queriedNode)
 	if err != nil {
-		log.Panic("Panic: ", err)
+		log.Printf("Error: %v", err)
 	}
 
 	for _, traffic := range traffics {
-		queriedNode.UpdatedAt = current
-		queriedNode.NodeAtCurrentDay.Period = current_day
-		queriedNode.NodeAtCurrentMonth.Period = current_month
-		queriedNode.NodeAtCurrentYear.Period = current_year
-		queriedNode.NodeAtCurrentDay.Amount += traffic.Total
-		queriedNode.NodeAtCurrentMonth.Amount += traffic.Total
-		queriedNode.NodeAtCurrentYear.Amount += traffic.Total
-		queriedNode.NodeAtCurrentDay.UserTrafficAtPeriod[traffic.Name] += traffic.Total
-		queriedNode.NodeAtCurrentMonth.UserTrafficAtPeriod[traffic.Name] += traffic.Total
-		queriedNode.NodeAtCurrentYear.UserTrafficAtPeriod[traffic.Name] += traffic.Total
+
+		if queriedNode.NodeAtCurrentDay.Period == current_day {
+			queriedNode.NodeAtCurrentDay.Amount += traffic.Total
+			queriedNode.NodeAtCurrentDay.UserTrafficAtPeriod[traffic.Name] += traffic.Total
+		} else if queriedNode.NodeAtCurrentDay.Period < current_day {
+			queriedNode.NodeByDay = append(queriedNode.NodeByDay, queriedNode.NodeAtCurrentDay)
+			queriedNode.NodeAtCurrentDay.Period = current_day
+			queriedNode.NodeAtCurrentDay.Amount += traffic.Total
+			queriedNode.NodeAtCurrentDay.UserTrafficAtPeriod[traffic.Name] += traffic.Total
+		}
+
+		if queriedNode.NodeAtCurrentMonth.Period == current_month {
+			queriedNode.NodeAtCurrentMonth.Amount += traffic.Total
+			queriedNode.NodeAtCurrentMonth.UserTrafficAtPeriod[traffic.Name] += traffic.Total
+		} else if queriedNode.NodeAtCurrentMonth.Period < current_month {
+			queriedNode.NodeByMonth = append(queriedNode.NodeByMonth, queriedNode.NodeAtCurrentMonth)
+			queriedNode.NodeAtCurrentMonth.Period = current_month
+			queriedNode.NodeAtCurrentMonth.Amount += traffic.Total
+			queriedNode.NodeAtCurrentMonth.UserTrafficAtPeriod[traffic.Name] += traffic.Total
+		}
+
+		if queriedNode.NodeAtCurrentYear.Period == current_year {
+			queriedNode.NodeAtCurrentYear.Amount += traffic.Total
+			queriedNode.NodeAtCurrentYear.UserTrafficAtPeriod[traffic.Name] += traffic.Total
+		} else if queriedNode.NodeAtCurrentYear.Period < current_year {
+			queriedNode.NodeByYear = append(queriedNode.NodeByYear, queriedNode.NodeAtCurrentYear)
+			queriedNode.NodeAtCurrentYear.Period = current_year
+			queriedNode.NodeAtCurrentYear.Amount += traffic.Total
+			queriedNode.NodeAtCurrentYear.UserTrafficAtPeriod[traffic.Name] += traffic.Total
+		}
+
 	}
 
 	// upsert the queriedNode into nodesCollection
@@ -172,6 +205,9 @@ func CronLoggingByNode(traffics []Traffic) {
 		primitive.E{Key: "node_at_current_year", Value: queriedNode.NodeAtCurrentYear},
 		primitive.E{Key: "node_at_current_month", Value: queriedNode.NodeAtCurrentMonth},
 		primitive.E{Key: "node_at_current_day", Value: queriedNode.NodeAtCurrentDay},
+		primitive.E{Key: "node_by_year", Value: queriedNode.NodeByYear},
+		primitive.E{Key: "node_by_month", Value: queriedNode.NodeByMonth},
+		primitive.E{Key: "node_by_day", Value: queriedNode.NodeByDay},
 		primitive.E{Key: "updated_at", Value: current},
 	}}}
 
@@ -207,11 +243,11 @@ func Cron_loggingJobs(c *cron.Cron, instance *box.Box) {
 
 	c.AddFunc(CRON_INTERVAL_BY_HOUR, func() {
 		Log_basicAction(instance)
-		log.Printf("Written by hour: %v", time.Now().Local().Format("2006010215"))
+		log.Printf("logging user&node by hour: %v", time.Now().Local().Format("2006010215"))
 	})
 
 	c.AddFunc(CRON_INTERVAL_BY_DAY, func() {
-		var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
+		var ctx, cancel = context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 
 		var current = time.Now()
@@ -221,18 +257,19 @@ func Cron_loggingJobs(c *cron.Cron, instance *box.Box) {
 		var filter bson.D
 
 		if NODE_TYPE == "main" || NODE_TYPE == "local" {
+
 			filter = bson.D{{}}
 			userCollection := database.OpenCollection(database.Client, "USERS")
 			cursor, err := userCollection.Find(ctx, filter)
 			if err != nil {
-				log.Panic("Panic: ", err)
+				log.Printf("Error: %v", err)
 			}
 
 			for cursor.Next(ctx) {
 				var currentUser User
 				err := cursor.Decode(&currentUser)
 				if err != nil {
-					log.Panic("Panic: ", err)
+					log.Printf("Error: %v", err)
 				}
 
 				singleUserFilter := bson.D{primitive.E{Key: "email", Value: currentUser.Email}}
@@ -284,7 +321,7 @@ func Cron_loggingJobs(c *cron.Cron, instance *box.Box) {
 		var queriedNode CurrentNode
 		err := nodesCollection.FindOne(ctx, filter, options.FindOne().SetProjection(projection)).Decode(&queriedNode)
 		if err != nil {
-			log.Panic("Panic: ", err)
+			log.Printf("Error: %v", err)
 		}
 
 		// append NodeAtCurrentDay to NodeByDay, then empty NodeAtCurrentDay.
@@ -318,7 +355,7 @@ func Cron_loggingJobs(c *cron.Cron, instance *box.Box) {
 
 	c.AddFunc(CRON_INTERVAL_BY_MONTH, func() {
 
-		var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
+		var ctx, cancel = context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 
 		// 2022-01-01 00:01:00 +0800 CST
@@ -334,14 +371,14 @@ func Cron_loggingJobs(c *cron.Cron, instance *box.Box) {
 			userCollection := database.OpenCollection(database.Client, "USERS")
 			cursor, err := userCollection.Find(ctx, filter)
 			if err != nil {
-				log.Panic("Panic: ", err)
+				log.Printf("Error: %v", err)
 			}
 
 			for cursor.Next(ctx) {
 				var currentUser User
 				err := cursor.Decode(&currentUser)
 				if err != nil {
-					log.Panic("Panic: ", err)
+					log.Printf("Error: %v", err)
 				}
 
 				singleUserFilter := bson.D{primitive.E{Key: "email", Value: currentUser.Email}}
@@ -389,7 +426,7 @@ func Cron_loggingJobs(c *cron.Cron, instance *box.Box) {
 		var queriedNode CurrentNode
 		err := nodesCollection.FindOne(ctx, filter, options.FindOne().SetProjection(projection)).Decode(&queriedNode)
 		if err != nil {
-			log.Panic("Panic: ", err)
+			log.Printf("Error: %v", err)
 		}
 
 		// append NodeAtCurrentMonth to NodeByMonth, then empty NodeAtCurrentMonth.
@@ -422,7 +459,7 @@ func Cron_loggingJobs(c *cron.Cron, instance *box.Box) {
 	})
 
 	c.AddFunc(CRON_INTERVAL_BY_YEAR, func() {
-		var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
+		var ctx, cancel = context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 
 		// 2022-01-01 00:01:30 +0800 CST
@@ -437,14 +474,14 @@ func Cron_loggingJobs(c *cron.Cron, instance *box.Box) {
 			userCollection := database.OpenCollection(database.Client, "USERS")
 			cursor, err := userCollection.Find(ctx, filter)
 			if err != nil {
-				log.Panic("Panic: ", err)
+				log.Printf("Error: %v", err)
 			}
 
 			for cursor.Next(ctx) {
 				var currentUser User
 				err := cursor.Decode(&currentUser)
 				if err != nil {
-					log.Panic("Panic: ", err)
+					log.Printf("Error: %v", err)
 				}
 
 				singleUserFilter := bson.D{primitive.E{Key: "email", Value: currentUser.Email}}
@@ -477,7 +514,7 @@ func Cron_loggingJobs(c *cron.Cron, instance *box.Box) {
 		var queriedNode CurrentNode
 		err := nodesCollection.FindOne(ctx, filter, options.FindOne().SetProjection(projection)).Decode(&queriedNode)
 		if err != nil {
-			log.Panic("Panic: ", err)
+			log.Printf("Error: %v", err)
 		}
 
 		// append NodeAtCurrentYear to NodeByYear, then empty NodeAtCurrentYear.
