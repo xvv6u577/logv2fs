@@ -20,6 +20,7 @@ setup-script*
 cmd/init.go
 cmd/dev.go
 
+logv2fs
 .env
 *.sh
 *.log

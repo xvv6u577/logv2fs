@@ -126,6 +126,16 @@ func UpdateAllTokens(signedToken string, signedRefreshToken string, userId strin
 
 }
 
+// check if a string in a slice
+func Contains(s []string, e string) bool {
+	for _, a := range s {
+		if a == e {
+			return true
+		}
+	}
+	return false
+}
+
 // CreateUser is the api used to tget a single user
 func SignUp() gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -620,12 +630,21 @@ func ReturnSingboxJson() gin.HandlerFunc {
 			for _, node := range globalVariable.ActiveGlobalNodes {
 
 				server_port, _ := strconv.Atoi(node.SERVER_PORT)
+				var outboundTags = []string{
+					"select",
+					"urltest",
+					"proxy",
+					"auto",
+					"WeChat",
+					"Apple",
+					"Microsoft",
+				}
 
 				if node.Type == "reality" {
 
 					for i, outbound := range singboxJSON.Outbounds {
 						if outboundMap, ok := outbound.(map[string]interface{}); ok {
-							if outboundMap["tag"] == "select" || outboundMap["tag"] == "urltest" {
+							if Contains(outboundTags, outboundMap["tag"].(string)) {
 								if outbounds, ok := singboxJSON.Outbounds[i].(map[string]interface{}); ok {
 									if outboundsList, ok := outbounds["outbounds"].([]interface{}); ok {
 										singboxJSON.Outbounds[i].(map[string]interface{})["outbounds"] = append(outboundsList, node.Remark)
@@ -682,7 +701,7 @@ func ReturnSingboxJson() gin.HandlerFunc {
 
 					for i, outbound := range singboxJSON.Outbounds {
 						if outboundMap, ok := outbound.(map[string]interface{}); ok {
-							if outboundMap["tag"] == "select" || outboundMap["tag"] == "urltest" {
+							if Contains(outboundTags, outboundMap["tag"].(string)) {
 								if outbounds, ok := singboxJSON.Outbounds[i].(map[string]interface{}); ok {
 									if outboundsList, ok := outbounds["outbounds"].([]interface{}); ok {
 										singboxJSON.Outbounds[i].(map[string]interface{})["outbounds"] = append(outboundsList, node.Remark)
@@ -718,7 +737,7 @@ func ReturnSingboxJson() gin.HandlerFunc {
 
 					for i, outbound := range singboxJSON.Outbounds {
 						if outboundMap, ok := outbound.(map[string]interface{}); ok {
-							if outboundMap["tag"] == "select" || outboundMap["tag"] == "urltest" {
+							if Contains(outboundTags, outboundMap["tag"].(string)) {
 								if outbounds, ok := singboxJSON.Outbounds[i].(map[string]interface{}); ok {
 									if outboundsList, ok := outbounds["outbounds"].([]interface{}); ok {
 										singboxJSON.Outbounds[i].(map[string]interface{})["outbounds"] = append(outboundsList, node.Remark)

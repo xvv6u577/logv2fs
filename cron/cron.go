@@ -247,7 +247,7 @@ func Cron_loggingJobs(c *cron.Cron, instance *box.Box) {
 	})
 
 	c.AddFunc(CRON_INTERVAL_BY_DAY, func() {
-		var ctx, cancel = context.WithTimeout(context.Background(), 10*time.Second)
+		var ctx, cancel = context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
 
 		var current = time.Now()
@@ -355,7 +355,7 @@ func Cron_loggingJobs(c *cron.Cron, instance *box.Box) {
 
 	c.AddFunc(CRON_INTERVAL_BY_MONTH, func() {
 
-		var ctx, cancel = context.WithTimeout(context.Background(), 10*time.Second)
+		var ctx, cancel = context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
 
 		// 2022-01-01 00:01:00 +0800 CST
@@ -459,7 +459,7 @@ func Cron_loggingJobs(c *cron.Cron, instance *box.Box) {
 	})
 
 	c.AddFunc(CRON_INTERVAL_BY_YEAR, func() {
-		var ctx, cancel = context.WithTimeout(context.Background(), 10*time.Second)
+		var ctx, cancel = context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
 
 		// 2022-01-01 00:01:30 +0800 CST
