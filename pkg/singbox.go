@@ -111,8 +111,11 @@ func GetUsageDataOfAllUsers(instance *box.Box) ([]Traffic, error) {
 	myStats := response.GetStat()
 
 	for _, stat := range myStats {
+
+		if stat.Value == 0 {
+			continue
+		}
 		// log.Printf("%s: %d\n", stat.Name, stat.Value)
-		// time.Sleep(time.Second / 10)
 
 		matches := compRegEx.FindAllStringSubmatch(stat.Name, -1)
 		for _, n := range matches {
