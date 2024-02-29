@@ -19,7 +19,6 @@ require (
 	github.com/robfig/cron v1.2.0
 	github.com/sagernet/sing v0.3.0
 	github.com/sagernet/sing-box v1.8.1
-	github.com/shomali11/parallelizer v0.0.0-20210506023428-ed2dd4732c78
 	github.com/spf13/cobra v1.8.0
 	golang.org/x/crypto v0.18.0
 	google.golang.org/protobuf v1.32.0
