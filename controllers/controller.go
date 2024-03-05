@@ -363,6 +363,84 @@ func EditUser() gin.HandlerFunc {
 	}
 }
 
+func TakeItOfflineByUserName() gin.HandlerFunc {
+	return func(c *gin.Context) {
+
+		if err := helper.CheckUserType(c, "admin"); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		var ctx, cancel = context.WithTimeout(context.Background(), 60*time.Second)
+		defer cancel()
+
+		name := c.Param("name")
+		var projections = bson.D{
+			{Key: "email", Value: 1},
+			{Key: "name", Value: 1},
+		}
+		user, err := database.GetUserByName(name, projections)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			log.Printf("GetUserByName failed: %s", err.Error())
+			return
+		}
+
+		filter := bson.D{primitive.E{Key: "email", Value: name}}
+		update := bson.M{"$set": bson.M{"status": "delete"}}
+		_, err = userCollection.UpdateOne(ctx, filter, update)
+		if err != nil {
+			msg := "database user info update failed."
+			c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
+			log.Printf("%s", msg)
+			return
+		}
+
+		log.Printf("Take user %s offline successfully!", user.Name)
+		c.JSON(http.StatusOK, gin.H{"message": "Take user " + user.Name + " offline successfully!"})
+	}
+
+}
+
+func TakeItOnlineByUserName() gin.HandlerFunc {
+	return func(c *gin.Context) {
+
+		if err := helper.CheckUserType(c, "admin"); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		var ctx, cancel = context.WithTimeout(context.Background(), 60*time.Second)
+		defer cancel()
+
+		name := c.Param("name")
+		var projections = bson.D{
+			{Key: "email", Value: 1},
+			{Key: "name", Value: 1},
+		}
+		user, err := database.GetUserByName(name, projections)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			log.Printf("GetUserByName failed: %s", err.Error())
+			return
+		}
+
+		filter := bson.D{primitive.E{Key: "email", Value: name}}
+		update := bson.M{"$set": bson.M{"status": "plain"}}
+		_, err = userCollection.UpdateOne(ctx, filter, update)
+		if err != nil {
+			msg := "database user info update failed."
+			c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
+			log.Printf("%s", msg)
+			return
+		}
+
+		log.Printf("Take user %s online successfully!", user.Name)
+		c.JSON(http.StatusOK, gin.H{"message": "Take user " + user.Name + " online successfully!"})
+	}
+
+}
+
 func DeleteUserByUserName() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
