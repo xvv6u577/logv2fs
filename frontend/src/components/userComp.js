@@ -143,7 +143,7 @@ const UserComp = (props) => {
                             }
                             user={props.user}
                         />
-                         {props.user.status === "plain" ? ( <button
+                        {props.user.status === "plain" ? (<button
                             className="w-auto md:w-24 focus:outline-none text-white bg-red-700 hover:bg-red-800 focus:ring-4 focus:ring-red-300 
                                     font-medium rounded-lg text-sm px-1.5 py-1 m-1 text-center dark:bg-red-600 dark:hover:bg-red-700 dark:focus:ring-red-800"
                             type="button"
@@ -156,17 +156,17 @@ const UserComp = (props) => {
                         </button>
 
                         ) : (
-                        <button
-                            className="w-auto md:w-24 focus:outline-none text-white bg-green-700 hover:bg-green-800 focus:ring-4 focus:ring-red-300 
+                            <button
+                                className="w-auto md:w-24 focus:outline-none text-white bg-green-700 hover:bg-green-800 focus:ring-4 focus:ring-red-300 
                                     font-medium rounded-lg text-sm px-1.5 py-1 m-1 text-center dark:bg-green-600 dark:hover:bg-green-700 dark:focus:ring-green-800"
-                            type="button"
-                            onClick={() => handleOnline(props.user.email)}
-                        >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 inline-block mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
-                            </svg>
-                            Enable
-                        </button>
+                                type="button"
+                                onClick={() => handleOnline(props.user.email)}
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 inline-block mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
+                                </svg>
+                                Enable
+                            </button>
                         )}
                         <ConfirmDelUser
                             btnName="Delete"
@@ -241,16 +241,12 @@ const EditUser = (props) => {
     const [{ used, password, name, credit }, setState] = useState({
         password: props.user.password,
         name: props.user.name,
-        used: props.user.used,
-        credit: props.user.credit,
     });
 
     useEffect(() => {
         setState({
             password: props.user.password,
             name: props.user.name,
-            used: props.user.used,
-            credit: props.user.credit,
         });
         setRole(props.user.role);
     }, [props.user])
@@ -280,8 +276,6 @@ const EditUser = (props) => {
                 password,
                 name,
                 role,
-                used: parseInt(used),
-                credit: parseInt(credit),
             },
         })
             .then((response) => {
@@ -328,9 +322,11 @@ const EditUser = (props) => {
                             </button>
                             <div className="py-6 px-6 lg:px-8">
                                 <h3 className="mb-4 text-xl font-medium text-gray-900 dark:text-white">Edit User</h3>
-                                <div><span>User Status: <b>{props.user.status}</b></span></div>
-                                <div><span>UUID: <b>{props.user.uuid}</b></span></div>
-                                <div><span>Path:  <b>{props.user.path}</b></span></div>
+                                <div className="my-4"><span>User Status:
+                                    <span className="inline-flex w-32 bg-blue-100 text-blue-800 text-sm mx-2 font-mono font-semibold mr-2 px-2.5 py-0.5 rounded dark:bg-blue-200 dark:text-blue-800" >
+                                        {props.user.status}
+                                    </span>
+                                </span></div>
                                 <form className="space-y-6" onSubmit={handleEditUser}>
                                     <div>
                                         <label htmlFor="email" className="block mb-2 text-sm font-medium text-gray-900 dark:text-gray-300">Email</label>
@@ -379,31 +375,8 @@ const EditUser = (props) => {
                                             <option value="admin">Admin</option>
                                         </select>
                                     </div>
-                                    <div>
-                                        <label htmlFor="name" className="block mb-2 text-sm font-medium text-gray-900 dark:text-gray-300">已用流量</label>
-                                        <input
-                                            type="number"
-                                            name="used"
-                                            onChange={onChange}
-                                            placeholder={used}
-                                            value={used}
-                                            className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label htmlFor="path" className="block mb-2 text-sm font-medium text-gray-900 dark:text-gray-300">每月限额</label>
-                                        <input
-                                            type="number"
-                                            name="credit"
-                                            onChange={onChange}
-                                            placeholder={credit}
-                                            value={credit}
-                                            className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white"
-                                        />
-                                    </div>
 
                                     <button type="submit" className="w-full text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800">Submit</button>
-
                                 </form>
                             </div>
                         </div>

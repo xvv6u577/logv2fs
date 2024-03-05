@@ -334,12 +334,6 @@ func EditUser() gin.HandlerFunc {
 		if foundUser.Name != user.Name {
 			newFoundUser["name"] = user.Name
 		}
-		if foundUser.Usedtraffic != user.Usedtraffic {
-			newFoundUser["used"] = user.Usedtraffic
-		}
-		if foundUser.Credittraffic != user.Credittraffic {
-			newFoundUser["credit"] = user.Credittraffic
-		}
 
 		if len(newFoundUser) == 0 {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "no new value in post data."})
