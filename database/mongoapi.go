@@ -77,7 +77,7 @@ func DeleteUserByName(email string) error {
 		return error
 	}
 
-	Client.Database("logV2rayTrafficDB").Collection(email).Drop(ctx)
+	// Client.Database("logV2rayTrafficDB").Collection(email).Drop(ctx)
 
 	return nil
 }
