@@ -21,7 +21,7 @@ require (
 	github.com/sagernet/sing-box v1.8.1
 	github.com/spf13/cobra v1.8.0
 	golang.org/x/crypto v0.18.0
-	google.golang.org/protobuf v1.32.0
+	google.golang.org/protobuf v1.33.0
 	gopkg.in/yaml.v2 v2.4.0
 )
 
