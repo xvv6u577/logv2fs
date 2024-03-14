@@ -1076,7 +1076,6 @@ func ReturnClashYAML() gin.HandlerFunc {
 		name := strings.Split(filename, ".")[0]
 
 		// print filename, name
-		log.Printf("filename: %v, name: %v", filename, name)
 		var err error
 		var yamlFile []byte
 		var clashYAML = ClashYAML{}
@@ -1094,18 +1093,6 @@ func ReturnClashYAML() gin.HandlerFunc {
 			return
 		}
 
-		// get globalVariable from GlobelCollection ActiveGlobalNodes
-		var globalVariable GlobalVariable
-		var ctx, cancel = context.WithTimeout(context.Background(), 10*time.Second)
-		defer cancel()
-
-		err = globalCollection.FindOne(ctx, bson.M{"name": "GLOBAL"}).Decode(&globalVariable)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "error occured while getting globalVariable"})
-			log.Printf("Getting globalVariable error: %s", err.Error())
-			return
-		}
-
 		if user.Status == "plain" {
 			yamlFile, err = os.ReadFile(helper.CurrentPath() + "/config/template_clash.yaml")
 			if err != nil {
@@ -1119,86 +1106,6 @@ func ReturnClashYAML() gin.HandlerFunc {
 				log.Printf("error: %v", err)
 				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 				return
-			}
-
-			// append vmessws, vmesstls to proxies in yamlfile according to globalVariable.ActiveGlobalNodes
-			for _, node := range globalVariable.ActiveGlobalNodes {
-
-				server_port, _ := strconv.Atoi(node.SERVER_PORT)
-
-				if node.Type == "vmessws" {
-
-					for i, proxy := range clashYAML.ProxyGroups {
-						if proxy.Type == "select" || proxy.Type == "url-test" {
-							clashYAML.ProxyGroups[i].Proxies = append(clashYAML.ProxyGroups[i].Proxies, node.Remark)
-						}
-					}
-
-					clashYAML.Proxies = append(clashYAML.Proxies, Vmess{
-						Name:           node.Remark,
-						Type:           "vmess",
-						Server:         node.IP,
-						Port:           server_port,
-						UUID:           user.UUID,
-						AlterID:        4,
-						Cipher:         "none",
-						Network:        "ws",
-						SkipCertVerify: true,
-						Sni:            "",
-						UDP:            false,
-						TLS:            false,
-						WsOpts: struct {
-							Path    string `yaml:"path"`
-							Headers struct {
-								Host string "yaml:\"Host\""
-							} "yaml:\"headers\""
-						}{
-							Path: "/" + user.Path,
-							Headers: struct {
-								Host string "yaml:\"Host\""
-							}{
-								Host: "",
-							},
-						},
-					})
-				}
-
-				if node.Type == "vmesstls" {
-
-					for i, proxy := range clashYAML.ProxyGroups {
-						if proxy.Type == "select" || proxy.Type == "url-test" {
-							clashYAML.ProxyGroups[i].Proxies = append(clashYAML.ProxyGroups[i].Proxies, node.Remark)
-						}
-					}
-
-					clashYAML.Proxies = append(clashYAML.Proxies, Vmess{
-						Name:           node.Remark,
-						Type:           "vmess",
-						Server:         node.Domain,
-						Port:           443,
-						UUID:           user.UUID,
-						AlterID:        4,
-						Cipher:         "none",
-						Network:        "ws",
-						SkipCertVerify: false,
-						Sni:            "",
-						UDP:            false,
-						TLS:            true,
-						WsOpts: struct {
-							Path    string "yaml:\"path\""
-							Headers struct {
-								Host string "yaml:\"Host\""
-							} "yaml:\"headers\""
-						}{
-							Path: "/" + user.Path,
-							Headers: struct {
-								Host string "yaml:\"Host\""
-							}{
-								Host: node.Domain,
-							},
-						},
-					})
-				}
 			}
 
 		} else {

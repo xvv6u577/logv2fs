@@ -22,13 +22,33 @@ dns:
   fallback-filter: { geoip: true, ipcidr: [240.0.0.0/4, 0.0.0.0/32] }
 
 proxies:
+  - name: 请联系IT-更换新客户端
+    server: 1.1.1.1
+    port: 7080
+    type: vmess
+    uuid: F027AF0A-1B65-42DD-9475-55E3AB42E4F6
+    alterId: 4
+    cipher: none
+    tls: false
+    skip-cert-verify: false
+    sni: ""
+    udp: false
+    network: ws
+    ws-opts:
+      path: /kay
+      headers:
+        Host: ""
 
 proxy-groups:
-  - { name: manual-select, type: select, proxies: [auto-select] }
+  - {
+      name: manual-select,
+      type: select,
+      proxies: ["auto-select", "请联系IT-更换新客户端"],
+    }
   - {
       name: auto-select,
       type: url-test,
-      proxies: [],
+      proxies: ["请联系IT-更换新客户端"],
       url: "http://www.gstatic.com/generate_204",
       interval: 86400,
     }
