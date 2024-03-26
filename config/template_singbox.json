@@ -22,7 +22,7 @@
             {
                 "tag": "proxyDns",
                 "address": "https://8.8.8.8/dns-query",
-                "detour": "proxy"
+                "detour": "manual-select"
             },
             {
                 "tag": "localDns",
@@ -116,7 +116,7 @@
     ],
     "outbounds": [
         {
-            "tag": "proxy",
+            "tag": "manual-select",
             "type": "selector",
             "outbounds": [
                 "auto"
@@ -162,11 +162,19 @@
             "outbounds": [
                 "direct"
             ]
+        },
+        {
+            "tag": "Openai",
+            "type": "urltest",
+            "outbounds": [],
+            "url": "http://www.gstatic.com/generate_204",
+            "interval": "1m",
+            "tolerance": 50
         }
     ],
     "route": {
         "auto_detect_interface": true,
-        "final": "proxy",
+        "final": "manual-select",
         "rules": [
             {
                 "protocol": "dns",
@@ -187,7 +195,7 @@
             },
             {
                 "clash_mode": "global",
-                "outbound": "proxy"
+                "outbound": "manual-select"
             },
             {
                 "domain": [
@@ -206,7 +214,7 @@
             },
             {
                 "rule_set": "geosite-geolocation-!cn",
-                "outbound": "proxy"
+                "outbound": "manual-select"
             },
             {
                 "ip_is_private": true,
@@ -227,6 +235,10 @@
             {
                 "rule_set": "geosite-microsoft",
                 "outbound": "Microsoft"
+            },
+            {
+                "rule_set": "geosite-openai",
+                "outbound": "Openai"
             }
         ],
         "rule_set": [
@@ -277,6 +289,13 @@
                 "type": "remote",
                 "format": "binary",
                 "url": "https://testingcf.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/microsoft.srs",
+                "download_detour": "direct"
+            },
+            {
+                "tag": "geosite-openai",
+                "type": "remote",
+                "format": "binary",
+                "url": "https://testingcf.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/openai.srs",
                 "download_detour": "direct"
             }
         ]

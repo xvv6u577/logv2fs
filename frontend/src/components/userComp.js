@@ -238,7 +238,7 @@ const EditUser = (props) => {
 
     const [show, setShow] = useState(false);
     const [role, setRole] = useState(props.user.role);
-    const [{ used, password, name, credit }, setState] = useState({
+    const [{ password, name }, setState] = useState({
         password: props.user.password,
         name: props.user.name,
     });

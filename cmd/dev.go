@@ -29,22 +29,7 @@ var devCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		// empty globalVariable.ActiveGlobalNodes
-		globalVariable.ActiveGlobalNodes = nil
-
-		globalVariable.ActiveGlobalNodes = append(globalVariable.ActiveGlobalNodes, Domain{
-			Type:        "reality",
-			Remark:      "team",
-			Domain:      "www.google.com",
-			IP:          "89.54.237.248",
-			SNI:         "",
-			UUID:        "",
-			PATH:        "",
-			SERVER_PORT: "7443",
-			PASSWORD:    "",
-			PUBLIC_KEY:  "",
-			SHORT_ID:    "",
-		})
+		fmt.Println(globalVariable)
 
 		_, err = globalCollection.UpdateOne(ctx, bson.M{"name": "GLOBAL"}, bson.M{"$set": globalVariable})
 		if err != nil {

@@ -8,7 +8,7 @@ import axios from "axios";
 const AddNode = () => {
 
     const [nodes, setnodes] = useState([]);
-    const [enable_subscription, setSubscriptionChecked] = useState(false);
+    const [enable_openai, setEnableOpenai] = useState(false);
     const initialState = {
         type: "reality",
         remark: "",
@@ -106,7 +106,7 @@ const AddNode = () => {
                                     <th className="px-4 py-3 title-font tracking-wider font-medium text-white text-sm bg-gray-800">域名</th>
                                     <th className="px-4 py-3 title-font tracking-wider font-medium text-white text-sm bg-gray-800">IP</th>
                                     <th className="px-4 py-3 title-font tracking-wider font-medium text-white text-sm bg-gray-800">Port</th>
-                                    <th className="px-4 py-3 title-font tracking-wider font-medium text-white text-sm bg-gray-800">Enable Subscription</th>
+                                    <th className="px-4 py-3 title-font tracking-wider font-medium text-white text-sm bg-gray-800">Openai</th>
                                     <th className="px-4 py-3 title-font tracking-wider font-medium text-white text-sm bg-gray-800">UUID</th>
                                     <th className="px-4 py-3 title-font tracking-wider font-medium text-white text-sm bg-gray-800">PATH</th>
                                     <th className="px-4 py-3 title-font tracking-wider font-medium text-white text-sm bg-gray-800">SNI</th>
@@ -122,7 +122,7 @@ const AddNode = () => {
                                             <td className="w-2/12 px-4 py-3">{node.domain}</td>
                                             <td className="px-4 py-3">{node.ip ? node.ip : "None"}</td>
                                             <td className="px-4 py-3">{node.server_port ? node.server_port : "None"}</td>
-                                            <td className="px-4 py-3">{node.enable_subscription ? "Yes" : "No"}</td>
+                                            <td className="px-4 py-3">{node.enable_openai ? "Yes" : "No"}</td>
                                             <td className="px-4 py-3">{node.uuid ? node.uuid : "None"}</td>
                                             <td className="px-4 py-3">{node.path ? node.path : "None"}</td>
                                             <td className="px-4 py-3">{node.sni ? node.sni : "None"}</td>
@@ -189,9 +189,9 @@ const AddNode = () => {
                             />
                             <input
                                 type="checkbox"
-                                name="enable_subscription"
-                                onChange={(e) => setSubscriptionChecked(e.target.checked)}
-                                checked={enable_subscription}
+                                name="enable_openai"
+                                onChange={(e) => setEnableOpenai(e.target.checked)}
+                                checked={enable_openai}
                                 id="default-checkbox"
                                 className="w-4 h-4 m-4 p-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600" />
                             <input
@@ -229,14 +229,14 @@ const AddNode = () => {
                                                 domain,
                                                 ip,
                                                 server_port,
-                                                enable_subscription,
+                                                enable_openai,
                                                 uuid,
                                                 path,
                                                 sni
                                             }
                                         ]));
                                         clearState();
-                                        setSubscriptionChecked(false);
+                                        setEnableOpenai(false);
                                     } else {
                                         dispatch(alert({ show: true, content: "Either the domain or remark field should be left empty." }));
                                     }
