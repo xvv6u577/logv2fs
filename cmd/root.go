@@ -14,7 +14,6 @@ import (
 )
 
 var (
-	NODE_TYPE                           = os.Getenv("NODE_TYPE")
 	CURRENT_DOMAIN                      = os.Getenv("CURRENT_DOMAIN")
 	SERVER_ADDRESS                      = os.Getenv("SERVER_ADDRESS")
 	SERVER_PORT                         = os.Getenv("SERVER_PORT")

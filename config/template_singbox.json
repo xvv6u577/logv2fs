@@ -164,12 +164,12 @@
             ]
         },
         {
-            "tag": "Openai",
-            "type": "urltest",
-            "outbounds": [],
-            "url": "http://www.gstatic.com/generate_204",
             "interval": "1m",
-            "tolerance": 50
+            "outbounds": [],
+            "tag": "Openai",
+            "tolerance": 50,
+            "type": "urltest",
+            "url": "http://www.gstatic.com/generate_204"
         }
     ],
     "route": {
@@ -237,8 +237,8 @@
                 "outbound": "Microsoft"
             },
             {
-                "rule_set": "geosite-openai",
-                "outbound": "Openai"
+                "outbound": "Openai",
+                "rule_set": "geosite-openai"
             }
         ],
         "rule_set": [
@@ -292,11 +292,11 @@
                 "download_detour": "direct"
             },
             {
+                "download_detour": "direct",
+                "format": "binary",
                 "tag": "geosite-openai",
                 "type": "remote",
-                "format": "binary",
-                "url": "https://testingcf.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/openai.srs",
-                "download_detour": "direct"
+                "url": "https://testingcf.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/openai.srs"
             }
         ]
     }

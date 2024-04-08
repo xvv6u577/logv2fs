@@ -37,7 +37,6 @@ var (
 	validate                           = validator.New()
 	V2_API_ADDRESS                     = os.Getenv("V2_API_ADDRESS")
 	V2_API_PORT                        = os.Getenv("V2_API_PORT")
-	NODE_TYPE                          = os.Getenv("NODE_TYPE")
 	CURRENT_DOMAIN                     = os.Getenv("CURRENT_DOMAIN")
 	MIXED_PORT                         = os.Getenv("MIXED_PORT")
 	ADMINUSERID                        = os.Getenv("ADMINUSERID")
@@ -504,14 +503,6 @@ func GetAllUsers() gin.HandlerFunc {
 
 		if len(allUsers) == 0 {
 			c.JSON(http.StatusOK, []User{})
-			return
-		}
-
-		if NODE_TYPE == "local" {
-			for _, user := range allUsers {
-				user.NodeInUseStatus = map[string]bool{CURRENT_DOMAIN: user.NodeInUseStatus[CURRENT_DOMAIN]}
-			}
-			c.JSON(http.StatusOK, allUsers)
 			return
 		}
 

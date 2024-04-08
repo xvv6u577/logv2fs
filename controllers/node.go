@@ -106,11 +106,6 @@ func AddNode() gin.HandlerFunc {
 		// for domain in singboxNodes, if it is not in allNodes, insert new one into nodeCollection; if yes, check if it is inactive, if yes, enable it.
 		for _, domain := range dataCollectableNodes {
 
-			// if it is a local mode, only localhost is checked; if it is a remote(main/attached) mode, all remote domain are checked.
-			// if NODE_TYPE == "local" && domain.Domain != "localhost" {
-			// 	continue
-			// }
-
 			if _, ok := allNodeStatus[domain.Domain]; ok {
 				// if domain is inactive, enable it. else, keep it.
 				if allNodeStatus[domain.Domain] == "inactive" {
