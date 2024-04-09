@@ -176,7 +176,7 @@ func CronLoggingByNode(traffics []Traffic) {
 		} else if queriedNode.NodeAtCurrentDay.Period < current_day {
 			queriedNode.NodeByDay = append(queriedNode.NodeByDay, queriedNode.NodeAtCurrentDay)
 			queriedNode.NodeAtCurrentDay.Period = current_day
-			queriedNode.NodeAtCurrentDay.Amount += traffic.Total
+			queriedNode.NodeAtCurrentDay.Amount = traffic.Total
 			queriedNode.NodeAtCurrentDay.UserTrafficAtPeriod = map[string]int64{}
 			queriedNode.NodeAtCurrentDay.UserTrafficAtPeriod[traffic.Name] += traffic.Total
 
@@ -189,7 +189,7 @@ func CronLoggingByNode(traffics []Traffic) {
 		} else if queriedNode.NodeAtCurrentMonth.Period < current_month {
 			queriedNode.NodeByMonth = append(queriedNode.NodeByMonth, queriedNode.NodeAtCurrentMonth)
 			queriedNode.NodeAtCurrentMonth.Period = current_month
-			queriedNode.NodeAtCurrentMonth.Amount += traffic.Total
+			queriedNode.NodeAtCurrentMonth.Amount = traffic.Total
 			queriedNode.NodeAtCurrentMonth.UserTrafficAtPeriod = map[string]int64{}
 			queriedNode.NodeAtCurrentMonth.UserTrafficAtPeriod[traffic.Name] += traffic.Total
 
@@ -202,7 +202,7 @@ func CronLoggingByNode(traffics []Traffic) {
 		} else if queriedNode.NodeAtCurrentYear.Period < current_year {
 			queriedNode.NodeByYear = append(queriedNode.NodeByYear, queriedNode.NodeAtCurrentYear)
 			queriedNode.NodeAtCurrentYear.Period = current_year
-			queriedNode.NodeAtCurrentYear.Amount += traffic.Total
+			queriedNode.NodeAtCurrentYear.Amount = traffic.Total
 			queriedNode.NodeAtCurrentYear.UserTrafficAtPeriod = map[string]int64{}
 			queriedNode.NodeAtCurrentYear.UserTrafficAtPeriod[traffic.Name] += traffic.Total
 
@@ -254,7 +254,7 @@ func Cron_loggingJobs(c *cron.Cron, instance *box.Box) {
 		// by node
 		CronLoggingByNode(usageData)
 
-		log.Printf("logging user&node by hour: %v", time.Now().Local().Format("2006010215"))
+		log.Printf("logging user&node every 15 Mins: %v", time.Now().Local().Format("2006010215"))
 	})
 
 }
