@@ -26,11 +26,11 @@ var (
 	trafficCollection *mongo.Collection = database.OpenCollection(database.Client, "TRAFFIC")
 	nodesCollection   *mongo.Collection = database.OpenCollection(database.Client, "NODES")
 	// userCollection    *mongo.Collection = database.OpenCollection(database.Client, "USERS")
-	globalCollection *mongo.Collection = database.OpenCollection(database.Client, "GLOBAL")
-	address          string
-	tlsStatus        bool
-	authrRequired    bool
-	cronInstance     *cron.Cron
+	// globalCollection *mongo.Collection = database.OpenCollection(database.Client, "GLOBAL")
+	address       string
+	tlsStatus     bool
+	authrRequired bool
+	cronInstance  *cron.Cron
 )
 
 type (

@@ -4,13 +4,12 @@ Copyright © 2023 NAME HERE <EMAIL ADDRESS>
 package cmd
 
 import (
-	"context"
 	"fmt"
-	"os"
 	"time"
 
 	"github.com/spf13/cobra"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 // devCmd represents the dev command
@@ -20,22 +19,15 @@ var devCmd = &cobra.Command{
 	Long:  `dev command`,
 	Run: func(cmd *cobra.Command, args []string) {
 
-		var globalVariable GlobalVariable
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
-		defer cancel()
-		err := globalCollection.FindOne(ctx, bson.M{"name": "GLOBAL"}).Decode(&globalVariable)
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
+		update := bson.D{primitive.E{Key: "$set", Value: bson.D{
+			primitive.E{Key: "updated_at", Value: time.Now().Unix()},
+		}}}
 
-		fmt.Println(globalVariable)
+		fmt.Println(update)
 
-		_, err = globalCollection.UpdateOne(ctx, bson.M{"name": "GLOBAL"}, bson.M{"$set": globalVariable})
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
+		update[0].Value = append(update[0].Value.(bson.D), primitive.E{Key: "used_by_current_day", Value: 0})
+
+		fmt.Println(update)
 
 	},
 }

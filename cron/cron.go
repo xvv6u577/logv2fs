@@ -74,9 +74,15 @@ func CronLoggingByUser(traffic Traffic) {
 		Email:     traffic.Name,
 	})
 
+	update := bson.D{primitive.E{Key: "$set", Value: bson.D{
+		primitive.E{Key: "updated_at", Value: current},
+	}}}
+
 	if user.UsedByCurrentDay.Period == current_day {
 		user.UsedByCurrentDay.Amount += traffic.Total
 		user.UsedByCurrentDay.UsedByDomain[CURRENT_DOMAIN] += traffic.Total
+
+		update[0].Value = append(update[0].Value.(bson.D), primitive.E{Key: "used_by_current_day", Value: user.UsedByCurrentDay})
 	} else if user.UsedByCurrentDay.Period < current_day {
 		user.TrafficByDay = append(user.TrafficByDay, user.UsedByCurrentDay)
 		user.UsedByCurrentDay.Period = current_day
@@ -84,12 +90,15 @@ func CronLoggingByUser(traffic Traffic) {
 		user.UsedByCurrentDay.UsedByDomain = map[string]int64{}
 		user.UsedByCurrentDay.UsedByDomain[CURRENT_DOMAIN] = traffic.Total
 
-		log.Printf("logging user by day: %v", current_day)
+		update[0].Value = append(update[0].Value.(bson.D), primitive.E{Key: "used_by_current_day", Value: user.UsedByCurrentDay})
+		update[0].Value = append(update[0].Value.(bson.D), primitive.E{Key: "traffic_by_day", Value: user.TrafficByDay})
 	}
 
 	if user.UsedByCurrentMonth.Period == current_month {
 		user.UsedByCurrentMonth.Amount += traffic.Total
 		user.UsedByCurrentMonth.UsedByDomain[CURRENT_DOMAIN] += traffic.Total
+
+		update[0].Value = append(update[0].Value.(bson.D), primitive.E{Key: "used_by_current_month", Value: user.UsedByCurrentMonth})
 	} else if user.UsedByCurrentMonth.Period < current_month {
 		user.TrafficByMonth = append(user.TrafficByMonth, user.UsedByCurrentMonth)
 		user.UsedByCurrentMonth.Period = current_month
@@ -97,12 +106,15 @@ func CronLoggingByUser(traffic Traffic) {
 		user.UsedByCurrentMonth.UsedByDomain = map[string]int64{}
 		user.UsedByCurrentMonth.UsedByDomain[CURRENT_DOMAIN] = traffic.Total
 
-		log.Printf("logging user by month: %v", current_month)
+		update[0].Value = append(update[0].Value.(bson.D), primitive.E{Key: "used_by_current_month", Value: user.UsedByCurrentMonth})
+		update[0].Value = append(update[0].Value.(bson.D), primitive.E{Key: "traffic_by_month", Value: user.TrafficByMonth})
 	}
 
 	if user.UsedByCurrentYear.Period == current_year {
 		user.UsedByCurrentYear.Amount += traffic.Total
 		user.UsedByCurrentYear.UsedByDomain[CURRENT_DOMAIN] += traffic.Total
+
+		update[0].Value = append(update[0].Value.(bson.D), primitive.E{Key: "used_by_current_year", Value: user.UsedByCurrentYear})
 	} else if user.UsedByCurrentYear.Period < current_year {
 		user.TrafficByYear = append(user.TrafficByYear, user.UsedByCurrentYear)
 		user.UsedByCurrentYear.Period = current_year
@@ -110,10 +122,12 @@ func CronLoggingByUser(traffic Traffic) {
 		user.UsedByCurrentYear.UsedByDomain = map[string]int64{}
 		user.UsedByCurrentYear.UsedByDomain[CURRENT_DOMAIN] = traffic.Total
 
-		log.Printf("logging user by year: %v", current_year)
+		update[0].Value = append(update[0].Value.(bson.D), primitive.E{Key: "used_by_current_year", Value: user.UsedByCurrentYear})
+		update[0].Value = append(update[0].Value.(bson.D), primitive.E{Key: "traffic_by_year", Value: user.TrafficByYear})
 	}
 
 	user.Usedtraffic += traffic.Total
+	update[0].Value = append(update[0].Value.(bson.D), primitive.E{Key: "used", Value: user.Usedtraffic})
 
 	filter := bson.D{primitive.E{Key: "email", Value: traffic.Name}}
 	upsert := true
@@ -122,16 +136,6 @@ func CronLoggingByUser(traffic Traffic) {
 		ReturnDocument: &after,
 		Upsert:         &upsert,
 	}
-	update := bson.D{primitive.E{Key: "$set", Value: bson.D{
-		primitive.E{Key: "used_by_current_day", Value: user.UsedByCurrentDay},
-		primitive.E{Key: "used_by_current_month", Value: user.UsedByCurrentMonth},
-		primitive.E{Key: "used_by_current_year", Value: user.UsedByCurrentYear},
-		primitive.E{Key: "traffic_by_day", Value: user.TrafficByDay},
-		primitive.E{Key: "traffic_by_month", Value: user.TrafficByMonth},
-		primitive.E{Key: "traffic_by_year", Value: user.TrafficByYear},
-		primitive.E{Key: "used", Value: user.Usedtraffic},
-		primitive.E{Key: "updated_at", Value: current},
-	}}}
 
 	result := userCollection.FindOneAndUpdate(ctx, filter, update, &opt)
 	if result.Err() != nil {
@@ -168,11 +172,17 @@ func CronLoggingByNode(traffics []Traffic) {
 		log.Printf("Error: %v", err)
 	}
 
+	var update = bson.D{primitive.E{Key: "$set", Value: bson.D{
+		primitive.E{Key: "updated_at", Value: current},
+	}}}
+
 	for _, traffic := range traffics {
 
 		if queriedNode.NodeAtCurrentDay.Period == current_day {
 			queriedNode.NodeAtCurrentDay.Amount += traffic.Total
 			queriedNode.NodeAtCurrentDay.UserTrafficAtPeriod[traffic.Name] += traffic.Total
+
+			update[0].Value = append(update[0].Value.(bson.D), primitive.E{Key: "node_at_current_day", Value: queriedNode.NodeAtCurrentDay})
 		} else if queriedNode.NodeAtCurrentDay.Period < current_day {
 			queriedNode.NodeByDay = append(queriedNode.NodeByDay, queriedNode.NodeAtCurrentDay)
 			queriedNode.NodeAtCurrentDay.Period = current_day
@@ -180,12 +190,15 @@ func CronLoggingByNode(traffics []Traffic) {
 			queriedNode.NodeAtCurrentDay.UserTrafficAtPeriod = map[string]int64{}
 			queriedNode.NodeAtCurrentDay.UserTrafficAtPeriod[traffic.Name] += traffic.Total
 
-			log.Printf("logging node by day: %v", current_day)
+			update[0].Value = append(update[0].Value.(bson.D), primitive.E{Key: "node_at_current_day", Value: queriedNode.NodeAtCurrentDay})
+			update[0].Value = append(update[0].Value.(bson.D), primitive.E{Key: "node_by_day", Value: queriedNode.NodeByDay})
 		}
 
 		if queriedNode.NodeAtCurrentMonth.Period == current_month {
 			queriedNode.NodeAtCurrentMonth.Amount += traffic.Total
 			queriedNode.NodeAtCurrentMonth.UserTrafficAtPeriod[traffic.Name] += traffic.Total
+
+			update[0].Value = append(update[0].Value.(bson.D), primitive.E{Key: "node_at_current_month", Value: queriedNode.NodeAtCurrentMonth})
 		} else if queriedNode.NodeAtCurrentMonth.Period < current_month {
 			queriedNode.NodeByMonth = append(queriedNode.NodeByMonth, queriedNode.NodeAtCurrentMonth)
 			queriedNode.NodeAtCurrentMonth.Period = current_month
@@ -193,12 +206,15 @@ func CronLoggingByNode(traffics []Traffic) {
 			queriedNode.NodeAtCurrentMonth.UserTrafficAtPeriod = map[string]int64{}
 			queriedNode.NodeAtCurrentMonth.UserTrafficAtPeriod[traffic.Name] += traffic.Total
 
-			log.Printf("logging node by month: %v", current_month)
+			update[0].Value = append(update[0].Value.(bson.D), primitive.E{Key: "node_at_current_month", Value: queriedNode.NodeAtCurrentMonth})
+			update[0].Value = append(update[0].Value.(bson.D), primitive.E{Key: "node_by_month", Value: queriedNode.NodeByMonth})
 		}
 
 		if queriedNode.NodeAtCurrentYear.Period == current_year {
 			queriedNode.NodeAtCurrentYear.Amount += traffic.Total
 			queriedNode.NodeAtCurrentYear.UserTrafficAtPeriod[traffic.Name] += traffic.Total
+
+			update[0].Value = append(update[0].Value.(bson.D), primitive.E{Key: "node_at_current_year", Value: queriedNode.NodeAtCurrentYear})
 		} else if queriedNode.NodeAtCurrentYear.Period < current_year {
 			queriedNode.NodeByYear = append(queriedNode.NodeByYear, queriedNode.NodeAtCurrentYear)
 			queriedNode.NodeAtCurrentYear.Period = current_year
@@ -206,27 +222,18 @@ func CronLoggingByNode(traffics []Traffic) {
 			queriedNode.NodeAtCurrentYear.UserTrafficAtPeriod = map[string]int64{}
 			queriedNode.NodeAtCurrentYear.UserTrafficAtPeriod[traffic.Name] += traffic.Total
 
-			log.Printf("logging node by year: %v", current_year)
+			update[0].Value = append(update[0].Value.(bson.D), primitive.E{Key: "node_at_current_year", Value: queriedNode.NodeAtCurrentYear})
+			update[0].Value = append(update[0].Value.(bson.D), primitive.E{Key: "node_by_year", Value: queriedNode.NodeByYear})
 		}
 
 	}
 
-	// upsert the queriedNode into nodesCollection
 	upsert := true
 	after := options.After
 	opt := options.FindOneAndUpdateOptions{
 		ReturnDocument: &after,
 		Upsert:         &upsert,
 	}
-	update := bson.D{primitive.E{Key: "$set", Value: bson.D{
-		primitive.E{Key: "node_at_current_year", Value: queriedNode.NodeAtCurrentYear},
-		primitive.E{Key: "node_at_current_month", Value: queriedNode.NodeAtCurrentMonth},
-		primitive.E{Key: "node_at_current_day", Value: queriedNode.NodeAtCurrentDay},
-		primitive.E{Key: "node_by_year", Value: queriedNode.NodeByYear},
-		primitive.E{Key: "node_by_month", Value: queriedNode.NodeByMonth},
-		primitive.E{Key: "node_by_day", Value: queriedNode.NodeByDay},
-		primitive.E{Key: "updated_at", Value: current},
-	}}}
 
 	result := nodesCollection.FindOneAndUpdate(ctx, filter, update, &opt)
 	if result.Err() != nil {
@@ -237,7 +244,7 @@ func CronLoggingByNode(traffics []Traffic) {
 
 func Cron_loggingJobs(c *cron.Cron, instance *box.Box) {
 
-	c.AddFunc(CRON_INTERVAL_BY_HOUR, func() {
+	c.AddFunc("0 */15 * * * *", func() {
 
 		usageData, err := thirdparty.GetUsageDataOfAllUsers(instance)
 		if err != nil {
@@ -255,6 +262,104 @@ func Cron_loggingJobs(c *cron.Cron, instance *box.Box) {
 		CronLoggingByNode(usageData)
 
 		log.Printf("logging user&node every 15 Mins: %v", time.Now().Local().Format("2006010215"))
+	})
+
+	c.AddFunc("5 0 0 * * *", func() {
+
+		var ctx, cancel = context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+
+		var current = time.Now().Local()
+		var current_year = current.Format("2006")
+		var current_month = current.Format("200601")
+		var current_day = current.Format("20060102")
+
+		var filter = bson.D{{}}
+		var projections = bson.D{
+			{Key: "email", Value: 1},
+			{Key: "credit", Value: 1},
+			{Key: "used", Value: 1},
+			{Key: "path", Value: 1},
+			{Key: "status", Value: 1},
+			{Key: "used_by_current_day", Value: 1},
+			{Key: "used_by_current_month", Value: 1},
+			{Key: "used_by_current_year", Value: 1},
+			{Key: "traffic_by_day", Value: 1},
+			{Key: "traffic_by_month", Value: 1},
+			{Key: "traffic_by_year", Value: 1},
+		}
+		cursor, err := userCollection.Find(ctx, filter, options.Find().SetProjection(projections))
+		if err != nil {
+			log.Printf("error occured while finding users")
+		}
+
+		for cursor.Next(ctx) {
+			var user User
+			err := cursor.Decode(&user)
+			if err != nil {
+				log.Printf("error occured while decoding users")
+			}
+
+			if user.UsedByCurrentDay.Period == current_day && user.UsedByCurrentMonth.Period == current_month && user.UsedByCurrentYear.Period == current_year {
+				continue
+			}
+
+			update := bson.D{primitive.E{Key: "$set", Value: bson.D{
+				primitive.E{Key: "updated_at", Value: current},
+			}}}
+
+			if user.UsedByCurrentDay.Period < current_day {
+				user.TrafficByDay = append(user.TrafficByDay, user.UsedByCurrentDay)
+				user.UsedByCurrentDay.Period = current_day
+				user.UsedByCurrentDay.Amount = 0
+				user.UsedByCurrentDay.UsedByDomain = map[string]int64{}
+
+				// append to the update
+				update[0].Value = append(update[0].Value.(bson.D), primitive.E{Key: "used_by_current_day", Value: user.UsedByCurrentDay})
+				update[0].Value = append(update[0].Value.(bson.D), primitive.E{Key: "traffic_by_day", Value: user.TrafficByDay})
+			}
+
+			if user.UsedByCurrentMonth.Period < current_month {
+				user.TrafficByMonth = append(user.TrafficByMonth, user.UsedByCurrentMonth)
+				user.UsedByCurrentMonth.Period = current_month
+				user.UsedByCurrentMonth.Amount = 0
+				user.UsedByCurrentMonth.UsedByDomain = map[string]int64{}
+
+				update[0].Value = append(update[0].Value.(bson.D), primitive.E{Key: "used_by_current_month", Value: user.UsedByCurrentMonth})
+				update[0].Value = append(update[0].Value.(bson.D), primitive.E{Key: "traffic_by_month", Value: user.TrafficByMonth})
+			}
+
+			if user.UsedByCurrentYear.Period < current_year {
+				user.TrafficByYear = append(user.TrafficByYear, user.UsedByCurrentYear)
+				user.UsedByCurrentYear.Period = current_year
+				user.UsedByCurrentYear.Amount = 0
+				user.UsedByCurrentYear.UsedByDomain = map[string]int64{}
+
+				update[0].Value = append(update[0].Value.(bson.D), primitive.E{Key: "used_by_current_year", Value: user.UsedByCurrentYear})
+				update[0].Value = append(update[0].Value.(bson.D), primitive.E{Key: "traffic_by_year", Value: user.TrafficByYear})
+			}
+
+			filter := bson.D{primitive.E{Key: "email", Value: user.Email}}
+			upsert := true
+			after := options.After
+			opt := options.FindOneAndUpdateOptions{
+				ReturnDocument: &after,
+				Upsert:         &upsert,
+			}
+
+			result := userCollection.FindOneAndUpdate(ctx, filter, update, &opt)
+			if result.Err() != nil {
+				log.Printf("Error: %v", result.Err())
+			}
+
+		}
+
+		if err := cursor.Err(); err != nil {
+			log.Printf("error occured while cursoring users")
+		}
+		cursor.Close(ctx)
+
+		log.Printf("update user credit every day: %v", time.Now().Local().Format("2006010215"))
 	})
 
 }
