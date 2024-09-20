@@ -1,20 +1,49 @@
 package model
 
-import "time"
+import (
+	"time"
+
+	"go.mongodb.org/mongo-driver/bson/primitive"
+)
 
 type CurrentNode struct {
 	Status             string         `json:"status" bson:"status" validate:"required,eq=active|eq=inactive"` // status: "active", "inactive"
 	Domain             string         `json:"domain" bson:"domain" validate:"required,min=2,max=100"`
 	IP                 string         `json:"ip" bson:"ip"`
 	Remark             string         `json:"remark" bson:"remark"`
+	CreatedAt          time.Time      `json:"created_at" bson:"created_at"`
+	UpdatedAt          time.Time      `json:"updated_at" bson:"updated_at"`
 	NodeAtCurrentYear  NodeAtPeriod   `json:"node_at_current_year" bson:"node_at_current_year"`
 	NodeAtCurrentMonth NodeAtPeriod   `json:"node_at_current_month" bson:"node_at_current_month"`
 	NodeAtCurrentDay   NodeAtPeriod   `json:"node_at_current_day" bson:"node_at_current_day"`
 	NodeByYear         []NodeAtPeriod `json:"node_by_year" bson:"node_by_year"`
 	NodeByMonth        []NodeAtPeriod `json:"node_by_month" bson:"node_by_month"`
 	NodeByDay          []NodeAtPeriod `json:"node_by_day" bson:"node_by_day"`
-	CreatedAt          time.Time      `json:"created_at" bson:"created_at"`
-	UpdatedAt          time.Time      `json:"updated_at" bson:"updated_at"`
+}
+
+type NodeTrafficLogs struct {
+	ID           primitive.ObjectID `json:"_id" bson:"_id"`
+	Domain_As_Id string             `json:"domain_as_id" bson:"domain_as_id"`
+	Remark       string             `json:"remark" bson:"remark"`
+	Status       string             `json:"status" bson:"status" validate:"required,eq=active|eq=inactive"` // status: "active", "inactive"
+	CreatedAt    time.Time          `json:"created_at" bson:"created_at"`
+	UpdatedAt    time.Time          `json:"updated_at" bson:"updated_at"`
+	HourlyLogs   []struct {
+		Timestamp time.Time `json:"timestamp" bson:"timestamp"`
+		Traffic   int64     `json:"traffic" bson:"traffic"`
+	} `json:"hourly_logs" bson:"hourly_logs"`
+	DailyLogs []struct {
+		Date    string `json:"date" bson:"date"`
+		Traffic int64  `json:"traffic" bson:"traffic"`
+	} `json:"daily_logs" bson:"daily_logs"`
+	MonthlyLogs []struct {
+		Month   string `json:"month" bson:"month"`
+		Traffic int64  `json:"traffic" bson:"traffic"`
+	} `json:"monthly_logs" bson:"monthly_logs"`
+	YearlyLogs []struct {
+		Year    string `json:"year" bson:"year"`
+		Traffic int64  `json:"traffic" bson:"traffic"`
+	} `json:"yearly_logs" bson:"yearly_logs"`
 }
 
 type NodeAtPeriod struct {
@@ -44,11 +73,4 @@ type Domain struct {
 	PUBLIC_KEY   string `json:"public_key" bson:"public_key"`
 	SHORT_ID     string `json:"short_id" bson:"short_id"`
 	EnableOpenai bool   `json:"enable_openai" bson:"enable_openai"`
-}
-
-type DomainInfo struct {
-	Domain       string `json:"domain"`
-	Remark       string `json:"remark"`
-	ExpiredDate  string `json:"expired_date"`
-	DaysToExpire int    `json:"days_to_expire"`
 }

@@ -20,11 +20,12 @@ const Login = () => {
 
 		axios
 			.post(process.env.REACT_APP_API_HOST + "login", {
-				email: name,
+				email_as_id: name,
 				password: password,
 			})
 			.then((response) => {
 				if (response.data) {
+					console.log(response.data);
 					localStorage.setItem("token", JSON.stringify(response.data.token));
 					dispatch(login({ token: response.data.token }));
 					// navigate("/mypanel");

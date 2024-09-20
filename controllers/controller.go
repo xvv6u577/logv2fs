@@ -7,7 +7,6 @@ import (
 	"log"
 	"os"
 	"strconv"
-	"strings"
 
 	"net/http"
 	"time"
@@ -31,44 +30,34 @@ import (
 )
 
 var (
-	userCollection   *mongo.Collection = database.OpenCollection(database.Client, "USERS")
-	nodeCollection   *mongo.Collection = database.OpenCollection(database.Client, "NODES")
-	globalCollection *mongo.Collection = database.OpenCollection(database.Client, "GLOBAL")
-	validate                           = validator.New()
-	V2_API_ADDRESS                     = os.Getenv("V2_API_ADDRESS")
-	V2_API_PORT                        = os.Getenv("V2_API_PORT")
-	CURRENT_DOMAIN                     = os.Getenv("CURRENT_DOMAIN")
-	MIXED_PORT                         = os.Getenv("MIXED_PORT")
-	ADMINUSERID                        = os.Getenv("ADMINUSERID")
-	CREDIT                             = os.Getenv("CREDIT")
-	PUBLIC_KEY                         = os.Getenv("PUBLIC_KEY")
-	SHORT_ID                           = os.Getenv("SHORT_ID")
+	// userCollection     *mongo.Collection = database.OpenCollection(database.Client, "USERS")
+	// nodeCollection     *mongo.Collection = database.OpenCollection(database.Client, "NODES")
+	globalCollection     *mongo.Collection = database.OpenCollection(database.Client, "GLOBAL")
+	MoniteringDomainsCol *mongo.Collection = database.OpenCollection(database.Client, "Monitering_Domains")
+	nodeTrafficLogsCol                     = database.OpenCollection(database.Client, "NODE_TRAFFIC_LOGS")
+	userTrafficLogsCol                     = database.OpenCollection(database.Client, "USER_TRAFFIC_LOGS")
+	validate                               = validator.New()
+	CURRENT_DOMAIN                         = os.Getenv("CURRENT_DOMAIN")
+	CREDIT                                 = os.Getenv("CREDIT")
+	PUBLIC_KEY                             = os.Getenv("PUBLIC_KEY")
+	SHORT_ID                               = os.Getenv("SHORT_ID")
 )
 
 type (
 	User            = model.User
 	TrafficAtPeriod = model.TrafficAtPeriod
 	Node            = model.Node
-	YamlTemplate    = model.YamlTemplate
-	Proxies         = model.Proxies
-	Headers         = model.Headers
-	WsOpts          = model.WsOpts
-	ProxyGroups     = model.ProxyGroups
-	CurrentNode     = model.CurrentNode
-	NodeAtPeriod    = model.NodeAtPeriod
-	GlobalVariable  = model.GlobalVariable
 	Domain          = model.Domain
-	DomainInfo      = model.DomainInfo
 	SingboxYAML     = model.SingboxYAML
 	SingboxJSON     = model.SingboxJSON
 	RealityJSON     = model.RealityJSON
 	Hysteria2JSON   = model.Hysteria2JSON
 	RealityYAML     = model.RealityYAML
 	Hysteria2YAML   = model.Hysteria2YAML
-	ClashYAML       = model.ClashYAML
-	Vmess           = model.Vmess
 	CFVlessJSON     = model.CFVlessJSON
 	CFVlessYAML     = model.CFVlessYAML
+	UserTrafficLogs = model.UserTrafficLogs
+	NodeTrafficLogs = model.NodeTrafficLogs
 )
 
 // HashPassword is used to encrypt the password before it is stored in the DB
@@ -111,7 +100,7 @@ func UpdateAllTokens(signedToken string, signedRefreshToken string, userId strin
 	opt := options.UpdateOptions{
 		Upsert: &upsert,
 	}
-	_, err := userCollection.UpdateOne(
+	_, err := userTrafficLogsCol.UpdateOne(
 		ctx,
 		filter,
 		bson.D{{Key: "$set", Value: updateObj}},
@@ -144,9 +133,7 @@ func SignUp() gin.HandlerFunc {
 			return
 		}
 
-		var ctx, cancel = context.WithTimeout(context.Background(), 60*time.Second)
-		defer cancel()
-		var user model.User
+		var user UserTrafficLogs
 		var current = time.Now()
 
 		if err := c.BindJSON(&user); err != nil {
@@ -162,8 +149,8 @@ func SignUp() gin.HandlerFunc {
 			return
 		}
 
-		user_email := helper.SanitizeStr(user.Email)
-		count, err := userCollection.CountDocuments(ctx, bson.M{"email": user_email})
+		user_email := helper.SanitizeStr(user.Email_As_Id)
+		count, err := userTrafficLogsCol.CountDocuments(context.TODO(), bson.M{"email_as_id": user_email})
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "error occured while checking for the email"})
 			log.Printf("Checking email error: %s", err.Error())
@@ -180,10 +167,6 @@ func SignUp() gin.HandlerFunc {
 			user.Name = user_email
 		}
 
-		if user.Path == "" {
-			user.Path = "ray"
-		}
-
 		password := HashPassword(user_email)
 		user.Password = password
 
@@ -194,53 +177,44 @@ func SignUp() gin.HandlerFunc {
 		user.UUID = uuidV4.String()
 
 		user_role := "plain"
+		user.Used = 0
 
-		if user.Credittraffic == 0 {
+		if user.Credit == 0 {
 			credit, _ := strconv.ParseInt(CREDIT, 10, 64)
-			user.Credittraffic = credit
+			user.Credit = credit
 		}
-		if user.Usedtraffic == 0 {
-			user.Usedtraffic = 0
-		}
-
-		var current_year = current.Local().Format("2006")
-		var current_month = current.Local().Format("200601")
-		var current_day = current.Local().Format("20060102")
-
-		user.UsedByCurrentDay = TrafficAtPeriod{
-			Period:       current_day,
-			Amount:       0,
-			UsedByDomain: map[string]int64{},
-		}
-		user.UsedByCurrentMonth = TrafficAtPeriod{
-			Period:       current_month,
-			Amount:       0,
-			UsedByDomain: map[string]int64{},
-		}
-		user.UsedByCurrentYear = TrafficAtPeriod{
-			Period:       current_year,
-			Amount:       0,
-			UsedByDomain: map[string]int64{},
-		}
-
-		user.TrafficByDay = []TrafficAtPeriod{}
-		user.TrafficByMonth = []TrafficAtPeriod{}
-		user.TrafficByYear = []TrafficAtPeriod{}
 
 		user.ID = primitive.NewObjectID()
 		user.User_id = user.ID.Hex()
-		token, refreshToken, _ := helper.GenerateAllTokens(user_email, user.UUID, user.Path, user_role, user.User_id)
+		token, refreshToken, _ := helper.GenerateAllTokens(user_email, user.UUID, user.Name, user_role, user.User_id)
 		user.Token = &token
 		user.Refresh_token = &refreshToken
 
-		_, err = userCollection.InsertOne(ctx, user)
+		user.HourlyLogs = []struct {
+			Timestamp time.Time `json:"timestamp" bson:"timestamp"`
+			Traffic   int64     `json:"traffic" bson:"traffic"`
+		}{}
+		user.DailyLogs = []struct {
+			Date    string `json:"date" bson:"date"`
+			Traffic int64  `json:"traffic" bson:"traffic"`
+		}{}
+		user.MonthlyLogs = []struct {
+			Month   string `json:"month" bson:"month"`
+			Traffic int64  `json:"traffic" bson:"traffic"`
+		}{}
+		user.YearlyLogs = []struct {
+			Year    string `json:"year" bson:"year"`
+			Traffic int64  `json:"traffic" bson:"traffic"`
+		}{}
+
+		_, err = userTrafficLogsCol.InsertOne(context.Background(), user)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			log.Printf("error occured while inserting user: %v", err)
+			log.Printf("error occured while inserting user traffic logs: %v", err)
 			return
 		}
 
-		c.JSON(http.StatusOK, gin.H{"message": "user " + user.Name + " created at v2ray and database."})
+		c.JSON(http.StatusOK, gin.H{"message": "user " + user.Name + " created successfully"})
 	}
 }
 
@@ -249,8 +223,7 @@ func Login() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var ctx, cancel = context.WithTimeout(context.Background(), 60*time.Second)
 		defer cancel()
-		var boundUser model.User
-		var foundUser model.User
+		var boundUser, foundUser, finalUser UserTrafficLogs
 
 		if err := c.BindJSON(&boundUser); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -258,8 +231,8 @@ func Login() gin.HandlerFunc {
 			return
 		}
 
-		sanitized_email := helper.SanitizeStr(boundUser.Email)
-		err := userCollection.FindOne(ctx, bson.M{"email": sanitized_email}).Decode(&foundUser)
+		sanitized_email := helper.SanitizeStr(boundUser.Email_As_Id)
+		err := userTrafficLogsCol.FindOne(ctx, bson.M{"email_as_id": sanitized_email}).Decode(&foundUser)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			log.Printf("error: %v", err)
@@ -273,21 +246,21 @@ func Login() gin.HandlerFunc {
 			return
 		}
 
-		token, refreshToken, _ := helper.GenerateAllTokens(sanitized_email, foundUser.UUID, foundUser.Path, foundUser.Role, foundUser.User_id)
+		token, refreshToken, _ := helper.GenerateAllTokens(sanitized_email, foundUser.UUID, foundUser.Name, foundUser.Role, foundUser.User_id)
 
 		UpdateAllTokens(token, refreshToken, foundUser.User_id)
 		var projections = bson.D{
 			{Key: "token", Value: 1},
 		}
 
-		user, err := database.GetUserByName(boundUser.Email, projections)
+		err = userTrafficLogsCol.FindOne(ctx, bson.M{"email_as_id": sanitized_email}, options.FindOne().SetProjection(projections)).Decode(&finalUser)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			log.Printf("error: %v", err)
 			return
 		}
 
-		c.JSON(http.StatusOK, user)
+		c.JSON(http.StatusOK, finalUser)
 	}
 }
 
@@ -302,7 +275,7 @@ func EditUser() gin.HandlerFunc {
 		var ctx, cancel = context.WithTimeout(context.Background(), 60*time.Second)
 		defer cancel()
 
-		var user, foundUser model.User
+		var user, foundUser UserTrafficLogs
 
 		if err := c.BindJSON(&user); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -310,7 +283,7 @@ func EditUser() gin.HandlerFunc {
 			return
 		}
 
-		err := userCollection.FindOne(ctx, bson.M{"email": helper.SanitizeStr(user.Email)}).Decode(&foundUser)
+		err := userTrafficLogsCol.FindOne(ctx, bson.M{"email_as_id": helper.SanitizeStr(user.Email_As_Id)}).Decode(&foundUser)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "email is incorrect"})
 			log.Printf("email is incorrect")
@@ -340,11 +313,11 @@ func EditUser() gin.HandlerFunc {
 			return
 		}
 
-		err = userCollection.FindOneAndUpdate(
+		err = userTrafficLogsCol.FindOneAndUpdate(
 			ctx,
-			bson.M{"email": helper.SanitizeStr(user.Email)},
+			bson.M{"email_as_id": helper.SanitizeStr(user.Email_As_Id)},
 			bson.M{"$set": newFoundUser},
-			options.FindOneAndUpdate().SetUpsert(true),
+			options.FindOneAndUpdate().SetUpsert(false),
 		).Decode(&replacedDocument)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -356,7 +329,7 @@ func EditUser() gin.HandlerFunc {
 	}
 }
 
-func TakeItOfflineByUserName() gin.HandlerFunc {
+func OfflineUserByName() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
 		if err := helper.CheckUserType(c, "admin"); err != nil {
@@ -368,20 +341,10 @@ func TakeItOfflineByUserName() gin.HandlerFunc {
 		defer cancel()
 
 		name := c.Param("name")
-		var projections = bson.D{
-			{Key: "email", Value: 1},
-			{Key: "name", Value: 1},
-		}
-		user, err := database.GetUserByName(name, projections)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			log.Printf("GetUserByName failed: %s", err.Error())
-			return
-		}
 
-		filter := bson.D{primitive.E{Key: "email", Value: name}}
-		update := bson.M{"$set": bson.M{"status": "delete"}}
-		_, err = userCollection.UpdateOne(ctx, filter, update)
+		filter := bson.D{primitive.E{Key: "email_as_id", Value: name}}
+		update := bson.M{"$set": bson.M{"status": "deleted"}}
+		_, err := userTrafficLogsCol.UpdateOne(ctx, filter, update)
 		if err != nil {
 			msg := "database user info update failed."
 			c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
@@ -389,13 +352,13 @@ func TakeItOfflineByUserName() gin.HandlerFunc {
 			return
 		}
 
-		log.Printf("Take user %s offline successfully!", user.Name)
-		c.JSON(http.StatusOK, gin.H{"message": "Take user " + user.Name + " offline successfully!"})
+		log.Printf("Take user %s offline successfully!", name)
+		c.JSON(http.StatusOK, gin.H{"message": "Take user " + name + " offline successfully!"})
 	}
 
 }
 
-func TakeItOnlineByUserName() gin.HandlerFunc {
+func OnlineUserByName() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
 		if err := helper.CheckUserType(c, "admin"); err != nil {
@@ -403,24 +366,24 @@ func TakeItOnlineByUserName() gin.HandlerFunc {
 			return
 		}
 
-		var ctx, cancel = context.WithTimeout(context.Background(), 60*time.Second)
-		defer cancel()
-
 		name := c.Param("name")
+
+		var user UserTrafficLogs
+		filter := bson.M{"email_as_id": name}
 		var projections = bson.D{
-			{Key: "email", Value: 1},
+			{Key: "email_as_id", Value: 1},
 			{Key: "name", Value: 1},
 		}
-		user, err := database.GetUserByName(name, projections)
+		err := userTrafficLogsCol.FindOne(context.TODO(), filter, options.FindOne().SetProjection(projections)).Decode(&user)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			log.Printf("GetUserByName failed: %s", err.Error())
+			msg := "database get user failed."
+			c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
+			log.Printf("%s", msg)
 			return
 		}
 
-		filter := bson.D{primitive.E{Key: "email", Value: name}}
 		update := bson.M{"$set": bson.M{"status": "plain"}}
-		_, err = userCollection.UpdateOne(ctx, filter, update)
+		_, err = userTrafficLogsCol.UpdateOne(context.TODO(), filter, update)
 		if err != nil {
 			msg := "database user info update failed."
 			c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
@@ -443,19 +406,22 @@ func DeleteUserByUserName() gin.HandlerFunc {
 		}
 
 		name := c.Param("name")
+
+		var user UserTrafficLogs
+		filter := bson.M{"email_as_id": name}
 		var projections = bson.D{
-			{Key: "email", Value: 1},
+			{Key: "email_as_id", Value: 1},
 			{Key: "name", Value: 1},
 		}
-		user, err := database.GetUserByName(name, projections)
+		err := userTrafficLogsCol.FindOne(context.TODO(), filter, options.FindOne().SetProjection(projections)).Decode(&user)
 		if err != nil {
-			msg := "database get user failed."
-			c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
-			log.Printf("%s", msg)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			log.Printf("DeleteUserByUserName: %s", err.Error())
 			return
 		}
 
-		err = database.DeleteUserByName(name)
+		// delete user from userTrafficLogsCol
+		_, err = userTrafficLogsCol.DeleteOne(context.TODO(), filter)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			log.Printf("DeleteUserByUserName: %s", err.Error())
@@ -475,43 +441,76 @@ func GetAllUsers() gin.HandlerFunc {
 			return
 		}
 
-		var projections = bson.D{
-			{Key: "email", Value: 1},
-			{Key: "path", Value: 1},
-			{Key: "name", Value: 1},
-			{Key: "node_in_use_status", Value: 1},
-			{Key: "uuid", Value: 1},
-			{Key: "role", Value: 1},
-			{Key: "status", Value: 1},
-			{Key: "suburl", Value: 1},
-			{Key: "user_id", Value: 1},
-			{Key: "used", Value: 1},
-			{Key: "credit", Value: 1},
-			{Key: "created_at", Value: 1},
-			{Key: "updated_at", Value: 1},
-			{Key: "used_by_current_day", Value: 1},
-			{Key: "used_by_current_month", Value: 1},
-			{Key: "used_by_current_year", Value: 1},
+		var ctx, cancel = context.WithTimeout(context.Background(), 60*time.Second)
+		defer cancel()
+
+		pipeline := mongo.Pipeline{
+			{{Key: "$project", Value: bson.D{
+				{Key: "email_as_id", Value: 1},
+				{Key: "uuid", Value: 1},
+				{Key: "name", Value: 1},
+				{Key: "role", Value: 1},
+				{Key: "status", Value: 1},
+				{Key: "used", Value: 1},
+				{Key: "daily_logs", Value: bson.D{
+					{Key: "$slice", Value: bson.A{
+						bson.D{
+							{Key: "$sortArray", Value: bson.D{
+								{Key: "input", Value: "$daily_logs"},
+								{Key: "sortBy", Value: bson.D{{Key: "date", Value: -1}}},
+							}},
+						},
+						10,
+					}},
+				}},
+				{Key: "monthly_logs", Value: bson.D{
+					{Key: "$slice", Value: bson.A{
+						bson.D{
+							{Key: "$sortArray", Value: bson.D{
+								{Key: "input", Value: "$monthly_logs"},
+								{Key: "sortBy", Value: bson.D{{Key: "month", Value: -1}}},
+							}},
+						},
+						10,
+					}},
+				}},
+				{Key: "yearly_logs", Value: bson.D{
+					{Key: "$slice", Value: bson.A{
+						bson.D{
+							{Key: "$sortArray", Value: bson.D{
+								{Key: "input", Value: "$yearly_logs"},
+								{Key: "sortBy", Value: bson.D{{Key: "year", Value: -1}}},
+							}},
+						},
+						10,
+					}},
+				}},
+			}}},
 		}
 
-		allUsers, err := database.GetAllUsersPortionInfo(projections)
+		cursor, err := userTrafficLogsCol.Aggregate(ctx, pipeline)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			log.Printf("GetAllUsers failed: %s", err.Error())
+			log.Printf("GetAllUsers: %s", err.Error())
+			return
+		}
+		defer cursor.Close(ctx)
+
+		var results []UserTrafficLogs
+		if err = cursor.All(ctx, &results); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			log.Printf("GetAllUsers: %s", err.Error())
 			return
 		}
 
-		if len(allUsers) == 0 {
-			c.JSON(http.StatusOK, []User{})
-			return
-		}
+		c.JSON(http.StatusOK, results)
 
-		c.JSON(http.StatusOK, allUsers)
 	}
 }
 
 func GetUserByName() gin.HandlerFunc {
 	return func(c *gin.Context) {
+
 		name := c.Param("name")
 
 		if err := helper.MatchUserTypeAndName(c, name); err != nil {
@@ -521,23 +520,23 @@ func GetUserByName() gin.HandlerFunc {
 		}
 
 		var projections = bson.D{
-			{Key: "used_by_current_day", Value: 1},
-			{Key: "used_by_current_month", Value: 1},
-			{Key: "used_by_current_year", Value: 1},
-			{Key: "traffic_by_day", Value: 1},
-			{Key: "traffic_by_month", Value: 1},
-			{Key: "traffic_by_year", Value: 1},
+			{Key: "email_as_id", Value: 1},
 			{Key: "used", Value: 1},
-			{Key: "email", Value: 1},
-			{Key: "path", Value: 1},
 			{Key: "uuid", Value: 1},
 			{Key: "name", Value: 1},
-			{Key: "node_in_use_status", Value: 1},
+			{Key: "status", Value: 1},
+			{Key: "role", Value: 1},
+			{Key: "credit", Value: 1},
+			{Key: "daily_logs", Value: 1},
+			{Key: "monthly_logs", Value: 1},
+			{Key: "yearly_logs", Value: 1},
 		}
-		user, err := database.GetUserByName(name, projections)
+
+		var user UserTrafficLogs
+		err := userTrafficLogsCol.FindOne(context.Background(), bson.M{"email_as_id": name}, options.FindOne().SetProjection(projections)).Decode(&user)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			log.Printf("Get user by name failed: %s", err.Error())
+			log.Printf("GetUserByName: %s", err.Error())
 			return
 		}
 
@@ -573,16 +572,17 @@ func GetSubscripionURL() gin.HandlerFunc {
 		name := helper.SanitizeStr(c.Param("name"))
 
 		// get globalVariable from GlobelCollection ActiveGlobalNodes
-		var globalVariable GlobalVariable
-		var ctx, cancel = context.WithTimeout(context.Background(), 10*time.Second)
-		defer cancel()
+		var activeGlobalNodes []Domain
 
-		err = globalCollection.FindOne(ctx, bson.M{"name": "GLOBAL"}).Decode(&globalVariable)
+		cur, err := globalCollection.Find(context.TODO(), bson.D{})
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "error occured while getting globalVariable"})
 			log.Printf("Getting globalVariable error: %s", err.Error())
 			return
 		}
+		defer cur.Close(context.Background())
+
+		cur.All(context.Background(), &activeGlobalNodes)
 
 		// projections include status, user_id, uuid,
 		var projections = bson.D{
@@ -590,16 +590,18 @@ func GetSubscripionURL() gin.HandlerFunc {
 			{Key: "user_id", Value: 1},
 			{Key: "uuid", Value: 1},
 		}
-		user, err := database.GetUserByName(name, projections)
+		var user UserTrafficLogs
+		err = userTrafficLogsCol.FindOne(context.TODO(), bson.M{"email_as_id": name}, options.FindOne().SetProjection(projections)).Decode(&user)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			log.Printf("GetUserByName failed: %s", err.Error())
+			log.Printf("GetSubscripionURL error: %v", err)
 			return
 		}
 
 		if user.Status == "plain" {
 			var sub string
-			for _, node := range globalVariable.ActiveGlobalNodes {
+			for _, node := range activeGlobalNodes {
+
 				if node.Type == "reality" {
 					if len(sub) == 0 {
 						sub = "vless://" + user.UUID + "@" + node.IP + ":" + node.SERVER_PORT + "?encryption=none&flow=xtls-rprx-vision&security=reality&sni=itunes.apple.com&fp=chrome&pbk=" + node.PUBLIC_KEY + "&sid=" + node.SHORT_ID + "&type=tcp&headerType=none#" + node.Remark
@@ -648,13 +650,14 @@ func ReturnSingboxJson() gin.HandlerFunc {
 		var err error
 		var jsonFile []byte
 		var singboxJSON = SingboxJSON{}
+		var user UserTrafficLogs
 
 		var projections = bson.D{
 			{Key: "status", Value: 1},
 			{Key: "user_id", Value: 1},
 			{Key: "uuid", Value: 1},
 		}
-		user, err := database.GetUserByName(name, projections)
+		err = userTrafficLogsCol.FindOne(context.TODO(), bson.M{"email_as_id": name}, options.FindOne().SetProjection(projections)).Decode(&user)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			log.Printf("ReturnSingboxJson failed: %s", err.Error())
@@ -662,16 +665,17 @@ func ReturnSingboxJson() gin.HandlerFunc {
 		}
 
 		// get globalVariable from GlobelCollection ActiveGlobalNodes
-		var globalVariable GlobalVariable
-		var ctx, cancel = context.WithTimeout(context.Background(), 10*time.Second)
-		defer cancel()
+		var activeGlobalNodes []Domain
 
-		err = globalCollection.FindOne(ctx, bson.M{"name": "GLOBAL"}).Decode(&globalVariable)
+		cur, err := globalCollection.Find(context.TODO(), bson.D{})
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "error occured while getting globalVariable"})
 			log.Printf("Getting globalVariable error: %s", err.Error())
 			return
 		}
+		defer cur.Close(context.Background())
+
+		cur.All(context.Background(), &activeGlobalNodes)
 
 		if user.Status == "plain" {
 
@@ -690,7 +694,7 @@ func ReturnSingboxJson() gin.HandlerFunc {
 			}
 
 			// append reality and hysteria2 nodes to outbounds in jsonfile.
-			for _, node := range globalVariable.ActiveGlobalNodes {
+			for _, node := range activeGlobalNodes {
 
 				server_port, _ := strconv.Atoi(node.SERVER_PORT)
 				var outboundTags = []string{
@@ -900,24 +904,25 @@ func ReturnVergeYAML() gin.HandlerFunc {
 			{Key: "user_id", Value: 1},
 			{Key: "uuid", Value: 1},
 		}
-		user, err := database.GetUserByName(name, projections)
+		var user UserTrafficLogs
+		err = userTrafficLogsCol.FindOne(context.TODO(), bson.M{"email_as_id": name}, options.FindOne().SetProjection(projections)).Decode(&user)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			log.Printf("ReturnSingboxJson failed: %s", err.Error())
+			log.Printf("ReturnVergeYAML failed: %s", err.Error())
 			return
 		}
 
 		// get globalVariable from GlobelCollection ActiveGlobalNodes
-		var globalVariable GlobalVariable
-		var ctx, cancel = context.WithTimeout(context.Background(), 10*time.Second)
-		defer cancel()
-
-		err = globalCollection.FindOne(ctx, bson.M{"name": "GLOBAL"}).Decode(&globalVariable)
+		var activeGlobalNodes []Domain
+		cur, err := globalCollection.Find(context.TODO(), bson.D{})
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "error occured while getting globalVariable"})
 			log.Printf("Getting globalVariable error: %s", err.Error())
 			return
 		}
+		defer cur.Close(context.Background())
+
+		cur.All(context.Background(), &activeGlobalNodes)
 
 		if user.Status == "plain" {
 			yamlFile, err = os.ReadFile(helper.CurrentPath() + "/config/template_verge.yaml")
@@ -935,10 +940,9 @@ func ReturnVergeYAML() gin.HandlerFunc {
 			}
 
 			// append reality and hysteria2 nodes to outbounds in yamlfile.
-			for _, node := range globalVariable.ActiveGlobalNodes {
+			for _, node := range activeGlobalNodes {
 
 				server_port, _ := strconv.Atoi(node.SERVER_PORT)
-
 				if node.Type == "reality" {
 
 					for i, proxy := range singboxYAML.ProxyGroups {
@@ -1054,65 +1058,5 @@ func ReturnVergeYAML() gin.HandlerFunc {
 		}
 
 		c.YAML(http.StatusOK, singboxYAML)
-	}
-}
-
-// return clash yaml file
-func ReturnClashYAML() gin.HandlerFunc {
-	return func(c *gin.Context) {
-
-		filename := helper.SanitizeStr(c.Param("filename"))
-		name := strings.Split(filename, ".")[0]
-
-		// print filename, name
-		var err error
-		var yamlFile []byte
-		var clashYAML = ClashYAML{}
-
-		var projections = bson.D{
-			{Key: "status", Value: 1},
-			{Key: "user_id", Value: 1},
-			{Key: "uuid", Value: 1},
-			{Key: "path", Value: 1},
-		}
-		user, err := database.GetUserByName(name, projections)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			log.Printf("ReturnSingboxJson failed: %s", err.Error())
-			return
-		}
-
-		if user.Status == "plain" {
-			yamlFile, err = os.ReadFile(helper.CurrentPath() + "/config/template_clash.yaml")
-			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-				log.Printf("error: %v", err)
-				return
-			}
-
-			err = yaml.Unmarshal(yamlFile, &clashYAML)
-			if err != nil {
-				log.Printf("error: %v", err)
-				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-				return
-			}
-
-		} else {
-			yamlFile, err = os.ReadFile(helper.CurrentPath() + "/config/error_clash.yaml")
-			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-				log.Printf("error: %v", err)
-				return
-			}
-
-			err = yaml.Unmarshal(yamlFile, &clashYAML)
-			if err != nil {
-				log.Fatalf("error: %v", err)
-				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-				return
-			}
-		}
-
-		c.YAML(http.StatusOK, clashYAML)
 	}
 }

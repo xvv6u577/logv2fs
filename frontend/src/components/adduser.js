@@ -7,14 +7,14 @@ import axios from "axios";
 function AddUser({ btnName }) {
 
 	const initialState = {
-		email: "",
+		email_as_id: "",
 		name: "",
 		path: "ray",
 		role: "normal",
 		uuid: ""
 	};
 	const [showModal, setShowModal] = useState(false);
-	const [{ email, name, path, role, uuid }, setState] = useState(initialState);
+	const [{ email_as_id, name, path, role, uuid }, setState] = useState(initialState);
 
 	const dispatch = useDispatch();
 	const loginState = useSelector((state) => state.login);
@@ -34,8 +34,8 @@ function AddUser({ btnName }) {
 			url: process.env.REACT_APP_API_HOST + "signup",
 			headers: { token: loginState.token },
 			data: {
-				email,
-				"password":email,
+				email_as_id,
+				"password":email_as_id,
 				role,
 				name,
 				path,
@@ -94,9 +94,9 @@ function AddUser({ btnName }) {
 										<label htmlFor="email" className="block mb-2 text-sm font-medium text-gray-900 dark:text-gray-300">Email (4-100 characters)*</label>
 										<input
 											type="input"
-											name="email"
+											name="email_as_id"
 											id="email"
-											value={email}
+											value={email_as_id}
 											onChange={onChange}
 											className="bg-gray-5ˀ0 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white" 
 											placeholder="email"

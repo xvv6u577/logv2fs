@@ -9,21 +9,15 @@ import (
 	"io/ioutil"
 	"log"
 	"net"
-	"os"
 	"time"
 
 	helper "github.com/xvv6u577/logv2fs/helpers"
 	"github.com/xvv6u577/logv2fs/model"
+	thirdparty "github.com/xvv6u577/logv2fs/pkg"
 	pb "github.com/xvv6u577/logv2fs/proto"
-	"github.com/xvv6u577/logv2fs/v2ray"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
-)
-
-var (
-	V2_API_ADDRESS = os.Getenv("V2_API_ADDRESS")
-	V2_API_PORT    = os.Getenv("V2_API_PORT")
 )
 
 type (
@@ -49,7 +43,7 @@ func (s *Server) AddUser(ctx context.Context, in *pb.GRPCRequest) (*pb.GRPCReply
 		Path:  in.GetPath(),
 	}
 
-	NHSClient := v2ray.NewHandlerServiceClient(cmdConn, in.GetPath())
+	NHSClient := thirdparty.NewHandlerServiceClient(cmdConn, in.GetPath())
 	err = NHSClient.AddUser(user)
 	if err != nil {
 		log.Printf("%v", "v2ray service add user failed.")
@@ -64,12 +58,12 @@ func (s *Server) DeleteUser(ctx context.Context, in *pb.GRPCRequest) (*pb.GRPCRe
 
 	cmdConn, err := grpc.Dial("127.0.0.1:8070", grpc.WithInsecure())
 	if err != nil {
-		log.Printf("%v", "v2ray service connection failed.")
+		log.Printf("%v", "thirdparty service connection failed.")
 		return &pb.GRPCReply{SuccesOrNot: "v2ray service connection failed."}, err
 	}
 	defer cmdConn.Close()
 
-	NHSClient := v2ray.NewHandlerServiceClient(cmdConn, in.GetPath())
+	NHSClient := thirdparty.NewHandlerServiceClient(cmdConn, in.GetPath())
 	err = NHSClient.DelUser(in.GetName())
 	if err != nil {
 		log.Printf("%v", "v2ray service delete user failed.")

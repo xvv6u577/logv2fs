@@ -27,7 +27,7 @@ func Authentication() gin.HandlerFunc {
 
 		c.Set("email", claims.Email)
 		c.Set("uuid", claims.UUID)
-		c.Set("path", claims.Path)
+		c.Set("name", claims.Name)
 		c.Set("uid", claims.Uid)
 		c.Set("user_type", claims.Role)
 

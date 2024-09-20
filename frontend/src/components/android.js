@@ -1,63 +1,75 @@
 import { useSelector } from "react-redux";
 import TapToCopied from "./tapToCopied";
-import AndroidImages1 from "../images/android-1.png";
-import AndroidImages2 from "../images/android-2.png";
-import AndroidImages3 from "../images/android-3.png";
-import AndroidImages4 from "../images/android-4.png";
-import AndroidImages5 from "../images/android-5.jpeg";
-import MyLightbox from "./MyLightbox";
+// import AndroidImages1 from "../images/android-1.png";
+// import AndroidImages2 from "../images/android-2.png";
+// import AndroidImages3 from "../images/android-3.png";
+// import AndroidImages4 from "../images/android-4.png";
+// import AndroidImages5 from "../images/android-5.jpeg";
+// import MyLightbox from "./MyLightbox";
 
 function Android() {
 
 	const loginState = useSelector((state) => state.login);
-	const img1 = [AndroidImages1];
-	const img2 = [AndroidImages2];
-	const img3 = [AndroidImages3];
-	const img4 = [AndroidImages4];
-	const img5 = [AndroidImages5];
+	// const img1 = [AndroidImages1];
+	// const img2 = [AndroidImages2];
+	// const img3 = [AndroidImages3];
+	// const img4 = [AndroidImages4];
+	// const img5 = [AndroidImages5];
 
 
 	return (
-		<div className="xl:container xl:mx-auto px-5 xl:px-20">
-			<h1 className="my-4 px-auto text-4xl font-extrabold tracking-tight leading-none text-gray-900 md:text-5xl lg:text-6xl dark:text-white">
-				Android 系统中安装 clash
-			</h1>
-			<p className="my-6 text-base font-normal text-gray-500 lg:text-xl sm:px-16 xl:px-10 dark:text-gray-400">Step 1: 安装 clash 客户端</p>
-			<div className="my-6 text-base font-normal text-gray-500 lg:text-base sm:px-16 xl:px-10 dark:text-sky-200">
-				客户端下载:{" "}<br /> <TapToCopied>{process.env.REACT_APP_FILE_AND_SUB_URL + "/dl/ClashForAndroid-2.5.11-premium.apk"}</TapToCopied>
-			</div>
-			<p className="my-6 text-base font-normal text-gray-500 lg:text-base sm:px-16 xl:px-10 dark:text-sky-200">
-				下载之后，运行安装程序，并授权安装。
-			</p>
-			<p className="my-6 text-base font-normal text-gray-500 lg:text-xl sm:px-16 xl:px-10 dark:text-gray-400">Step 2: 添加配置</p>
-			<MyLightbox images={img1} device="mobile" />
-			<p className="my-6 text-base font-normal text-gray-500 lg:text-base sm:px-16 xl:px-10 dark:text-sky-200">
-				打开 clash 客户端，点击“配置”按钮，然后点击右上角“+”按钮，选择“从 URL 导入”
-			</p>
-			<MyLightbox images={img2} device="mobile" />
-			<MyLightbox images={img3} device="mobile" />
-			<p className="my-6 text-base font-normal text-gray-500 lg:text-base sm:px-16 xl:px-10 dark:text-sky-200">
-				复制下面的 URL, 在 URL 下面粘贴:<br />
-			</p>
-			<p className="my-6 text-base font-normal text-gray-500 lg:text-base sm:px-16 xl:px-10 dark:text-sky-200">
-				<TapToCopied >{process.env.REACT_APP_FILE_AND_SUB_URL + "/clash/" + loginState.jwt.Email + ".yaml"}</TapToCopied>
-			</p>
-			<p className="my-6 text-base font-normal text-gray-500 lg:text-base sm:px-16 xl:px-10 dark:text-sky-200">
-				名称填写: clash, 自动更新填写(半天): 720
-			</p>
-			<p className="my-6 text-base font-normal text-gray-500 lg:text-base sm:px-16 xl:px-10 dark:text-sky-200">
-				点按右上角图标，保存配置 <br />
-			</p>
-			<MyLightbox images={img4} device="mobile" />
-			<p className="my-6 text-base font-normal text-gray-500 lg:text-xl sm:px-16 xl:px-10 dark:text-gray-400">Step 3: 日常运行设置</p>
-			<div className="my-6 text-base font-normal text-gray-500 lg:text-base sm:px-16 xl:px-10 dark:text-sky-200">
-				<p>回到 clash 客户端主界面，点按"已停止", 若文字变成"运行中"，则程序已打开</p>
-			</div>
-			<MyLightbox images={img5} device="mobile" />
-			<div className="my-6 text-base font-normal text-gray-500 lg:text-base sm:px-16 xl:px-10 dark:text-sky-200">
-				打开浏览器，访问 <TapToCopied>https://www.google.com</TapToCopied>，如果能正常访问，说明配置成功。
-			</div>
+		<div className="xl:container xl:mx-auto mx-auto px-4 py-8 max-w-3xl">
+			<h1 class="text-3xl font-bold text-center text-gray-800 dark:text-white mb-8">Android 安装 Sing-box 指南</h1>
+
+			<ol class="space-y-8">
+				<li>
+					<h2 class="text-xl font-semibold text-gray-800 dark:text-white mb-2">下载客户端 Sing-box</h2>
+					<p class="text-gray-700 dark:text-gray-300">下载链接：
+						<a href="https://w8.undervineyard.com/dl/Singbox-for-Android-1.8.11-universal.apk" class="text-blue-500 hover:text-blue-600 underline">
+							https://w8.undervineyard.com/dl/Singbox-for-Android-1.8.11-universal.apk
+						</a>
+					</p>
+				</li>
+
+				<li>
+					<h2 class="text-xl font-semibold text-gray-800 dark:text-white mb-2">添加配置文件</h2>
+					<ol class="list-decimal pl-6 space-y-2 text-gray-700 dark:text-gray-300">
+						<li>在客户端主界面，点按"profiles"</li>
+						<li>选择 "New Profile"</li>
+						<li>填写以下信息：
+							<ul class="list-disc pl-6 mt-2 space-y-1">
+								<li>Name：w8</li>
+								<li>Type: remote</li>
+								<li>URL：<TapToCopied>{process.env.REACT_APP_FILE_AND_SUB_URL + "/singbox/" + loginState.jwt.Email}</TapToCopied></li>
+								<li>Update Interval: 360</li>
+							</ul>
+						</li>
+					</ol>
+				</li>
+
+				<li>
+					<h2 class="text-xl font-semibold text-gray-800 dark:text-white mb-2">启用服务</h2>
+					<ol class="list-decimal pl-6 space-y-2 text-gray-700 dark:text-gray-300">
+						<li>在客户端主界面，点按"Dashboard"</li>
+						<li>打开 Enable 开关按钮</li>
+					</ol>
+				</li>
+
+				<li>
+					<h2 class="text-xl font-semibold text-gray-800 dark:text-white mb-2">验证安装</h2>
+					<ol class="list-decimal pl-6 space-y-2 text-gray-700 dark:text-gray-300">
+						<li>打开您的浏览器</li>
+						<li>尝试访问 <TapToCopied>www.google.com</TapToCopied></li>
+						<li>如果能够成功打开，则表示安装和配置已完成</li>
+					</ol>
+				</li>
+			</ol >
+
+		<div class="bg-yellow-100 dark:bg-yellow-900 border-l-4 border-yellow-500 text-yellow-700 dark:text-yellow-200 p-4 mt-8">
+			<p class="font-semibold">提示：</p>
+			<p>如果在安装过程中遇到任何问题，请确保您的Android设备允许安装来自未知来源的应用，并检查网络连接是否正常。</p>
 		</div>
+		</div >
 	);
 }
 

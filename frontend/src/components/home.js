@@ -34,14 +34,14 @@ const Home = () => {
 				headers: { token: loginState.token },
 			})
 			.then((response) => {
-				let user = response.data.filter(
-					(ele) => ele.email === loginState.jwt.Email
-				);
-				if (user.length !== 0) {
-					setUsers(response.data);
-				} else {
-					dispatch(logout());
-				}
+				setUsers(response.data);
+				// let user = response.data.filter(
+				// 	(ele) => ele.email === loginState.jwt.Email
+				// );
+				// if (user.length !== 0) {
+				// } else {
+				// 	dispatch(logout());
+				// }
 			})
 			.catch((err) => {
 				if (err.response) {
@@ -62,21 +62,14 @@ const Home = () => {
 					className="w-20 focus:outline-none text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-red-300 font-medium rounded-lg text-sm px-1.5 py-1 m-1 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
 					onClick={() => {
 						const updatedUsers = users
-							// put admin at the top of the list
-							.reduce((acc, ele) => {
-								if (ele.role === "admin") {
-									return [ele, ...acc];
-								}
-								return [...acc, ele];
+							.reduce((acc, user) => {
+								return user.role === "admin" ? [user, ...acc] : [...acc, user];
 							}, [])
-							// sort the normal users by used_by_current_month.amount
 							.sort((a, b) => {
-								if ((a.role === "admin") | (b.role === "admin")) {
-									return 0;
-								}
-								return (
-									b.used_by_current_month.amount - a.used_by_current_month.amount
-								);
+								if (a.role === "admin" || b.role === "admin") return 0;
+
+								const getTraffic = user => user.monthly_logs?.[0]?.traffic ?? 0;
+								return getTraffic(b) - getTraffic(a);
 							});
 						setUsers(updatedUsers);
 					}}
@@ -90,18 +83,18 @@ const Home = () => {
 							// put status:plain at the top of the list
 							.reduce((acc, ele) => {
 								if (ele.status === "plain") {
-									return [...acc, ele];
+									return [ele, ...acc];
 								}
-								return [ele, ...acc];
+								return [...acc, ele];
 							}, [])
-							// sort the plain users by used_by_current_month.amount
+							// sort the plain users by user.used
 							.sort((a, b) => {
 								if ((a.status !== "plain") | (b.status !== "plain")) {
 									return 0;
 								}
-								return (
-									b.used_by_current_month.amount - a.used_by_current_month.amount
-								);
+
+								const getTraffic = user => user.monthly_logs?.[0]?.traffic ?? 0;
+								return getTraffic(b) - getTraffic(a);
 							});
 						setUsers(updatedUsers);
 					}}
@@ -110,7 +103,7 @@ const Home = () => {
 				</button>
 				<button
 					className="w-20 focus:outline-none text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-red-300 font-medium rounded-lg text-sm px-1.5 py-1 m-1 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
-					onClick={() => { 
+					onClick={() => {
 						const updatedUsers = users
 							// put status:plain at the top of the list
 							.reduce((acc, ele) => {
@@ -124,18 +117,18 @@ const Home = () => {
 								if ((a.status !== "plain") | (b.status !== "plain")) {
 									return 0;
 								}
-								return (
-									b.used_by_current_day.amount - a.used_by_current_day.amount
-								);
+
+								const getTraffic = user => user.daily_logs?.[0]?.traffic ?? 0;
+								return getTraffic(b) - getTraffic(a);
 							});
 						setUsers(updatedUsers);
-					 }}
+					}}
 				>
 					Today
 				</button>
 				<button
 					className="w-20 focus:outline-none text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-red-300 font-medium rounded-lg text-sm px-1.5 py-1 m-1 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
-					onClick={() => { 
+					onClick={() => {
 						const updatedUsers = users
 							// put status:plain at the top of the list
 							.reduce((acc, ele) => {
@@ -149,18 +142,18 @@ const Home = () => {
 								if ((a.status !== "plain") | (b.status !== "plain")) {
 									return 0;
 								}
-								return (
-									b.used_by_current_month.amount - a.used_by_current_month.amount
-								);
+								
+								const getTraffic = user => user.monthly_logs?.[0]?.traffic ?? 0;
+								return getTraffic(b) - getTraffic(a);
 							});
 						setUsers(updatedUsers);
-					 }}
+					}}
 				>
 					By Month
 				</button>
 				<button
 					className="w-20 focus:outline-none text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-red-300 font-medium rounded-lg text-sm px-1.5 py-1 m-1 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
-					onClick={() => { 
+					onClick={() => {
 						const updatedUsers = users
 							// put status:plain at the top of the list
 							.reduce((acc, ele) => {
@@ -179,7 +172,7 @@ const Home = () => {
 								);
 							});
 						setUsers(updatedUsers);
-					 }}
+					}}
 				>
 					By Used
 				</button>

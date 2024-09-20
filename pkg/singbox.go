@@ -15,70 +15,77 @@ import (
 	"github.com/xvv6u577/logv2fs/database"
 	"github.com/xvv6u577/logv2fs/model"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 type (
-	User    = model.User
-	Traffic = model.Traffic
+	Traffic         = model.Traffic
+	UserTrafficLogs = model.UserTrafficLogs
 )
 
 var (
-	CURRENT_DOMAIN = os.Getenv("CURRENT_DOMAIN")
+	CURRENT_DOMAIN     = os.Getenv("CURRENT_DOMAIN")
+	userTrafficLogsCol = database.OpenCollection(database.Client, "USER_TRAFFIC_LOGS")
 )
 
-func UpdateOptionsFromDB(options option.Options) (option.Options, error) {
+func UpdateOptionsFromDB(opt option.Options) (option.Options, error) {
 
 	var projections = bson.D{
-		{Key: "email", Value: 1},
+		{Key: "email_as_id", Value: 1},
 		{Key: "status", Value: 1},
 		{Key: "uuid", Value: 1},
-		{Key: "node_in_use_status", Value: 1},
 		{Key: "user_id", Value: 1},
 	}
 
-	users, err := database.GetAllUsersPortionInfo(projections)
+	cur, err := userTrafficLogsCol.Find(context.Background(), bson.D{}, options.Find().SetProjection(projections))
 	if err != nil {
 		log.Printf("error getting all users portion info: %v\n", err)
-		return options, err
+		return opt, err
 	}
 
-	if len(users) > 0 {
+	var userTrafficLogsArr []*UserTrafficLogs
+	if err = cur.All(context.Background(), &userTrafficLogsArr); err != nil {
+		log.Printf("error getting all users portion info: %v\n", err)
+		return opt, err
+	}
+
+	if len(userTrafficLogsArr) > 0 {
 		var wg sync.WaitGroup
 
-		for _, user := range users {
+		for _, user := range userTrafficLogsArr {
 			if user.Status == "plain" {
 				wg.Add(1)
-				go func(user User) {
+				go func(user UserTrafficLogs) {
 					defer wg.Done()
 
-					// add VlessUser and Hysteria2User to options.Inbounds
-					for inbound := range options.Inbounds {
+					// add VlessUser and Hysteria2User to opt.Inbounds
+					for inbound := range opt.Inbounds {
 
-						var usersToAppend = []string{user.Email + "-reality", user.Email + "-hysteria2", user.Email + "-vmess"}
-						options.Experimental.V2RayAPI.Stats.Users = append(options.Experimental.V2RayAPI.Stats.Users, usersToAppend...)
+						var usersToAppend = []string{user.Email_As_Id + "-reality", user.Email_As_Id + "-hysteria2"}
+						opt.Experimental.V2RayAPI.Stats.Users = append(opt.Experimental.V2RayAPI.Stats.Users, usersToAppend...)
 
-						if options.Inbounds[inbound].Type == "vless" {
-							options.Inbounds[inbound].VLESSOptions.Users = append(options.Inbounds[inbound].VLESSOptions.Users, option.VLESSUser{
-								Name: user.Email + "-reality",
+						if opt.Inbounds[inbound].Type == "vless" {
+							opt.Inbounds[inbound].VLESSOptions.Users = append(opt.Inbounds[inbound].VLESSOptions.Users, option.VLESSUser{
+								Name: user.Email_As_Id + "-reality",
 								UUID: user.UUID,
 								Flow: "xtls-rprx-vision",
 							})
 						}
 
-						if options.Inbounds[inbound].Type == "hysteria2" {
-							options.Inbounds[inbound].Hysteria2Options.Users = append(options.Inbounds[inbound].Hysteria2Options.Users, option.Hysteria2User{
-								Name:     user.Email + "-hysteria2",
+						if opt.Inbounds[inbound].Type == "hysteria2" {
+							opt.Inbounds[inbound].Hysteria2Options.Users = append(opt.Inbounds[inbound].Hysteria2Options.Users, option.Hysteria2User{
+								Name:     user.Email_As_Id + "-hysteria2",
 								Password: user.User_id,
 							})
 						}
 
-						if options.Inbounds[inbound].Type == "vmess" {
-							options.Inbounds[inbound].VMessOptions.Users = append(options.Inbounds[inbound].VMessOptions.Users, option.VMessUser{
-								Name:    user.Email + "-vmess",
-								UUID:    user.UUID,
-								AlterId: 0,
-							})
-						}
+						// if opt.Inbounds[inbound].Type == "vmess" {
+						// 	opt.Inbounds[inbound].VMessOptions.Users = append(opt.Inbounds[inbound].VMessOptions.Users, option.VMessUser{
+						// 		Name:    user.Email_As_Id + "-vmess",
+						// 		UUID:    user.UUID,
+						// 		AlterId: 0,
+						// 	})
+						// }
 					}
 
 				}(*user)
@@ -88,10 +95,10 @@ func UpdateOptionsFromDB(options option.Options) (option.Options, error) {
 		wg.Wait()
 	}
 
-	return options, nil
+	return opt, nil
 }
 
-func GetUsageDataOfAllUsers(instance *box.Box) ([]Traffic, error) {
+func UsageDataOfAll(instance *box.Box) ([]Traffic, error) {
 
 	statsService := instance.Router().V2RayServer().StatsService()
 

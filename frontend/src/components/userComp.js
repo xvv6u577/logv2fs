@@ -18,7 +18,7 @@ const UserComp = (props) => {
 
     const fetchMore = () => {
         axios
-            .get(process.env.REACT_APP_API_HOST + "user/" + props.user.email, {
+            .get(process.env.REACT_APP_API_HOST + "user/" + props.user.email_as_id, {
                 headers: { token: loginState.token },
             })
             .then((response) => {
@@ -88,7 +88,7 @@ const UserComp = (props) => {
             <h2 id={`accordion-collapse-heading-${props.index}`} >
                 <span className="flex flex-col md:flex-row items-center md:justify-between w-full md:px-5 font-medium text-left border border-b-0 border-gray-200 rounded-t-xl focus:ring-4 focus:ring-gray-200 dark:focus:ring-gray-800 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white"
                 >
-                    <span className="flex md:justify-start justify-center w-full md:w-1/3">
+                    <span className="flex md:justify-start justify-center w-full md:w-1/4">
                         <div>
                             <span className="w-10 bg-gray-100 text-gray-800 text-xs font-medium inline-flex items-center px-2.5 py-0.5 rounded mr-2 dark:bg-gray-700 dark:text-gray-300">
                                 {props.index + 1}{"."}
@@ -121,21 +121,26 @@ const UserComp = (props) => {
                             )}
                         </div>
                     </span>
-                    <span className="flex md:justify-start justify-center items-center w-full  md:w-1/3 text-xs"> Today:{" "}
+                    <span className="flex md:justify-start justify-center items-center w-full  md:w-5/12 text-xs">
+                        Today:{" "}
                         <span className="inline-flex w-24 bg-indigo-100 text-indigo-800 text-sm font-medium mr-2 px-2.5 py-0.5 rounded dark:bg-indigo-200 dark:text-indigo-900">
-                            {formatBytes(props.user.used_by_current_day.amount)}
+                            {props.user.daily_logs && props.user.daily_logs.length > 0 ? formatBytes(props.user.daily_logs[0].traffic) : "0 Bytes"}
                         </span>
                         {" "}
                         This month:{" "}
                         <span className="inline-flex w-24 bg-indigo-100 text-indigo-800 text-sm font-medium mr-2 px-2.5 py-0.5 rounded dark:bg-indigo-200 dark:text-indigo-900">
-                            {formatBytes(props.user.used_by_current_month.amount)}
+                            {props.user.monthly_logs && props.user.monthly_logs.length > 0 ? formatBytes(props.user.monthly_logs[0].traffic) : "0 Bytes"}
+                        </span>
+                        {" "} This Year:{" "}
+                        <span className="inline-flex w-24 bg-indigo-100 text-indigo-800 text-sm font-medium mr-2 px-2.5 py-0.5 rounded dark:bg-indigo-200 dark:text-indigo-900">
+                            {props.user.yearly_logs && props.user.yearly_logs.length > 0 ? formatBytes(props.user.yearly_logs[0].traffic) : "0 Bytes"}
                         </span>
                         {" "} Used:{" "}
                         <span className="inline-flex w-24 bg-indigo-100 text-indigo-800 text-sm font-medium mr-2 px-2.5 py-0.5 rounded dark:bg-indigo-200 dark:text-indigo-900">
                             {formatBytes(props.user.used)}
                         </span>
                     </span>
-                    <span className="w-full flex flex-col md:flex-row md:w-1/3">
+                    <span className="w-full flex flex-col md:flex-row md:w-1/4">
                         <EditUser
                             btnName="Edit"
                             editUserFunc={() =>
@@ -147,7 +152,7 @@ const UserComp = (props) => {
                             className="w-auto md:w-24 focus:outline-none text-white bg-red-700 hover:bg-red-800 focus:ring-4 focus:ring-red-300 
                                     font-medium rounded-lg text-sm px-1.5 py-1 m-1 text-center dark:bg-red-600 dark:hover:bg-red-700 dark:focus:ring-red-800"
                             type="button"
-                            onClick={() => handleOffline(props.user.email)}
+                            onClick={() => handleOffline(props.user.email_as_id)}
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 inline-block mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
@@ -160,7 +165,7 @@ const UserComp = (props) => {
                                 className="w-auto md:w-24 focus:outline-none text-white bg-green-700 hover:bg-green-800 focus:ring-4 focus:ring-red-300 
                                     font-medium rounded-lg text-sm px-1.5 py-1 m-1 text-center dark:bg-green-600 dark:hover:bg-green-700 dark:focus:ring-green-800"
                                 type="button"
-                                onClick={() => handleOnline(props.user.email)}
+                                onClick={() => handleOnline(props.user.email_as_id)}
                             >
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 inline-block mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
@@ -170,7 +175,7 @@ const UserComp = (props) => {
                         )}
                         <ConfirmDelUser
                             btnName="Delete"
-                            deleteUserFunc={() => handleDeleteUser(props.user.email)}
+                            deleteUserFunc={() => handleDeleteUser(props.user.email_as_id)}
                         />
                     </span>
                     <svg
@@ -178,7 +183,7 @@ const UserComp = (props) => {
                             props.update();
                             props.active && fetchMore();
                         }}
-                        className={`w-10 h-10 shrink-0 dark:hover:bg-gray-600 hover:cursor-pointer ${props.active ? "rotate-180" : "rotate-0"}`}
+                        className={`md:w-1/12 w-10 h-10 shrink-0 dark:hover:bg-gray-600 hover:cursor-pointer ${props.active ? "rotate-180" : "rotate-0"}`}
                         fill="currentColor"
                         viewBox="0 0 20 20"
                         xmlns="http://www.w3.org/2000/svg">
@@ -193,40 +198,40 @@ const UserComp = (props) => {
                 <div className="w-auto flex flex-col md:w-2/3 md:p-5 mx-auto my-3 px-3 font-light rounded-lg border-4 border-gray-200 dark:border-gray-700 dark:bg-gray-900">
                     <div className="py-1 flex justify-between items-center">
                         <pre className="inline text-sm font-medium text-gray-900 dark:text-white">Email: </pre>
-                        <TapToCopied>{user.email}</TapToCopied>
+                        <TapToCopied>{user.email_as_id}</TapToCopied>
                     </div>
                     <div className="py-1 flex justify-between items-center">
                         <pre className="inline  text-sm font-medium text-gray-900 dark:text-white">SubUrl:</pre>
                         <TapToCopied>
-                            {process.env.REACT_APP_FILE_AND_SUB_URL + "/static/" + user.email}
+                            {process.env.REACT_APP_FILE_AND_SUB_URL + "/static/" + user.email_as_id}
                         </TapToCopied>
                     </div>
                     <div className="py-1 flex justify-between items-center">
                         <pre className="inline  text-sm font-medium text-gray-900 dark:text-white">Clash:</pre>
                         <TapToCopied>
-                            {process.env.REACT_APP_FILE_AND_SUB_URL + "/clash/" + user.email + ".yaml"}
+                            {process.env.REACT_APP_FILE_AND_SUB_URL + "/clash/" + user.email_as_id + ".yaml"}
                         </TapToCopied>
                     </div>
                     <div className="py-1 flex justify-between items-center">
                         <pre className="inline  text-sm font-medium text-gray-900 dark:text-white">Verge:</pre>
                         <TapToCopied>
-                            {process.env.REACT_APP_FILE_AND_SUB_URL + "/verge/" + user.email}
+                            {process.env.REACT_APP_FILE_AND_SUB_URL + "/verge/" + user.email_as_id}
                         </TapToCopied>
                     </div>
                     <div className="py-1 flex justify-between items-center">
                         <pre className="inline  text-sm font-medium text-gray-900 dark:text-white">Sing-box:</pre>
                         <TapToCopied>
-                            {process.env.REACT_APP_FILE_AND_SUB_URL + "/singbox/" + user.email}
+                            {process.env.REACT_APP_FILE_AND_SUB_URL + "/singbox/" + user.email_as_id}
                         </TapToCopied>
                     </div>
                 </div>
                 <div className="my-4">
                     <div className="pt-2 text-2xl text-center">Monthly Traffic </div>
-                    <TrafficTable data={user.traffic_by_month} by="月份" />
+                    <TrafficTable data={user?.monthly_logs} by="月份" />
                 </div>
                 <div className="my-4">
                     <div className="pt-2 text-2xl text-center">Daily Traffic</div>
-                    <TrafficTable data={user.traffic_by_day} by="日期" />
+                    <TrafficTable data={user?.daily_logs} by="日期" />
                 </div>
             </div>
         </>
@@ -267,12 +272,13 @@ const EditUser = (props) => {
     const handleEditUser = (e) => {
         e.preventDefault();
         setShow(!show);
+        console.log(props.user.email_as_id, password, name, role);
         axios({
             method: "post",
-            url: process.env.REACT_APP_API_HOST + "edit/" + props.user.email,
+            url: process.env.REACT_APP_API_HOST + "edit/" + props.user.email_as_id,
             headers: { token: loginState.token },
             data: {
-                email: props.user.email,
+                "email_as_id": props.user.email_as_id,
                 password,
                 name,
                 role,
@@ -334,8 +340,8 @@ const EditUser = (props) => {
                                             type="input"
                                             id="email"
                                             name="email"
-                                            placeholder={props.user.email}
-                                            value={props.user.email}
+                                            placeholder={props.user.email_as_id}
+                                            value={props.user.email_as_id}
                                             className="bg-gray-5ˀ0 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white"
                                             disabled />
                                     </div>

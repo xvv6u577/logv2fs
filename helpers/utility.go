@@ -23,16 +23,6 @@ func CurrentPath() string {
 	return strings.Replace(dir, "\\", "/", -1)
 }
 
-func CountNodesInUse(nodeStatus map[string]bool) int {
-	trueCount := 0
-	for _, status := range nodeStatus {
-		if status {
-			trueCount++
-		}
-	}
-	return trueCount
-}
-
 func IsDomainReachable(domain string) bool {
 	// Create a context with a timeout of 3 seconds.
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)

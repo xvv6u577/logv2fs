@@ -152,19 +152,6 @@ type SingboxYAML struct {
 	Rules []string `yaml:"rules"`
 }
 
-type ClashYAML struct {
-	Port               int           `default:"7890" yaml:"mixed-port"`
-	AllowLan           bool          `yaml:"allow-lan"`
-	BindAddress        string        `yaml:"bind-address"`
-	Mode               string        `yaml:"mode"`
-	LogLevel           string        `yaml:"log-level"`
-	ExternalController string        `yaml:"external-controller"`
-	Dns                interface{}   `yaml:"dns"`
-	Proxies            []interface{} `yaml:"proxies"`
-	ProxyGroups        []ProxyGroups `yaml:"proxy-groups"`
-	Rules              []string      `yaml:"rules"`
-}
-
 type Vmess struct {
 	Name           string `yaml:"name"`
 	Server         string `yaml:"server"`

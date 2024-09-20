@@ -12,7 +12,7 @@ import (
 type SignedDetails struct {
 	Email string
 	UUID  string
-	Path  string
+	Name  string
 	Uid   string
 	Role  string
 	jwt.StandardClaims
@@ -21,11 +21,11 @@ type SignedDetails struct {
 var SECRET_KEY string = os.Getenv("SECRET_KEY")
 
 // GenerateAllTokens generates both the detailed token and refresh token
-func GenerateAllTokens(email string, uuid string, path string, userType string, uid string) (signedToken string, signedRefreshToken string, err error) {
+func GenerateAllTokens(email string, uuid string, name string, userType string, uid string) (signedToken string, signedRefreshToken string, err error) {
 	claims := &SignedDetails{
 		Email: email,
 		UUID:  uuid,
-		Path:  path,
+		Name:  name,
 		Uid:   uid,
 		Role:  userType,
 		StandardClaims: jwt.StandardClaims{
@@ -55,7 +55,7 @@ func GenerateAllTokens(email string, uuid string, path string, userType string, 
 	return token, refreshToken, err
 }
 
-//ValidateToken validates the jwt token
+// ValidateToken validates the jwt token
 func ValidateToken(signedToken string) (claims *SignedDetails, msg string) {
 	token, err := jwt.ParseWithClaims(
 		signedToken,

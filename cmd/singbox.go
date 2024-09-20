@@ -12,7 +12,7 @@ import (
 
 	"github.com/robfig/cron"
 	"github.com/spf13/cobra"
-	localCron "github.com/xvv6u577/logv2fs/cron"
+	_cron "github.com/xvv6u577/logv2fs/cron"
 	thirdparty "github.com/xvv6u577/logv2fs/pkg"
 
 	box "github.com/sagernet/sing-box"
@@ -67,7 +67,7 @@ var singboxCmd = &cobra.Command{
 				log.Fatalf("error starting box instance: %v\n", err)
 			}
 
-			localCron.Cron_loggingJobs(cronInstance, instance)
+			_cron.Cron_loggingJobs(cronInstance, instance)
 			for {
 				osSignal := <-osSignals
 				if osSignal == syscall.SIGINT || osSignal == syscall.SIGTERM || osSignal == syscall.SIGTSTP {

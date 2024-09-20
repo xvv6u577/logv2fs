@@ -1,10 +1,9 @@
-package v2ray
+package thirdparty
 
 import (
 	"context"
 	"fmt"
 	"log"
-	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -28,14 +27,8 @@ const (
 	OVERDUE = "overdue"
 )
 
-var (
-	V2_API_ADDRESS = os.Getenv("V2_API_ADDRESS")
-	V2_API_PORT    = os.Getenv("V2_API_PORT")
-)
-
 type (
-	Traffic = model.Traffic
-	User    = model.User
+	User = model.User
 )
 
 type StatsServiceClient struct {

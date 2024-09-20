@@ -48,7 +48,7 @@ const Menu = () => {
 				</nav>
 				{loginState.jwt.Role === "admin" && (
 					<>
-						<button
+						{/* <button
 							className="w-full sm:w-auto block text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 
 								font-medium rounded-lg text-sm px-1.5 py-1 m-1 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
 							onClick={handleWriteToDB}
@@ -57,7 +57,7 @@ const Menu = () => {
 								<path fillRule="evenodd" d="M8 4a3 3 0 00-3 3v4a5 5 0 0010 0V7a1 1 0 112 0v4a7 7 0 11-14 0V7a5 5 0 0110 0v4a3 3 0 11-6 0V7a1 1 0 012 0v4a1 1 0 102 0V7a3 3 0 00-3-3z" clipRule="evenodd" />
 							</svg>
 							WriteToDB
-						</button>
+						</button> */}
 						<AddUser btnName="AddUser" />
 					</>
 				)}

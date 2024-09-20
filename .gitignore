@@ -7,16 +7,16 @@ frontend/.env
 frontend/tool
 sing-box-full-platform/
 setup-rocket.chat/
-ui/
+setup-script*
+config/geo/
 
 # include logs, but exclude everything else in the directory
 logs/*
 !logs/
-cloudflare-CDN/
+cloudflare/
 
 development/
 CA
-setup-script*
 cmd/init.go
 cmd/dev.go
 
@@ -29,4 +29,4 @@ logv2fs
 .dockerignore
 docker-compose.yml
 Dockerfile
-TODO-Development.MD
+TODO.MD

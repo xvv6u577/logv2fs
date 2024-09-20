@@ -16,6 +16,13 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
+type DomainInfo struct {
+	Domain       string `json:"domain"`
+	Remark       string `json:"remark"`
+	ExpiredDate  string `json:"expired_date"`
+	DaysToExpire int    `json:"days_to_expire"`
+}
+
 // check if a domain is in a domain object list
 func IsDomainInDomainList(domain string, domainList []Domain) bool {
 	for _, domainObj := range domainList {
@@ -26,6 +33,29 @@ func IsDomainInDomainList(domain string, domainList []Domain) bool {
 	return false
 }
 
+// check if domain's remark is in a domain object list
+func IsRemarkInDomainList(remark string, domainList []Domain) bool {
+	for _, domainObj := range domainList {
+		if domainObj.Remark == remark {
+			return true
+		}
+	}
+	return false
+}
+
+// Function to remove duplicate Domain.Domain in a Domain slice
+func removeDuplicateDomains(domains []Domain) []Domain {
+	seen := make(map[string]bool)
+	var result []Domain
+	for _, domain := range domains {
+		if _, exists := seen[domain.Domain]; !exists {
+			seen[domain.Domain] = true
+			result = append(result, domain)
+		}
+	}
+	return result
+}
+
 func AddNode() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
@@ -34,205 +64,111 @@ func AddNode() gin.HandlerFunc {
 			return
 		}
 
-		var ctx, cancel = context.WithTimeout(context.Background(), 10*time.Second)
-		defer cancel()
-
-		var domainsOfWebForm, dataCollectableNodes []Domain
 		var current = time.Now().Local()
+		var nodeFromWebForm, dataCollectableNodes []Domain
 
-		if err := c.BindJSON(&domainsOfWebForm); err != nil {
+		if err := c.BindJSON(&nodeFromWebForm); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			log.Printf("BindJSON error: %v", err)
 			return
 		}
 
-		// types: reality, hysteria2, vmesstls, vmessws, vlessCDN! if type is reality, reassgin public_key and short_id
-		for i, domain := range domainsOfWebForm {
+		// remove duplicated domains in nodeFromWebForm
+		dataCollectableNodes = removeDuplicateDomains(nodeFromWebForm)
+
+		// types: reality, hysteria2, vlessCDN! if type is reality, reassgin public_key and short_id.
+		for i, domain := range nodeFromWebForm {
 			if domain.Type == "reality" {
-				domainsOfWebForm[i].PUBLIC_KEY = PUBLIC_KEY
-				domainsOfWebForm[i].SHORT_ID = SHORT_ID
-				if !IsDomainInDomainList(domain.Domain, dataCollectableNodes) {
-					dataCollectableNodes = append(dataCollectableNodes, domain)
-				}
-			}
-			if domain.Type == "hysteria2" && !IsDomainInDomainList(domain.Domain, dataCollectableNodes) {
-				dataCollectableNodes = append(dataCollectableNodes, domain)
+				nodeFromWebForm[i].PUBLIC_KEY = PUBLIC_KEY
+				nodeFromWebForm[i].SHORT_ID = SHORT_ID
 			}
 
-			if (domain.Type == "vmesstls" || domain.Type == "vmessws") && !IsDomainInDomainList(domain.Domain, dataCollectableNodes) {
-				dataCollectableNodes = append(dataCollectableNodes, domain)
-			}
-		}
-
-		// replace ActiveGlobalNodes in globalCollection with domainsOfWebForm
-		var replacedDocument GlobalVariable
-		err := globalCollection.FindOneAndUpdate(ctx,
-			bson.M{"name": "GLOBAL"},
-			bson.M{"$set": bson.M{
-				"active_global_nodes": domainsOfWebForm,
-			}},
-
-			options.FindOneAndUpdate().SetReturnDocument(1),
-		).Decode(&replacedDocument)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			log.Printf("FindOneAndUpdate error: %v", err)
-			return
-		}
-
-		// query all nodes by projections, combine domain and status into a map
-		var allNodeStatus = map[string]string{}
-		var nodeProjections = bson.D{
-			{Key: "domain", Value: 1},
-			{Key: "status", Value: 1},
-		}
-		cursor, err := nodeCollection.Find(ctx, bson.M{}, options.Find().SetProjection(nodeProjections))
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			log.Printf("error occured while querying nodeCollection")
-			return
-		}
-		for cursor.Next(ctx) {
-			var t CurrentNode
-			err := cursor.Decode(&t)
+			// set remark as filter, check if node is in globalCollection. if no, insert it. if yes, update it.
+			filter := bson.M{"remark": domain.Remark}
+			update := bson.M{"$set": nodeFromWebForm[i]}
+			opts := options.Update().SetUpsert(true)
+			_, err := globalCollection.UpdateOne(context.TODO(), filter, update, opts)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-				log.Printf("error occured while decoding nodes")
+				log.Printf("UpdateOne error: %v", err)
 				return
 			}
-			allNodeStatus[t.Domain] = t.Status
+
 		}
 
-		// for domain in singboxNodes, if it is not in allNodes, insert new one into nodeCollection; if yes, check if it is inactive, if yes, enable it.
+		remarks := make([]string, len(nodeFromWebForm))
+		for i, domain := range nodeFromWebForm {
+			remarks[i] = domain.Remark
+		}
+		filter := bson.M{"remark": bson.M{"$nin": remarks}}
+		_, err := globalCollection.DeleteMany(context.TODO(), filter)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			log.Printf("DeleteMany error: %v", err)
+			return
+		}
+
 		for _, domain := range dataCollectableNodes {
 
-			if _, ok := allNodeStatus[domain.Domain]; ok {
-				// if domain is inactive, enable it. else, keep it.
-				if allNodeStatus[domain.Domain] == "inactive" {
-					var nodeAtCurrentDay, nodeAtCurrentMonth, nodeAtCurrentYear NodeAtPeriod
-					var nodeByDay, nodeByMonth, nodeByYear []NodeAtPeriod
-					// fetch one node from nodeCollection by domain, and update status, remark, updated_at, node_at_current_year, node_at_current_month, node_at_current_day
-					filter := bson.D{primitive.E{Key: "domain", Value: domain.Domain}}
-					toBeFixedNode := CurrentNode{}
-					err = nodeCollection.FindOne(ctx, filter).Decode(&toBeFixedNode)
-					if err != nil {
-						c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-						log.Printf("error occured while querying node: %v", err)
-						return
-					}
-
-					if toBeFixedNode.NodeAtCurrentYear.Period == current.Format("2006") {
-						nodeAtCurrentYear = toBeFixedNode.NodeAtCurrentYear
-						nodeByYear = toBeFixedNode.NodeByYear
-					} else {
-						nodeAtCurrentYear = NodeAtPeriod{
-							Period:              current.Format("2006"),
-							Amount:              0,
-							UserTrafficAtPeriod: map[string]int64{},
-						}
-						nodeByYear = append(toBeFixedNode.NodeByYear, toBeFixedNode.NodeAtCurrentYear)
-					}
-
-					if toBeFixedNode.NodeAtCurrentMonth.Period == current.Format("200601") {
-						nodeAtCurrentMonth = toBeFixedNode.NodeAtCurrentMonth
-						nodeByMonth = toBeFixedNode.NodeByMonth
-					} else {
-						nodeAtCurrentMonth = NodeAtPeriod{
-							Period:              current.Format("200601"),
-							Amount:              0,
-							UserTrafficAtPeriod: map[string]int64{},
-						}
-						nodeByMonth = append(toBeFixedNode.NodeByMonth, toBeFixedNode.NodeAtCurrentMonth)
-					}
-
-					if toBeFixedNode.NodeAtCurrentDay.Period == current.Format("20060102") {
-						nodeAtCurrentDay = toBeFixedNode.NodeAtCurrentDay
-						nodeByDay = toBeFixedNode.NodeByDay
-					} else {
-						nodeAtCurrentDay = NodeAtPeriod{
-							Period:              current.Format("20060102"),
-							Amount:              0,
-							UserTrafficAtPeriod: map[string]int64{},
-						}
-						nodeByDay = append(toBeFixedNode.NodeByDay, toBeFixedNode.NodeAtCurrentDay)
-					}
-
-					update := bson.M{"$set": bson.M{
-						"status":                "active",
-						"updated_at":            time.Now().Local(),
-						"remark":                domain.Remark,
-						"ip":                    domain.IP,
-						"node_at_current_year":  nodeAtCurrentYear,
-						"node_at_current_month": nodeAtCurrentMonth,
-						"node_at_current_day":   nodeAtCurrentDay,
-						"node_by_year":          nodeByYear,
-						"node_by_month":         nodeByMonth,
-						"node_by_day":           nodeByDay,
-					}}
-
-					_, err = nodeCollection.UpdateOne(ctx, filter, update)
-					if err != nil {
-						c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-						log.Printf("update node status error: %v", err)
-						return
-					}
-				}
-			} else {
-				var node CurrentNode
-				node.Domain = domain.Domain
-				node.Status = "active"
-				node.Remark = domain.Remark
-				node.IP = domain.IP
-				node.NodeAtCurrentYear = NodeAtPeriod{
-					Period:              current.Format("2006"),
-					Amount:              0,
-					UserTrafficAtPeriod: map[string]int64{},
-				}
-				node.NodeAtCurrentMonth = NodeAtPeriod{
-					Period:              current.Format("200601"),
-					Amount:              0,
-					UserTrafficAtPeriod: map[string]int64{},
-				}
-				node.NodeAtCurrentDay = NodeAtPeriod{
-					Period:              current.Format("20060102"),
-					Amount:              0,
-					UserTrafficAtPeriod: map[string]int64{},
-				}
-				node.NodeByYear = []NodeAtPeriod{}
-				node.NodeByMonth = []NodeAtPeriod{}
-				node.NodeByDay = []NodeAtPeriod{}
-				node.CreatedAt = current
-				node.UpdatedAt = current
-
-				_, err = nodeCollection.InsertOne(ctx, node)
-				if err != nil {
-					c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-					log.Printf("error occured while inserting node: %v", err)
-					return
-				}
-
+			// check if domain is in nodeTrafficLogsCol. if no, insert it. if yes, update it.
+			filter := bson.M{"domain_as_id": domain.Domain}
+			update := bson.M{
+				"$set": bson.M{
+					"remark":     domain.Remark,
+					"status":     "active",
+					"updated_at": current,
+				},
+				"$setOnInsert": bson.M{
+					"_id":          primitive.NewObjectID(),
+					"domain_as_id": domain.Domain,
+					"created_at":   current,
+					"hourly_logs": []struct {
+						Timestamp time.Time `json:"timestamp" bson:"timestamp"`
+						Traffic   int64     `json:"traffic" bson:"traffic"`
+					}{},
+					"daily_logs": []struct {
+						Date    string `json:"date" bson:"date"`
+						Traffic int64  `json:"traffic" bson:"traffic"`
+					}{},
+					"monthly_logs": []struct {
+						Month   string `json:"month" bson:"month"`
+						Traffic int64  `json:"traffic" bson:"traffic"`
+					}{},
+					"yearly_logs": []struct {
+						Year    string `json:"year" bson:"year"`
+						Traffic int64  `json:"traffic" bson:"traffic"`
+					}{},
+				},
 			}
+			opts := options.Update().SetUpsert(true)
+			_, err = nodeTrafficLogsCol.UpdateOne(context.TODO(), filter, update, opts)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				log.Printf("UpdateOne in nodeTrafficLogsCol error: %v", err)
+				return
+			}
+
 		}
 
-		// for nodes in allNodes, if it is not in domains, set it to inactive.
-		for domain := range allNodeStatus {
-			if !IsDomainInDomainList(domain, dataCollectableNodes) {
-				filter := bson.D{primitive.E{Key: "domain", Value: domain}}
-				update := bson.M{"$set": bson.M{"status": "inactive", "updated_at": time.Now().Local()}}
-				_, err = nodeCollection.UpdateOne(ctx, filter, update)
-				if err != nil {
-					c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-					log.Printf("error occured while updating node: %v", err)
-					return
-				}
-			}
+		// Set status to "inactive" for NodeTrafficLogs entries not in dataCollectableNodes
+		domainAsIds := make([]string, len(dataCollectableNodes))
+		for i, domain := range dataCollectableNodes {
+			domainAsIds[i] = domain.Domain
+		}
+		inactiveFilter := bson.M{"domain_as_id": bson.M{"$nin": domainAsIds}}
+		inactiveUpdate := bson.M{"$set": bson.M{"status": "inactive"}}
+		_, err = nodeTrafficLogsCol.UpdateMany(context.TODO(), inactiveFilter, inactiveUpdate)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			log.Printf("UpdateMany in nodeTrafficLogsCol error: %v", err)
+			return
 		}
 
 		c.JSON(http.StatusOK, gin.H{"message": "Congrats! Nodes updated in success!"})
 	}
 }
 
-func GetActiveGlobalNodesInfo() gin.HandlerFunc {
+func GetActiveGlobalNodes() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
 		if err := helper.CheckUserType(c, "admin"); err != nil {
@@ -240,23 +176,27 @@ func GetActiveGlobalNodesInfo() gin.HandlerFunc {
 			return
 		}
 
-		var ctx, cancel = context.WithTimeout(context.Background(), 60*time.Second)
-		defer cancel()
-
-		var activeGlobalNodesInfo GlobalVariable
-		var filter = bson.D{bson.E{Key: "name", Value: "GLOBAL"}}
-		err := globalCollection.FindOne(ctx, filter).Decode(&activeGlobalNodesInfo)
+		var activeNodes []Domain
+		// type is not "work"
+		var filter = bson.D{{Key: "type", Value: bson.D{{Key: "$ne", Value: "work"}}}}
+		cur, err := globalCollection.Find(context.TODO(), filter)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			log.Printf("FindOne error: %v", err)
+			log.Printf("Find error: %v", err)
+			return
+		}
+		err = cur.All(context.TODO(), &activeNodes)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			log.Printf("All error: %v", err)
 			return
 		}
 
-		c.JSON(http.StatusOK, activeGlobalNodesInfo.ActiveGlobalNodes)
+		c.JSON(http.StatusOK, activeNodes)
 	}
 }
 
-func GetDomainInfo() gin.HandlerFunc {
+func GetWorkDomainInfo() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
 		if err := helper.CheckUserType(c, "admin"); err != nil {
@@ -268,15 +208,23 @@ func GetDomainInfo() gin.HandlerFunc {
 		defer cancel()
 
 		var domainInfos []DomainInfo
-		var foundGlobal GlobalVariable
-		var filter = bson.D{primitive.E{Key: "name", Value: "GLOBAL"}}
-		err := globalCollection.FindOne(ctx, filter).Decode(&foundGlobal)
+		var workDoamins []Domain
+
+		// get all domains from MoniteringDomainsCol
+		cur, err := MoniteringDomainsCol.Find(ctx, bson.D{})
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			log.Printf("FindOne error: %v", err)
+			log.Printf("Find error: %v", err)
 			return
 		}
-		domainInfos, err = getDomainExpiredStatus(foundGlobal.WorkRelatedDomainList)
+		err = cur.All(ctx, &workDoamins)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			log.Printf("All error: %v", err)
+			return
+		}
+
+		domainInfos, err = getDomainExpiredStatus(workDoamins)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			log.Printf("error occured while parsing domain info: %v", err)
@@ -358,35 +306,41 @@ func UpdateDomainInfo() gin.HandlerFunc {
 			return
 		}
 
-		var ctx, cancel = context.WithTimeout(context.Background(), 60*time.Second)
-		defer cancel()
-
-		var comingDomainList []DomainInfo
-		var workRelatedDomainList []Domain
-		err := c.BindJSON(&comingDomainList)
+		var domainOfWebForm []DomainInfo
+		err := c.BindJSON(&domainOfWebForm)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			log.Printf("BindJSON error: %v", err)
 			return
 		}
 
-		for _, domain := range comingDomainList {
-			workRelatedDomainList = append(workRelatedDomainList, Domain{
-				Type:   "work",
-				Domain: domain.Domain,
-				Remark: domain.Remark,
-			})
+		// Track domains to keep
+		domainsToKeep := []string{}
+
+		for _, domain := range domainOfWebForm {
+			filter := bson.M{"domain": domain.Domain}
+			update := bson.M{"$set": bson.M{
+				"type":   "work",
+				"domain": domain.Domain,
+				"remark": domain.Remark,
+			}}
+			opts := options.Update().SetUpsert(true)
+			_, err := MoniteringDomainsCol.UpdateOne(context.TODO(), filter, update, opts)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				log.Printf("UpdateOne error: %v", err)
+				return
+			}
+
+			domainsToKeep = append(domainsToKeep, domain.Domain)
 		}
 
-		var replacedDocument GlobalVariable
-		err = globalCollection.FindOneAndUpdate(ctx,
-			bson.M{"name": "GLOBAL"},
-			bson.M{"$set": bson.M{"work_related_domain_list": workRelatedDomainList}},
-			options.FindOneAndUpdate().SetReturnDocument(1),
-		).Decode(&replacedDocument)
+		// Remove domains not in domainOfWebForm
+		filter := bson.M{"domain": bson.M{"$nin": domainsToKeep}}
+		_, err = MoniteringDomainsCol.DeleteMany(context.TODO(), filter)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			log.Printf("FindOneAndUpdate error: %v", err)
+			log.Printf("DeleteMany error: %v", err)
 			return
 		}
 
@@ -394,7 +348,7 @@ func UpdateDomainInfo() gin.HandlerFunc {
 	}
 }
 
-func GetNodePartial() gin.HandlerFunc {
+func GetSingboxNodes() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
 		if err := helper.CheckUserType(c, "admin"); err != nil {
@@ -402,40 +356,25 @@ func GetNodePartial() gin.HandlerFunc {
 			return
 		}
 
-		var ctx, cancel = context.WithTimeout(context.Background(), 60*time.Second)
-		defer cancel()
-
-		// query nodeCollection by projection, and return nodePartial with json format
-		var nodePartial []*CurrentNode
-		var projections = bson.D{
-			{Key: "domain", Value: 1},
-			{Key: "status", Value: 1},
-			{Key: "remark", Value: 1},
-			{Key: "node_at_current_day", Value: 1},
-			{Key: "node_at_current_month", Value: 1},
-			{Key: "node_at_current_year", Value: 1},
-			{Key: "node_by_day", Value: 1},
-			{Key: "node_by_month", Value: 1},
-			{Key: "node_by_year", Value: 1},
-			{Key: "created_at", Value: 1},
-		}
-		cur, err := nodeCollection.Find(ctx, bson.D{}, options.Find().SetProjection(projections))
+		var activeNodes []NodeTrafficLogs
+		var filter = bson.D{primitive.E{Key: "status", Value: "active"}}
+		cur, err := nodeTrafficLogsCol.Find(context.TODO(), filter)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			log.Printf("Find error: %v", err)
 			return
 		}
-		for cur.Next(ctx) {
-			var node CurrentNode
-			err := cur.Decode(&node)
-			if err != nil {
+
+		for cur.Next(context.TODO()) {
+			var node NodeTrafficLogs
+			if err := cur.Decode(&node); err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 				log.Printf("Decode error: %v", err)
 				return
 			}
-			nodePartial = append(nodePartial, &node)
+			activeNodes = append(activeNodes, node)
 		}
 
-		c.JSON(http.StatusOK, nodePartial)
+		c.JSON(http.StatusOK, activeNodes)
 	}
 }

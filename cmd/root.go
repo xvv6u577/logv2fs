@@ -14,23 +14,21 @@ import (
 )
 
 var (
-	CURRENT_DOMAIN                      = os.Getenv("CURRENT_DOMAIN")
-	SERVER_ADDRESS                      = os.Getenv("SERVER_ADDRESS")
-	SERVER_PORT                         = os.Getenv("SERVER_PORT")
-	V2_API_ADDRESS                      = os.Getenv("V2_API_ADDRESS")
-	V2_API_PORT                         = os.Getenv("V2_API_PORT")
-	V2RAY                               = os.Getenv("V2RAY")
-	V2RAY_CONFIG                        = os.Getenv("V2RAY_CONFIG")
-	GRPC_PORT                           = os.Getenv("GRPC_PORT")
-	GIN_MODE                            = os.Getenv("GIN_MODE")
-	trafficCollection *mongo.Collection = database.OpenCollection(database.Client, "TRAFFIC")
-	nodesCollection   *mongo.Collection = database.OpenCollection(database.Client, "NODES")
-	// userCollection    *mongo.Collection = database.OpenCollection(database.Client, "USERS")
-	// globalCollection *mongo.Collection = database.OpenCollection(database.Client, "GLOBAL")
-	address       string
-	tlsStatus     bool
-	authrRequired bool
-	cronInstance  *cron.Cron
+	CURRENT_DOMAIN                         = os.Getenv("CURRENT_DOMAIN")
+	SERVER_ADDRESS                         = os.Getenv("SERVER_ADDRESS")
+	SERVER_PORT                            = os.Getenv("SERVER_PORT")
+	GIN_MODE                               = os.Getenv("GIN_MODE")
+	trafficCollection    *mongo.Collection = database.OpenCollection(database.Client, "TRAFFIC")
+	nodesCollection      *mongo.Collection = database.OpenCollection(database.Client, "NODES")
+	userCollection       *mongo.Collection = database.OpenCollection(database.Client, "USERS")
+	globalCollection     *mongo.Collection = database.OpenCollection(database.Client, "GLOBAL")
+	nodeTrafficLogs                        = database.OpenCollection(database.Client, "NODE_TRAFFIC_LOGS")
+	userTrafficLogs                        = database.OpenCollection(database.Client, "USER_TRAFFIC_LOGS")
+	MoniteringDomainsCol *mongo.Collection = database.OpenCollection(database.Client, "Monitering_Domains")
+	address              string
+	tlsStatus            bool
+	authrRequired        bool
+	cronInstance         *cron.Cron
 )
 
 type (
@@ -42,11 +40,8 @@ type (
 	Domain          = model.Domain
 	Traffic         = model.Traffic
 	TrafficAtPeriod = model.TrafficAtPeriod
-	YamlTemplate    = model.YamlTemplate
-	Proxies         = model.Proxies
-	Headers         = model.Headers
-	WsOpts          = model.WsOpts
-	ProxyGroups     = model.ProxyGroups
+	UserTrafficLogs = model.UserTrafficLogs
+	NodeTrafficLogs = model.NodeTrafficLogs
 )
 
 // rootCmd represents the base command when called without any subcommands

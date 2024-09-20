@@ -5,14 +5,14 @@ package cmd
 
 import (
 	"context"
+	"log"
 	"time"
 
 	"github.com/spf13/cobra"
+	"github.com/xvv6u577/logv2fs/model"
 
-	"github.com/xvv6u577/logv2fs/database"
 	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 // migrateCmd represents the migrate command
@@ -20,248 +20,222 @@ var migrateCmd = &cobra.Command{
 	Use:   "migrate",
 	Short: "init TRAFFIC collection in database",
 	Run: func(cmd *cobra.Command, args []string) {
-		var ctx, cancel = context.WithTimeout(context.Background(), 5*time.Minute)
-		defer cancel()
 
-		var current = time.Now().Local()
-		var current_year = current.Format("2006")
-		var current_month = current.Format("200601")
-		var current_day = current.Format("20060102")
-
-		var projections = bson.D{
-			{Key: "email", Value: 1},
-		}
-		users, err := database.GetAllUsersPortionInfo(projections)
+		// globalCollection
+		filter := bson.M{"name": "GLOBAL"}
+		var global model.GlobalVariable
+		err := globalCollection.FindOne(context.TODO(), filter).Decode(&global)
 		if err != nil {
-			panic(err)
+			log.Printf("error getting global collection: %v\n", err)
 		}
 
-		var nodeArray []*CurrentNode
-		// query all in nodeCollection, and put them into nodeArray
-		var nodeFilter = bson.D{{}}
-		var nodeProjections = bson.D{}
-		cursor, err := nodesCollection.Find(ctx, nodeFilter, options.Find().SetProjection(nodeProjections))
+		// insert WorkRelatedDomainList into MoniteringDomains collection, ActiveGlobalNodes into global collection
+		for _, domain := range global.WorkRelatedDomainList {
+			MoniteringDomainsCol.InsertOne(context.TODO(), domain)
+
+		}
+
+		for _, node := range global.ActiveGlobalNodes {
+			globalCollection.InsertOne(context.TODO(), node)
+		}
+
+		// userCollection
+		cursor, err := userCollection.Find(context.TODO(), bson.M{})
 		if err != nil {
-			panic(err)
-		}
-		if err = cursor.All(ctx, &nodeArray); err != nil {
-			panic(err)
+			log.Printf("error getting traffic collection: %v\n", err)
 		}
 
-		for _, user := range users {
+		for cursor.Next(context.TODO()) {
 
-			var myTraffic *mongo.Collection = database.OpenCollection(database.Client, user.Email)
-			var TrafficInDBArray []*TrafficInDB
+			var userTrafficLog model.UserTrafficLogs
 
-			var filter = bson.D{{}}
-			var myProjections = bson.D{}
-			cursor, err := myTraffic.Find(ctx, filter, options.Find().SetProjection(myProjections))
-			if err != nil {
-				panic(err)
-			}
-			if err = cursor.All(ctx, &TrafficInDBArray); err != nil {
-				panic(err)
+			var user model.User
+			if err := cursor.Decode(&user); err != nil {
+				log.Printf("error decoding traffic: %v\n", err)
 			}
 
-			for _, traffic := range TrafficInDBArray {
-				// compare with time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC), if traffic.CreatedAt is before this time, then skip
-				if traffic.CreatedAt.Before(time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC)) {
-					continue
+			userTrafficLog.Email_As_Id = user.Email
+			userTrafficLog.ID = primitive.NewObjectID()
+			userTrafficLog.Password = user.Password
+			userTrafficLog.UUID = user.UUID
+			userTrafficLog.Role = user.Role
+			userTrafficLog.Status = user.Status
+			userTrafficLog.Name = user.Name
+			userTrafficLog.Token = user.Token
+			userTrafficLog.Refresh_token = user.Refresh_token
+			userTrafficLog.User_id = user.User_id
+			userTrafficLog.Used = user.Usedtraffic
+			userTrafficLog.Credit = user.Credittraffic
+			userTrafficLog.CreatedAt = user.CreatedAt
+			userTrafficLog.UpdatedAt = user.UpdatedAt
+			userTrafficLog.HourlyLogs = []struct {
+				Timestamp time.Time `json:"timestamp" bson:"timestamp"`
+				Traffic   int64     `json:"traffic" bson:"traffic"`
+			}{}
+
+			if len(user.TrafficByYear) > 0 {
+				for _, year := range user.TrafficByYear {
+					userTrafficLog.YearlyLogs = append(userTrafficLog.YearlyLogs, struct {
+						Year    string `json:"year" bson:"year"`
+						Traffic int64  `json:"traffic" bson:"traffic"`
+					}{
+						Year:    year.Period,
+						Traffic: year.Amount,
+					})
 				}
-
-				var trafficInfo = TrafficInDB{
-					Email:     user.Email,
-					Domain:    traffic.Domain,
-					CreatedAt: traffic.CreatedAt,
-					Total:     traffic.Total,
-				}
-				if _, err = trafficCollection.InsertOne(ctx, trafficInfo); err != nil {
-					panic(err)
-				}
-
-				// check if this domain is in nodeArray by traffic.Domain, if not, add it, else, merge the traffic info to the node
-				var found = false
-				var foundNode *CurrentNode
-				var year = traffic.CreatedAt.Format("2006")
-				var month = traffic.CreatedAt.Format("200601")
-				var day = traffic.CreatedAt.Format("20060102")
-
-				for _, node := range nodeArray {
-					if node.Domain == traffic.Domain {
-						found = true
-						foundNode = node
-						break
-					}
-				}
-
-				if !found {
-					var node = &CurrentNode{
-						Status: "inactive",
-						Domain: traffic.Domain,
-						Remark: traffic.Domain,
-						NodeAtCurrentDay: NodeAtPeriod{
-							Period:              current_day,
-							Amount:              0,
-							UserTrafficAtPeriod: map[string]int64{},
-						},
-						NodeAtCurrentMonth: NodeAtPeriod{
-							Period:              current_month,
-							Amount:              0,
-							UserTrafficAtPeriod: map[string]int64{},
-						},
-						NodeAtCurrentYear: NodeAtPeriod{
-							Period:              current_year,
-							Amount:              0,
-							UserTrafficAtPeriod: map[string]int64{},
-						},
-						NodeByDay:   []NodeAtPeriod{},
-						NodeByMonth: []NodeAtPeriod{},
-						NodeByYear:  []NodeAtPeriod{},
-						CreatedAt:   time.Now().Local(),
-						UpdatedAt:   time.Now().Local(),
-					}
-
-					if node.NodeAtCurrentYear.Period == year {
-						node.NodeAtCurrentYear.Amount += traffic.Total
-						node.NodeAtCurrentYear.UserTrafficAtPeriod[user.Email] += traffic.Total
-					} else {
-						node.NodeByYear = append(node.NodeByYear, NodeAtPeriod{
-							Period: year,
-							Amount: traffic.Total,
-							UserTrafficAtPeriod: map[string]int64{
-								user.Email: traffic.Total,
-							},
-						})
-					}
-
-					if node.NodeAtCurrentMonth.Period == month {
-						node.NodeAtCurrentMonth.Amount += traffic.Total
-						node.NodeAtCurrentMonth.UserTrafficAtPeriod[user.Email] += traffic.Total
-					} else {
-						node.NodeByMonth = append(node.NodeByMonth, NodeAtPeriod{
-							Period: month,
-							Amount: traffic.Total,
-							UserTrafficAtPeriod: map[string]int64{
-								user.Email: traffic.Total,
-							},
-						})
-					}
-
-					if node.NodeAtCurrentDay.Period == day {
-						node.NodeAtCurrentDay.Amount += traffic.Total
-						node.NodeAtCurrentDay.UserTrafficAtPeriod[user.Email] += traffic.Total
-					} else {
-						node.NodeByDay = append(node.NodeByDay, NodeAtPeriod{
-							Period: day,
-							Amount: traffic.Total,
-							UserTrafficAtPeriod: map[string]int64{
-								user.Email: traffic.Total,
-							},
-						})
-					}
-
-					nodeArray = append(nodeArray, node)
-				} else {
-					// if node_at_current_year equals to current_year, then add traffic.Total to node_at_current_year.Amount
-					// else, add it to node.NodeByYear.
-					if foundNode.NodeAtCurrentYear.Period == year {
-						foundNode.NodeAtCurrentYear.Amount += traffic.Total
-						foundNode.NodeAtCurrentYear.UserTrafficAtPeriod[user.Email] += traffic.Total
-					} else {
-						// chek period in array node.NodeByYear, if found, then add traffic.Total to node.NodeByYear.Amount, else, append it to node.NodeByYear
-						var ifFoundNodeByYear = false
-						for i := range foundNode.NodeByYear {
-							if foundNode.NodeByYear[i].Period == year {
-								foundNode.NodeByYear[i].Amount += traffic.Total
-								foundNode.NodeByYear[i].UserTrafficAtPeriod[user.Email] += traffic.Total
-								ifFoundNodeByYear = true
-								break
-							}
-						}
-
-						if !ifFoundNodeByYear {
-							foundNode.NodeByYear = append(foundNode.NodeByYear, NodeAtPeriod{
-								Period: year,
-								Amount: traffic.Total,
-								UserTrafficAtPeriod: map[string]int64{
-									user.Email: traffic.Total,
-								},
-							})
-						}
-					}
-
-					// if node_at_current_month equals to current_month, then add traffic.Total to node_at_current_month.Amount
-					// else, add it to node.NodeByMonth.
-					if foundNode.NodeAtCurrentMonth.Period == month {
-						foundNode.NodeAtCurrentMonth.Amount += traffic.Total
-						foundNode.NodeAtCurrentMonth.UserTrafficAtPeriod[user.Email] += traffic.Total
-					} else {
-						// chek period in array node.NodeByMonth, if found, then add traffic.Total to node.NodeByMonth.Amount, else, append it to node.NodeByMonth
-						var ifFoundNodeByMonth = false
-						for i := range foundNode.NodeByMonth {
-							if foundNode.NodeByMonth[i].Period == month {
-								foundNode.NodeByMonth[i].Amount += traffic.Total
-								foundNode.NodeByMonth[i].UserTrafficAtPeriod[user.Email] += traffic.Total
-								ifFoundNodeByMonth = true
-								break
-							}
-						}
-
-						if !ifFoundNodeByMonth {
-							foundNode.NodeByMonth = append(foundNode.NodeByMonth, NodeAtPeriod{
-								Period: month,
-								Amount: traffic.Total,
-								UserTrafficAtPeriod: map[string]int64{
-									user.Email: traffic.Total,
-								},
-							})
-						}
-					}
-
-					// if node_at_current_day equals to current_day, then add traffic.Total to node_at_current_day.Amount
-					// else, add it to node.NodeByDay.
-					if foundNode.NodeAtCurrentDay.Period == day {
-						foundNode.NodeAtCurrentDay.Amount += traffic.Total
-						foundNode.NodeAtCurrentDay.UserTrafficAtPeriod[user.Email] += traffic.Total
-					} else {
-						// chek period in array node.NodeByDay, if found, then add traffic.Total to node.NodeByDay.Amount, else, append it to node.NodeByDay
-						var ifFoundNodeByDay = false
-						for i := range foundNode.NodeByDay {
-							if foundNode.NodeByDay[i].Period == day {
-								foundNode.NodeByDay[i].Amount += traffic.Total
-								foundNode.NodeByDay[i].UserTrafficAtPeriod[user.Email] += traffic.Total
-								ifFoundNodeByDay = true
-								break
-							}
-						}
-
-						if !ifFoundNodeByDay {
-							foundNode.NodeByDay = append(foundNode.NodeByDay, NodeAtPeriod{
-								Period: day,
-								Amount: traffic.Total,
-								UserTrafficAtPeriod: map[string]int64{
-									user.Email: traffic.Total,
-								},
-							})
-						}
-					}
-
-				}
-
 			}
+
+			if len(user.TrafficByMonth) > 0 {
+				for _, month := range user.TrafficByMonth {
+					userTrafficLog.MonthlyLogs = append(userTrafficLog.MonthlyLogs, struct {
+						Month   string `json:"month" bson:"month"`
+						Traffic int64  `json:"traffic" bson:"traffic"`
+					}{
+						Month:   month.Period,
+						Traffic: month.Amount,
+					})
+				}
+			}
+
+			if len(user.TrafficByDay) > 0 {
+				for _, day := range user.TrafficByDay {
+					userTrafficLog.DailyLogs = append(userTrafficLog.DailyLogs, struct {
+						Date    string `json:"date" bson:"date"`
+						Traffic int64  `json:"traffic" bson:"traffic"`
+					}{
+						Date:    day.Period,
+						Traffic: day.Amount,
+					})
+				}
+			}
+
+			if user.UsedByCurrentYear.Amount > 0 {
+				userTrafficLog.YearlyLogs = append(userTrafficLog.YearlyLogs, struct {
+					Year    string `json:"year" bson:"year"`
+					Traffic int64  `json:"traffic" bson:"traffic"`
+				}{
+					Year:    user.UsedByCurrentYear.Period,
+					Traffic: user.UsedByCurrentYear.Amount,
+				})
+			}
+
+			if user.UsedByCurrentMonth.Amount > 0 {
+				userTrafficLog.MonthlyLogs = append(userTrafficLog.MonthlyLogs, struct {
+					Month   string `json:"month" bson:"month"`
+					Traffic int64  `json:"traffic" bson:"traffic"`
+				}{
+					Month:   user.UsedByCurrentMonth.Period,
+					Traffic: user.UsedByCurrentMonth.Amount,
+				})
+			}
+
+			if user.UsedByCurrentDay.Amount > 0 {
+				userTrafficLog.DailyLogs = append(userTrafficLog.DailyLogs, struct {
+					Date    string `json:"date" bson:"date"`
+					Traffic int64  `json:"traffic" bson:"traffic"`
+				}{
+					Date:    user.UsedByCurrentDay.Period,
+					Traffic: user.UsedByCurrentDay.Amount,
+				})
+			}
+
+			userTrafficLogs.InsertOne(context.Background(), userTrafficLog)
 
 		}
 
-		// upsert nodeArray to NODES collection.
-		for _, node := range nodeArray {
-			var filter = bson.D{{Key: "domain", Value: node.Domain}}
-			var update = bson.D{
-				{Key: "$set", Value: node},
+		// nodesCollection
+		cursor, err = nodesCollection.Find(context.TODO(), bson.M{})
+		if err != nil {
+			log.Printf("error getting traffic collection: %v\n", err)
+		}
+
+		for cursor.Next(context.TODO()) {
+
+			var nodeTrafficLog model.NodeTrafficLogs
+
+			var node model.CurrentNode
+			if err := cursor.Decode(&node); err != nil {
+				log.Printf("error decoding traffic: %v\n", err)
 			}
-			var upsert = true
-			if _, err = nodesCollection.UpdateOne(ctx, filter, update, &options.UpdateOptions{Upsert: &upsert}); err != nil {
-				panic(err)
+
+			nodeTrafficLog.Domain_As_Id = node.Domain
+			nodeTrafficLog.ID = primitive.NewObjectID()
+			nodeTrafficLog.CreatedAt = node.CreatedAt
+			nodeTrafficLog.UpdatedAt = node.UpdatedAt
+			nodeTrafficLog.Remark = node.Remark
+			nodeTrafficLog.Status = node.Status
+			nodeTrafficLog.HourlyLogs = []struct {
+				Timestamp time.Time `json:"timestamp" bson:"timestamp"`
+				Traffic   int64     `json:"traffic" bson:"traffic"`
+			}{}
+
+			if len(node.NodeByYear) > 0 {
+				for _, year := range node.NodeByYear {
+					nodeTrafficLog.YearlyLogs = append(nodeTrafficLog.YearlyLogs, struct {
+						Year    string `json:"year" bson:"year"`
+						Traffic int64  `json:"traffic" bson:"traffic"`
+					}{
+						Year:    year.Period,
+						Traffic: year.Amount,
+					})
+				}
 			}
+
+			if len(node.NodeByMonth) > 0 {
+				for _, month := range node.NodeByMonth {
+					nodeTrafficLog.MonthlyLogs = append(nodeTrafficLog.MonthlyLogs, struct {
+						Month   string `json:"month" bson:"month"`
+						Traffic int64  `json:"traffic" bson:"traffic"`
+					}{
+						Month:   month.Period,
+						Traffic: month.Amount,
+					})
+				}
+			}
+
+			if len(node.NodeByDay) > 0 {
+				for _, day := range node.NodeByDay {
+					nodeTrafficLog.DailyLogs = append(nodeTrafficLog.DailyLogs, struct {
+						Date    string `json:"date" bson:"date"`
+						Traffic int64  `json:"traffic" bson:"traffic"`
+					}{
+						Date:    day.Period,
+						Traffic: day.Amount,
+					})
+				}
+			}
+
+			if node.NodeAtCurrentYear.Amount > 0 {
+				nodeTrafficLog.YearlyLogs = append(nodeTrafficLog.YearlyLogs, struct {
+					Year    string `json:"year" bson:"year"`
+					Traffic int64  `json:"traffic" bson:"traffic"`
+				}{
+					Year:    node.NodeAtCurrentYear.Period,
+					Traffic: node.NodeAtCurrentDay.Amount,
+				})
+			}
+
+			if node.NodeAtCurrentMonth.Amount > 0 {
+				nodeTrafficLog.MonthlyLogs = append(nodeTrafficLog.MonthlyLogs, struct {
+					Month   string `json:"month" bson:"month"`
+					Traffic int64  `json:"traffic" bson:"traffic"`
+				}{
+					Month:   node.NodeAtCurrentMonth.Period,
+					Traffic: node.NodeAtCurrentMonth.Amount,
+				})
+			}
+
+			if node.NodeAtCurrentDay.Amount > 0 {
+				nodeTrafficLog.DailyLogs = append(nodeTrafficLog.DailyLogs, struct {
+					Date    string `json:"date" bson:"date"`
+					Traffic int64  `json:"traffic" bson:"traffic"`
+				}{
+					Date:    node.NodeAtCurrentDay.Period,
+					Traffic: node.NodeAtCurrentDay.Amount,
+				})
+			}
+
+			nodeTrafficLogs.InsertOne(context.Background(), nodeTrafficLog)
 		}
 	},
 }

@@ -40,8 +40,4 @@ func PublicRoutes(incomingRoutes *gin.Engine) {
 	// verge config
 	incomingRoutes.GET("/verge/:name", controller.ReturnVergeYAML())
 
-	// clash config
-	// incomingRoutes.Use(static.Serve("/clash/", static.LocalFile("./config/results/", false)))
-	incomingRoutes.GET("/clash/:filename", controller.ReturnClashYAML())
-
 }

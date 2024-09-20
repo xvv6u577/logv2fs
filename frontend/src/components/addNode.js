@@ -79,10 +79,6 @@ const AddNode = () => {
             return "Reality";
         } else if (type === "hysteria2") {
             return "Hysteria2";
-        } else if (type === "vmessws") {
-            return "VmessWS";
-        } else if (type === "vmesstls") {
-            return "VmessTLS";
         } else if (type === "vlessCDN") {
             return "VLessCDN";
         }
@@ -151,8 +147,6 @@ const AddNode = () => {
                             >
                                 <option value="reality">Reality</option>
                                 <option value="hysteria2">Hysteria2</option>
-                                <option value="vmessws">VmessWS</option>
-                                <option value="vmesstls">VmessTLS</option>
                                 <option value="vlessCDN">VLessCDN</option>
                             </select>
                             <input
