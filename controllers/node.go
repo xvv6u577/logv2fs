@@ -48,6 +48,9 @@ func removeDuplicateDomains(domains []Domain) []Domain {
 	seen := make(map[string]bool)
 	var result []Domain
 	for _, domain := range domains {
+		if domain.Type == "vlessCDN" {
+			continue
+		}
 		if _, exists := seen[domain.Domain]; !exists {
 			seen[domain.Domain] = true
 			result = append(result, domain)
