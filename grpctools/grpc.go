@@ -21,7 +21,7 @@ import (
 )
 
 type (
-	User = model.User
+	User = model.UserTrafficLogs
 )
 
 type Server struct {
@@ -38,9 +38,8 @@ func (s *Server) AddUser(ctx context.Context, in *pb.GRPCRequest) (*pb.GRPCReply
 	defer cmdConn.Close()
 
 	user := User{
-		Email: in.GetName(),
-		UUID:  in.GetUuid(),
-		Path:  in.GetPath(),
+		Email_As_Id: in.GetName(),
+		UUID:        in.GetUuid(),
 	}
 
 	NHSClient := thirdparty.NewHandlerServiceClient(cmdConn, in.GetPath())
@@ -113,7 +112,7 @@ func GrpcClientToAddUser(domain string, port string, user User, enableTLS bool) 
 	if enableTLS {
 		tlsCredentials, err := GetClientSideTlsCredential()
 		if err != nil {
-			log.Printf("Warn: %v could not load credential %v\nErr:%v", helper.SanitizeStr(domain), helper.SanitizeStr(user.Email), err)
+			log.Printf("Warn: %v could not load credential %v\nErr:%v", helper.SanitizeStr(domain), helper.SanitizeStr(user.Email_As_Id), err)
 			return err
 		}
 
@@ -131,9 +130,9 @@ func GrpcClientToAddUser(domain string, port string, user User, enableTLS bool) 
 
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
-	r, err := client.AddUser(ctx, &pb.GRPCRequest{Uuid: user.UUID, Path: user.Path, Name: user.Email})
+	r, err := client.AddUser(ctx, &pb.GRPCRequest{Uuid: user.UUID, Name: user.Email_As_Id})
 	if err != nil {
-		log.Printf("Warn: %v could not add user %v\nErr: %v", helper.SanitizeStr(domain), helper.SanitizeStr(user.Email), err)
+		log.Printf("Warn: %v could not add user %v\nErr: %v", helper.SanitizeStr(domain), helper.SanitizeStr(user.Email_As_Id), err)
 		return err
 	}
 
@@ -147,7 +146,7 @@ func GrpcClientToDeleteUser(domain string, port string, user User, enableTLS boo
 	if enableTLS {
 		tlsCredentials, err := GetClientSideTlsCredential()
 		if err != nil {
-			log.Printf("Warn: %v could not load credential %v\nErr:%v", helper.SanitizeStr(domain), helper.SanitizeStr(user.Email), err)
+			log.Printf("Warn: %v could not load credential %v\nErr:%v", helper.SanitizeStr(domain), helper.SanitizeStr(user.Email_As_Id), err)
 			return err
 		}
 
@@ -166,9 +165,9 @@ func GrpcClientToDeleteUser(domain string, port string, user User, enableTLS boo
 	// Contact the server and print out its response.
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
-	r, err := client.DeleteUser(ctx, &pb.GRPCRequest{Uuid: user.UUID, Path: user.Path, Name: user.Email})
+	r, err := client.DeleteUser(ctx, &pb.GRPCRequest{Uuid: user.UUID, Name: user.Email_As_Id})
 	if err != nil {
-		log.Printf("Warn: %v could not delete user %v\nErr:%v", helper.SanitizeStr(domain), helper.SanitizeStr(user.Email), err)
+		log.Printf("Warn: %v could not delete user %v\nErr:%v", helper.SanitizeStr(domain), helper.SanitizeStr(user.Email_As_Id), err)
 		return err
 	}
 

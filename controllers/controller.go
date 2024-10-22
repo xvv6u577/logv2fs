@@ -44,7 +44,6 @@ var (
 )
 
 type (
-	User            = model.User
 	TrafficAtPeriod = model.TrafficAtPeriod
 	Node            = model.Node
 	Domain          = model.Domain

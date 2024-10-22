@@ -28,7 +28,7 @@ const (
 )
 
 type (
-	User = model.User
+	User = model.UserTrafficLogs
 )
 
 type StatsServiceClient struct {
@@ -138,7 +138,7 @@ func (h *HandlerServiceClient) AddUser(u User) error {
 
 	user := &protocol.User{
 		Level: LEVEL,
-		Email: u.Email,
+		Email: u.Email_As_Id,
 		Account: serial.ToTypedMessage(&vmess.Account{
 			Id:               u.UUID,
 			AlterId:          ALTERID,

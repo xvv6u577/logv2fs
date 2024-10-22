@@ -6,21 +6,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-type CurrentNode struct {
-	Status             string         `json:"status" bson:"status" validate:"required,eq=active|eq=inactive"` // status: "active", "inactive"
-	Domain             string         `json:"domain" bson:"domain" validate:"required,min=2,max=100"`
-	IP                 string         `json:"ip" bson:"ip"`
-	Remark             string         `json:"remark" bson:"remark"`
-	CreatedAt          time.Time      `json:"created_at" bson:"created_at"`
-	UpdatedAt          time.Time      `json:"updated_at" bson:"updated_at"`
-	NodeAtCurrentYear  NodeAtPeriod   `json:"node_at_current_year" bson:"node_at_current_year"`
-	NodeAtCurrentMonth NodeAtPeriod   `json:"node_at_current_month" bson:"node_at_current_month"`
-	NodeAtCurrentDay   NodeAtPeriod   `json:"node_at_current_day" bson:"node_at_current_day"`
-	NodeByYear         []NodeAtPeriod `json:"node_by_year" bson:"node_by_year"`
-	NodeByMonth        []NodeAtPeriod `json:"node_by_month" bson:"node_by_month"`
-	NodeByDay          []NodeAtPeriod `json:"node_by_day" bson:"node_by_day"`
-}
-
 type NodeTrafficLogs struct {
 	ID           primitive.ObjectID `json:"_id" bson:"_id"`
 	Domain_As_Id string             `json:"domain_as_id" bson:"domain_as_id"`

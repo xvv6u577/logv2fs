@@ -30,11 +30,9 @@ var (
 )
 
 type (
-	CurrentNode     = model.CurrentNode
 	TrafficInDB     = model.TrafficInDB
 	NodeAtPeriod    = model.NodeAtPeriod
 	GlobalVariable  = model.GlobalVariable
-	User            = model.User
 	Domain          = model.Domain
 	Traffic         = model.Traffic
 	TrafficAtPeriod = model.TrafficAtPeriod
