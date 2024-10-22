@@ -14,15 +14,13 @@ import (
 )
 
 var (
-	CURRENT_DOMAIN                         = os.Getenv("CURRENT_DOMAIN")
-	SERVER_ADDRESS                         = os.Getenv("SERVER_ADDRESS")
-	SERVER_PORT                            = os.Getenv("SERVER_PORT")
-	GIN_MODE                               = os.Getenv("GIN_MODE")
-	trafficCollection    *mongo.Collection = database.OpenCollection(database.Client, "TRAFFIC")
-	nodesCollection      *mongo.Collection = database.OpenCollection(database.Client, "NODES")
-	userCollection       *mongo.Collection = database.OpenCollection(database.Client, "USERS")
-	globalCollection     *mongo.Collection = database.OpenCollection(database.Client, "GLOBAL")
-	nodeTrafficLogs                        = database.OpenCollection(database.Client, "NODE_TRAFFIC_LOGS")
+	CURRENT_DOMAIN = os.Getenv("CURRENT_DOMAIN")
+	SERVER_ADDRESS = os.Getenv("SERVER_ADDRESS")
+	SERVER_PORT    = os.Getenv("SERVER_PORT")
+	GIN_MODE       = os.Getenv("GIN_MODE")
+	// trafficCollection *mongo.Collection = database.OpenCollection(database.Client, "TRAFFIC")
+	// globalCollection  *mongo.Collection = database.OpenCollection(database.Client, "GLOBAL")
+	// nodeTrafficLogs                        = database.OpenCollection(database.Client, "NODE_TRAFFIC_LOGS")
 	userTrafficLogs                        = database.OpenCollection(database.Client, "USER_TRAFFIC_LOGS")
 	MoniteringDomainsCol *mongo.Collection = database.OpenCollection(database.Client, "Monitering_Domains")
 	address              string
