@@ -35,13 +35,6 @@ const Home = () => {
 			})
 			.then((response) => {
 				setUsers(response.data);
-				// let user = response.data.filter(
-				// 	(ele) => ele.email === loginState.jwt.Email
-				// );
-				// if (user.length !== 0) {
-				// } else {
-				// 	dispatch(logout());
-				// }
 			})
 			.catch((err) => {
 				if (err.response) {

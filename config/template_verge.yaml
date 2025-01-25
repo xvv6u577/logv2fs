@@ -33,7 +33,6 @@ proxy-groups:
     type: select
     proxies:
       - 自动选择
-      - DIRECT
 
   - name: 自动选择
     type: url-test #选出延迟最低的机场节点

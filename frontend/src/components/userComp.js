@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { alert, success } from "../store/message";
 import { formatBytes } from "../service/service";
@@ -7,6 +7,108 @@ import TapToCopied from "./tapToCopied";
 import TrafficTable from "./trafficTable";
 import { doRerender } from "../store/rerender";
 
+// 提取通用样式
+const badgeStyles = {
+  base: "inline-flex text-xs font-semibold mr-2 px-2.5 py-0.5 rounded",
+  counter: "w-10 bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300",
+  name: "w-32 bg-blue-100 text-blue-800 dark:bg-blue-200 dark:text-blue-800",
+  status: {
+    online: "w-16 bg-green-100 text-green-800 dark:bg-green-200 dark:text-green-900",
+    offline: "w-16 bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300"
+  },
+  role: {
+    admin: "w-16 bg-purple-100 text-purple-800 dark:bg-purple-200 dark:text-purple-900",
+    user: "w-16 bg-yellow-100 text-yellow-800 dark:bg-yellow-200 dark:text-yellow-900"
+  },
+  traffic: "w-24 bg-indigo-100 text-indigo-800 dark:bg-indigo-200 dark:text-indigo-900"
+};
+
+// 用户基本信息组件
+const UserBasicInfo = ({ index, user, loginState }) => (
+  <div>
+    <span className={`${badgeStyles.base} ${badgeStyles.counter}`}>
+      {index + 1}{"."}
+    </span>
+    <span className={`${badgeStyles.base} ${badgeStyles.name}`}>
+      {user.name}
+    </span>
+    <span className={`${badgeStyles.base} ${user.status === "plain" ? badgeStyles.status.online : badgeStyles.status.offline}`}>
+      {user.status === "plain" ? "online" : "offline"}
+    </span>
+    <span className={`${badgeStyles.base} ${user.role === "admin" ? badgeStyles.role.admin : badgeStyles.role.user}`}>
+      {user.role === "admin" ? "admin" : "user"}
+    </span>
+    {user.email === loginState.jwt.Email && (
+      <span className="bg-pink-100 text-pink-800 text-xs font-semibold mr-2 px-2.5 py-0.5 rounded dark:bg-pink-200 dark:text-pink-900">
+        Me
+      </span>
+    )}
+  </div>
+);
+
+// 流量信息组件
+const TrafficInfo = ({ user }) => (
+  <span className="flex md:justify-start justify-center items-center w-full md:w-5/12 text-xs">
+    {[
+      { label: "Today", value: user.daily_logs?.[0]?.traffic },
+      { label: "This month", value: user.monthly_logs?.[0]?.traffic },
+      { label: "This Year", value: user.yearly_logs?.[0]?.traffic },
+      { label: "Used", value: user.used }
+    ].map(({ label, value }, index) => (
+      <React.Fragment key={index}>
+        {label}:{" "}
+        <span className={`${badgeStyles.base} ${badgeStyles.traffic}`}>
+          {value ? formatBytes(value) : "0 Bytes"}
+        </span>
+        {" "}
+      </React.Fragment>
+    ))}
+  </span>
+);
+
+// 操作按钮组件
+const ActionButtons = ({ user, handleOnline, handleOffline, handleDeleteUser, dispatch, rerenderSignal }) => (
+  <span className="w-full flex flex-col md:flex-row md:w-1/4">
+    <EditUser
+      btnName="Edit"
+      editUserFunc={() => dispatch(doRerender({ rerender: !rerenderSignal.rerender }))}
+      user={user}
+    />
+    <StatusToggleButton 
+      status={user.status} 
+      emailId={user.email_as_id}
+      onOnline={handleOnline}
+      onOffline={handleOffline}
+    />
+    <ConfirmDelUser
+      btnName="Delete"
+      deleteUserFunc={() => handleDeleteUser(user.email_as_id)}
+    />
+  </span>
+);
+
+// 状态切换按钮组件
+const StatusToggleButton = ({ status, emailId, onOnline, onOffline }) => {
+  const isOnline = status === "plain";
+  const buttonClass = `w-auto md:w-24 focus:outline-none text-white font-medium rounded-lg text-sm px-1.5 py-1 m-1 text-center ${
+    isOnline 
+      ? "bg-red-700 hover:bg-red-800 dark:bg-red-600 dark:hover:bg-red-700" 
+      : "bg-green-700 hover:bg-green-800 dark:bg-green-600 dark:hover:bg-green-700"
+  }`;
+  
+  return (
+    <button
+      className={buttonClass}
+      type="button"
+      onClick={() => isOnline ? onOffline(emailId) : onOnline(emailId)}
+    >
+      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 inline-block mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
+      </svg>
+      {isOnline ? "Disable" : "Enable"}
+    </button>
+  );
+};
 
 const UserComp = (props) => {
 
@@ -85,99 +187,23 @@ const UserComp = (props) => {
 
     return (
         <>
-            <h2 id={`accordion-collapse-heading-${props.index}`} >
-                <span className="flex flex-col md:flex-row items-center md:justify-between w-full md:px-5 font-medium text-left border border-b-0 border-gray-200 rounded-t-xl focus:ring-4 focus:ring-gray-200 dark:focus:ring-gray-800 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white"
-                >
+            <h2 id={`accordion-collapse-heading-${props.index}`}>
+                <span className="flex flex-col md:flex-row items-center md:justify-between w-full md:px-5 font-medium text-left border border-b-0 border-gray-200 rounded-t-xl focus:ring-4 focus:ring-gray-200 dark:focus:ring-gray-800 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white">
                     <span className="flex md:justify-start justify-center w-full md:w-1/4">
-                        <div>
-                            <span className="w-10 bg-gray-100 text-gray-800 text-xs font-medium inline-flex items-center px-2.5 py-0.5 rounded mr-2 dark:bg-gray-700 dark:text-gray-300">
-                                {props.index + 1}{"."}
-                            </span>
-                            <span className="inline-flex w-32 bg-blue-100 text-blue-800 text-xs font-semibold mr-2 px-2.5 py-0.5 rounded dark:bg-blue-200 dark:text-blue-800" >
-                                {props.user.name}
-                            </span>
-                            {props.user.status === "plain" ? (
-                                <span className="inline-flex w-16 bg-green-100 text-green-800 text-xs font-semibold mr-2 px-2.5 py-0.5 rounded dark:bg-green-200 dark:text-green-900">
-                                    online
-                                </span>
-                            ) : (
-                                <span className="inline-flex w-16 bg-gray-100 text-gray-800 text-sm font-medium mr-2 px-2.5 py-0.5 rounded dark:bg-gray-700 dark:text-gray-300">
-                                    offline
-                                </span>
-                            )}
-                            {props.user.role === "admin" ? (
-                                <span className="inline-flex w-16 bg-purple-100 text-purple-800 text-sm font-medium mr-2 px-2.5 py-0.5 rounded dark:bg-purple-200 dark:text-purple-900">
-                                    admin
-                                </span>
-                            ) : (
-                                <span className="inline-flex w-16 bg-yellow-100 text-yellow-800 text-xs font-semibold mr-2 px-2.5 py-0.5 rounded dark:bg-yellow-200 dark:text-yellow-900">
-                                    user
-                                </span>
-                            )}
-                            {props.user.email === loginState.jwt.Email && (
-                                <span className="bg-pink-100 text-pink-800 text-xs font-semibold mr-2 px-2.5 py-0.5 rounded dark:bg-pink-200 dark:text-pink-900">
-                                    Me
-                                </span>
-                            )}
-                        </div>
+                        <UserBasicInfo index={props.index} user={props.user} loginState={loginState} />
                     </span>
-                    <span className="flex md:justify-start justify-center items-center w-full  md:w-5/12 text-xs">
-                        Today:{" "}
-                        <span className="inline-flex w-24 bg-indigo-100 text-indigo-800 text-sm font-medium mr-2 px-2.5 py-0.5 rounded dark:bg-indigo-200 dark:text-indigo-900">
-                            {props.user.daily_logs && props.user.daily_logs.length > 0 ? formatBytes(props.user.daily_logs[0].traffic) : "0 Bytes"}
-                        </span>
-                        {" "}
-                        This month:{" "}
-                        <span className="inline-flex w-24 bg-indigo-100 text-indigo-800 text-sm font-medium mr-2 px-2.5 py-0.5 rounded dark:bg-indigo-200 dark:text-indigo-900">
-                            {props.user.monthly_logs && props.user.monthly_logs.length > 0 ? formatBytes(props.user.monthly_logs[0].traffic) : "0 Bytes"}
-                        </span>
-                        {" "} This Year:{" "}
-                        <span className="inline-flex w-24 bg-indigo-100 text-indigo-800 text-sm font-medium mr-2 px-2.5 py-0.5 rounded dark:bg-indigo-200 dark:text-indigo-900">
-                            {props.user.yearly_logs && props.user.yearly_logs.length > 0 ? formatBytes(props.user.yearly_logs[0].traffic) : "0 Bytes"}
-                        </span>
-                        {" "} Used:{" "}
-                        <span className="inline-flex w-24 bg-indigo-100 text-indigo-800 text-sm font-medium mr-2 px-2.5 py-0.5 rounded dark:bg-indigo-200 dark:text-indigo-900">
-                            {formatBytes(props.user.used)}
-                        </span>
-                    </span>
-                    <span className="w-full flex flex-col md:flex-row md:w-1/4">
-                        <EditUser
-                            btnName="Edit"
-                            editUserFunc={() =>
-                                dispatch(doRerender({ rerender: !rerenderSignal.rerender }))
-                            }
-                            user={props.user}
-                        />
-                        {props.user.status === "plain" ? (<button
-                            className="w-auto md:w-24 focus:outline-none text-white bg-red-700 hover:bg-red-800 focus:ring-4 focus:ring-red-300 
-                                    font-medium rounded-lg text-sm px-1.5 py-1 m-1 text-center dark:bg-red-600 dark:hover:bg-red-700 dark:focus:ring-red-800"
-                            type="button"
-                            onClick={() => handleOffline(props.user.email_as_id)}
-                        >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 inline-block mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
-                            </svg>
-                            Disable
-                        </button>
-
-                        ) : (
-                            <button
-                                className="w-auto md:w-24 focus:outline-none text-white bg-green-700 hover:bg-green-800 focus:ring-4 focus:ring-red-300 
-                                    font-medium rounded-lg text-sm px-1.5 py-1 m-1 text-center dark:bg-green-600 dark:hover:bg-green-700 dark:focus:ring-green-800"
-                                type="button"
-                                onClick={() => handleOnline(props.user.email_as_id)}
-                            >
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 inline-block mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
-                                </svg>
-                                Enable
-                            </button>
-                        )}
-                        <ConfirmDelUser
-                            btnName="Delete"
-                            deleteUserFunc={() => handleDeleteUser(props.user.email_as_id)}
-                        />
-                    </span>
+                    
+                    <TrafficInfo user={props.user} />
+                    
+                    <ActionButtons 
+                        user={props.user}
+                        handleOnline={handleOnline}
+                        handleOffline={handleOffline}
+                        handleDeleteUser={handleDeleteUser}
+                        dispatch={dispatch}
+                        rerenderSignal={rerenderSignal}
+                    />
+                    
                     <svg
                         onClick={() => {
                             props.update();
@@ -186,8 +212,9 @@ const UserComp = (props) => {
                         className={`md:w-1/12 w-10 h-10 shrink-0 dark:hover:bg-gray-600 hover:cursor-pointer ${props.active ? "rotate-180" : "rotate-0"}`}
                         fill="currentColor"
                         viewBox="0 0 20 20"
-                        xmlns="http://www.w3.org/2000/svg">
-                        <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd"></path>
+                        xmlns="http://www.w3.org/2000/svg"
+                    >
+                        <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
                     </svg>
                 </span>
             </h2>

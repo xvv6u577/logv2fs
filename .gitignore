@@ -9,6 +9,7 @@ sing-box-full-platform/
 setup-rocket.chat/
 setup-script*
 config/geo/
+config/1121*
 
 # include logs, but exclude everything else in the directory
 logs/*
@@ -30,3 +31,4 @@ logv2fs
 docker-compose.yml
 Dockerfile
 TODO.MD
+config/template_singbox_new1.10.json

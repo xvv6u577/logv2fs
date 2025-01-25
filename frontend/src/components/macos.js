@@ -40,6 +40,8 @@ function Macos() {
 			</div>
 
 			<ol className="list-decimal list-inside space-y-4 mb-6">
+				<li>打开 App Store，点击右上角“商店”，点击“退出”！</li>
+				<li>再次点击右上角“商店”，点击“登录”，输入 Apple ID 邮箱和密码，点击“下一步”，输入两步验证码。</li>
 				<li>打开App Store，搜索 "sing-box" 并安装。</li>
 				<li>安装后，打开软件，点击 "Install Network Extensions"，然后点击 "Allow"。</li>
 				<li>
