@@ -20,3 +20,11 @@ setup-script
 .dockerignore
 docker-compose.yml
 Dockerfile
+
+frontend/
+cloudflare/
+setup-script
+development/
+sing-box-full-platform/
+setup-rocket.chat/
+TODO.MD
