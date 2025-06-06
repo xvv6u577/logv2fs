@@ -1,0 +1,22 @@
+---
+description: 
+globs: frontend/src/components/**/*.js
+alwaysApply: false
+---
+---
+description: React + Tailwind CSS 项目规范
+globs:
+  - "frontend/src/components/**/*.js"
+alwaysApply: true
+---
+
+- 生成简洁、美观的组件
+- Ensuring components are accessible and responsive.
+- Optimizing performance with techniques like code splitting and lazy loading.
+- 使用函数组件和 React Hooks。
+- 使用 Tailwind CSS 进行样式设计，避免使用自定义 CSS。
+- 类名应使用 kebab-case 命名法。
+- 组件命名应使用 PascalCase 命名法。
+- 所有组件应包含必要的无障碍属性，如 `aria-label`。
+- 避免使用内联样式，除非有特殊需求。
+- 表单控件应与对应的 `label` 元素关联。

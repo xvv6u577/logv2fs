@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
-import { useNavigate, Navigate } from "react-router-dom";
+import { Navigate } from "react-router-dom";
 import axios from "axios";
 import { alert } from "../store/message";
 import { login } from "../store/login";
@@ -10,7 +10,6 @@ const Login = () => {
 	const [password, setPassword] = useState("");
 
 	const dispatch = useDispatch();
-	const navigate = useNavigate();
 
 	const loginState = useSelector((state) => state.login);
 	const message = useSelector((state) => state.message);
@@ -25,10 +24,8 @@ const Login = () => {
 			})
 			.then((response) => {
 				if (response.data) {
-					console.log(response.data);
 					localStorage.setItem("token", JSON.stringify(response.data.token));
 					dispatch(login({ token: response.data.token }));
-					// navigate("/mypanel");
 				}
 			})
 			.catch((err) => {

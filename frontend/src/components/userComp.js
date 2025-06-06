@@ -50,9 +50,9 @@ const UserBasicInfo = ({ index, user, loginState }) => (
 const TrafficInfo = ({ user }) => (
   <span className="flex md:justify-start justify-center items-center w-full md:w-5/12 text-xs">
     {[
-      { label: "Today", value: user.daily_logs?.[0]?.traffic },
-      { label: "This month", value: user.monthly_logs?.[0]?.traffic },
-      { label: "This Year", value: user.yearly_logs?.[0]?.traffic },
+      { label: "Today", value: user.daily_logs?.[0]?.date === new Date(new Date().getTime() + 8 * 60 * 60 * 1000).toISOString().slice(0, 10).replace(/-/g, '') ? user.daily_logs?.[0]?.traffic : 0 },
+      { label: "This month", value: user.monthly_logs?.[0]?.month === new Date(new Date().getTime() + 8 * 60 * 60 * 1000).toISOString().slice(0, 7).replace(/-/g, '') ? user.monthly_logs?.[0]?.traffic : 0 },
+      { label: "This Year", value: user.yearly_logs?.[0]?.year === new Date(new Date().getTime() + 8 * 60 * 60 * 1000).toISOString().slice(0, 4) ? user.yearly_logs?.[0]?.traffic : 0 },
       { label: "Used", value: user.used }
     ].map(({ label, value }, index) => (
       <React.Fragment key={index}>

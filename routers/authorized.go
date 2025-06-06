@@ -29,8 +29,6 @@ func AuthorizedRoutes(incomingRoutes *gin.Engine) {
 	incomingRoutes.GET("/v1/onlineuser/:name", controller.OnlineUserByName())
 	incomingRoutes.GET("/v1/deluser/:name", controller.DeleteUserByUserName())
 
-	incomingRoutes.GET("/v1/cl6217", controller.WriteToDB())
-
 	incomingRoutes.PUT("/v1/759b0v", controller.AddNode())
 
 	incomingRoutes.GET("/v1/681p32", controller.GetWorkDomainInfo())

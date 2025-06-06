@@ -5,5 +5,6 @@
             "file:///Users/guestuser/go/src/github/logv2fs/config/template.yaml",
             "file:///Users/guestuser/Downloads/data.yaml"
         ]
-    }
+    },
+    "editor.fontSize": 13
 }

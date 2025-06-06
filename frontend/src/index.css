@@ -2,31 +2,38 @@
 @tailwind components;
 @tailwind utilities;
 
-@font-face {
-	font-family: 'Source Code Pro';
-	src: url('./fonts/Source_Code_Pro/static/SourceCodePro-Regular.ttf') format('truetype');
-	font-weight: normal;
-	font-style: normal;
-}
+@layer base {
+	@font-face {
+		font-family: 'Source Code Pro';
+		src: url('./fonts/Source_Code_Pro/static/SourceCodePro-Regular.ttf') format('truetype');
+		font-weight: normal;
+		font-style: normal;
+	}
 
-@font-face {
-	font-family: 'Source Code Pro';
-	src: url('./fonts/Source_Code_Pro/static/SourceCodePro-Bold.ttf') format('truetype');
-	font-weight: bold;
-	font-style: normal;
-}
+	@font-face {
+		font-family: 'Source Code Pro';
+		src: url('./fonts/Source_Code_Pro/static/SourceCodePro-Bold.ttf') format('truetype');
+		font-weight: bold;
+		font-style: normal;
+	}
 
-/* Add more @font-face rules for other styles as needed */
+	/* Add more @font-face rules for other styles as needed */
 
-body {
-	font-family: "Source Code Pro", PingFangSC-light, PingFangTC-light, "PingFang SC", Cambria, Cochin, Georgia, Times, "Times New Roman", serif !important;
-	background-color: rgb(12, 17, 42) !important;
-	color: rgba(255, 255, 255, 0.8) !important;
-	font-size: 14px !important;
-}
+	body {
+		font-family: "Source Code Pro", PingFangSC-light, PingFangTC-light, "PingFang SC", Cambria, Cochin, Georgia, Times, "Times New Roman", serif !important;
+		background-color: rgb(12, 17, 42) !important;
+		color: rgba(255, 255, 255, 0.8) !important;
+		font-size: 14px !important;
+	}
 
-#root {
-	min-height: 100vh;
-	display: flex;
-	flex-direction: column;
+	#root {
+		min-height: 100vh;
+		display: flex;
+		flex-direction: column;
+	}
+
+	.local_container {
+		width: 80%;
+		margin: 0 auto;
+	}
 }

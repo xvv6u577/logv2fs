@@ -28,104 +28,78 @@ function App() {
 	return (
 		<BrowserRouter>
 			<Routes>
-				<Route path="/" element={ <Login /> }></Route>
-				<Route path="/login" element={ <Login /> }></Route>
-				<Route
-					path="/mypanel"
-					element={
+			<Route path="/home" element={
 						<RequireAuth>
-							<div className="flex-1 flex flex-col md:container md:mx-auto" fluid="true">
-								<Menu />
-								<Mypanel />
-								<Footer />
-							</div>
-						</RequireAuth>
-					}
-				></Route>
-				<Route
-					path="/addnode"
-					element={
-						<RequireAuth>
-							<div className="flex-1 flex flex-col md:container md:mx-auto" fluid="true">
-								<Menu />
-								<AddNode />
-								<Footer />
-							</div>
-						</RequireAuth>
-					}
-				></Route>
-				<Route
-					path="/nodes"
-					element={
-						<RequireAuth>
-							<div className="flex-1 flex flex-col md:container md:mx-auto" fluid="true">
-								<Menu />
-								<Nodes />
-								<Footer />
-							</div>
-						</RequireAuth>
-					}
-				></Route>
-				<Route
-					path="/home"
-					element={
-						<RequireAuth>
-							<div className="flex-1 flex flex-col md:container md:mx-auto" fluid="true">
+							<div className="local_container" fluid="true">
 								<Menu />
 								<Home />
 								<Footer />
 							</div>
-						</RequireAuth>
-					}
-				></Route>
-				<Route
-					path="/macos"
-					element={
+						</RequireAuth> } >
+				</Route>
+				<Route path="/login" element={ <Login /> }></Route>
+				<Route path="/mypanel" element={ 
+						<RequireAuth> <div className="local_container" fluid="true">
+								<Menu />
+								<Mypanel />
+								<Footer />
+							</div>
+						</RequireAuth> } >
+				</Route>
+				<Route path="/addnode" element={
 						<RequireAuth>
-							<div className="flex-1 flex flex-col md:container md:mx-auto" fluid="true">
+							<div className="local_container" fluid="true">
+								<Menu />
+								<AddNode />
+								<Footer />
+							</div>
+						</RequireAuth>}>
+				</Route>
+				<Route path="/nodes" element={
+						<RequireAuth> <div className="local_container" fluid="true">
+								<Menu />
+								<Nodes />
+								<Footer />
+							</div>
+						</RequireAuth> } >
+				</Route>
+				<Route path="/macos" element={
+						<RequireAuth>
+							<div className="local_container" fluid="true">
 								<Menu />
 								<Macos />
 								<Footer />
 							</div>
-						</RequireAuth>
-					}
-				></Route>
-				<Route
-					path="/windows"
-					element={
-						<RequireAuth>
-							<div className="flex-1 flex flex-col md:container md:mx-auto" fluid="true">
+						</RequireAuth> } >
+				</Route>
+				<Route path="/windows" element={
+						 <RequireAuth>
+							<div className="local_container" fluid="true">
 								<Menu />
 								<Windows />
 								<Footer />
 							</div>
-						</RequireAuth>
-					}
-				></Route>
-				<Route
-					path="/iphone"
-					element={
+						</RequireAuth> } >
+						</Route>
+				<Route path="/iphone" element={
 						<RequireAuth>
-							<div className="flex-1 flex flex-col md:container md:mx-auto" fluid="true">
+							<div className="local_container" fluid="true">
 								<Menu />
 								<Iphone />
 								<Footer />
 							</div>
-						</RequireAuth>
-					}
-				></Route>
-				<Route
-					path="/android"
-					element={
+						</RequireAuth> } >
+				</Route>
+				<Route path="/android" element={
 						<RequireAuth>
-							<div className="flex-1 flex flex-col md:container md:mx-auto" fluid="true">
+							<div className="local_container" fluid="true">
 								<Menu />
 								<Android />
 								<Footer />
 							</div>
-						</RequireAuth>
-					}
-				></Route>
+						</RequireAuth> } >
+				</Route>
+				<Route path="/" element={ <Login /> }></Route>
 			</Routes>
 		</BrowserRouter>
 	);

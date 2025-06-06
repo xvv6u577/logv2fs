@@ -51,16 +51,11 @@ func LogUserTraffic(collection *mongo.Collection, email string, timestamp time.T
 
 	filters := []interface{}{}
 	update := bson.M{
-		"$push": bson.M{
-			"hourly_logs": bson.M{
-				"timestamp": timestamp,
-				"traffic":   traffic,
-			},
-		},
 		"$set": bson.M{
 			"updated_at": time.Now(),
 		},
-		"$inc": bson.M{},
+		"$inc":  bson.M{},
+		"$push": bson.M{},
 	}
 
 	// check if date exists in daily_logs
@@ -150,16 +145,11 @@ func LogNodeTraffic(collection *mongo.Collection, domain string, timestamp time.
 
 	filters := []interface{}{}
 	update := bson.M{
-		"$push": bson.M{
-			"hourly_logs": bson.M{
-				"timestamp": timestamp,
-				"traffic":   traffic,
-			},
-		},
 		"$set": bson.M{
 			"updated_at": time.Now(),
 		},
-		"$inc": bson.M{},
+		"$inc":  bson.M{},
+		"$push": bson.M{},
 	}
 
 	// check if date exists in daily_logs
@@ -247,9 +237,7 @@ func insertTrafficData(traffic Traffic, timestamp time.Time) error {
 func Cron_loggingJobs(c *cron.Cron, instance *box.Box) {
 
 	// cron job by 15 mins
-	// c.AddFunc("0 */5 * * * *", func() {
-	// cron job by hour
-	c.AddFunc("0 0 * * * *", func() {
+	c.AddFunc("0 */15 * * * *", func() {
 
 		timesteamp := time.Now().Local()
 		usageData, err := thirdparty.UsageDataOfAll(instance)
@@ -277,7 +265,7 @@ func Cron_loggingJobs(c *cron.Cron, instance *box.Box) {
 
 		}
 
-		log.Printf("logging user&node every 1 hour: %v", time.Now().Local().Format("2006010215"))
+		log.Printf("logging user&node traffic: %v", time.Now().Local().Format("20060102"))
 	})
 
 }

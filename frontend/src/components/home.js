@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { alert, reset } from "../store/message";
 import axios from "axios";
-import { logout } from "../store/login";
 import UserComp from "./userComp";
 import Alert from "./alert";
 

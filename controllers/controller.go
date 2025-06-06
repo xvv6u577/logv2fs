@@ -543,26 +543,6 @@ func GetUserByName() gin.HandlerFunc {
 	}
 }
 
-func WriteToDB() gin.HandlerFunc {
-	return func(c *gin.Context) {
-
-		if err := helper.CheckUserType(c, "admin"); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
-		}
-
-		// err := localCron.Log_basicAction()
-		// if err != nil {
-		// 	c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		// 	log.Printf("Write to DB failed: %s", err.Error())
-		// 	return
-		// }
-
-		log.Println("Write to DB by hand!")
-		c.JSON(http.StatusOK, gin.H{"message": "Write to DB successfully!"})
-	}
-}
-
 func GetSubscripionURL() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
