@@ -1,0 +1,132 @@
+# ===== Cursor AI 忽略文件配置 =====
+# 此文件用于告诉 Cursor AI 哪些文件不需要分析，提高代码智能提示的准确性和速度
+
+# ===== 构建产物和二进制文件 =====
+# Go 编译后的二进制文件
+logv2fs
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+dist/
+build/
+
+# ===== 依赖和第三方组件 =====
+# Node.js 依赖
+frontend/node_modules/
+frontend/.pnp
+frontend/.pnp.js
+node_modules/
+
+# Go 依赖缓存
+vendor/
+
+# 第三方平台组件
+sing-box-full-platform/
+sing-box-docker/
+setup-rocket.chat/
+
+# ===== 开发环境和配置 =====
+# 环境变量文件（可能包含敏感信息）
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# 开发脚本
+setup-script*
+*.sh
+
+# ===== 日志和临时文件 =====
+# 日志文件
+logs/
+*.log
+*.log.*
+
+# 临时文件
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# 备份文件
+*.old
+*.backup
+*.bak
+
+# ===== 前端构建产物 =====
+frontend/build/
+frontend/dist/
+frontend/.next/
+frontend/out/
+frontend/tool/
+
+# ===== 数据和媒体文件 =====
+# 地理位置数据
+config/geo/
+
+# 证书文件
+CA/
+*.pem
+*.key
+*.crt
+*.p12
+
+# ===== 容器和部署配置 =====
+# Docker 相关
+.dockerignore
+docker-compose.yml
+docker-compose.*.yml
+Dockerfile
+Dockerfile.*
+
+# Cloudflare 配置
+cloudflare/
+
+# ===== 开发工具配置 =====
+# IDE 配置
+.vscode/
+.idea/
+*.iml
+
+# Git 相关
+.git/
+.gitignore
+
+# ===== 开发和测试目录 =====
+# 开发环境目录
+development/
+
+# 测试覆盖率报告
+coverage/
+*.out
+
+# ===== 文档和说明文件 =====
+# 临时文档
+TODO.MD
+TEMP.md
+DRAFT.md
+
+# ===== 大文件和数据库 =====
+# 数据库文件
+*.db
+*.sqlite
+*.sqlite3
+dump.sql
+
+# 大文件
+*.zip
+*.tar.gz
+*.rar
+*.7z
+*.iso
+
+# ===== 特定于项目的忽略 =====
+# 初始化和开发相关的 Go 文件
+cmd/init.go
+cmd/dev.go 
