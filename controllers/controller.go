@@ -274,6 +274,13 @@ func EditUser() gin.HandlerFunc {
 		var ctx, cancel = context.WithTimeout(context.Background(), 60*time.Second)
 		defer cancel()
 
+		// 从路径参数获取用户名
+		name := c.Param("name")
+		if name == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "user name is required"})
+			return
+		}
+
 		var user, foundUser UserTrafficLogs
 
 		if err := c.BindJSON(&user); err != nil {
@@ -282,118 +289,53 @@ func EditUser() gin.HandlerFunc {
 			return
 		}
 
-		err := userTrafficLogsCol.FindOne(ctx, bson.M{"email_as_id": helper.SanitizeStr(user.Email_As_Id)}).Decode(&foundUser)
+		// 不需要验证整个结构体，因为我们只是部分更新
+
+		err := userTrafficLogsCol.FindOne(ctx, bson.M{"email_as_id": helper.SanitizeStr(name)}).Decode(&foundUser)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "email is incorrect"})
-			log.Printf("email is incorrect")
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "user not found"})
+			log.Printf("user not found: %s", name)
 			return
 		}
 
-		var replacedDocument bson.M
 		newFoundUser := bson.M{}
 
-		if foundUser.Role != user.Role {
+		// 只允许编辑 name 和 role
+		if foundUser.Role != user.Role && user.Role != "" {
 			newFoundUser["role"] = user.Role
+			log.Printf("Updating role from %s to %s", foundUser.Role, user.Role)
 		}
 
-		if user.Password != "" {
-			password := HashPassword(user.Password)
-			if foundUser.Password != user.Password && foundUser.Password != password {
-				newFoundUser["password"] = password
-			}
-		}
-		if foundUser.Name != user.Name {
+		if foundUser.Name != user.Name && user.Name != "" {
 			newFoundUser["name"] = user.Name
+			log.Printf("Updating name from %s to %s", foundUser.Name, user.Name)
 		}
 
 		if len(newFoundUser) == 0 {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "no new value in post data."})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "no new value in post data."})
 			log.Printf("no new value in post data.")
 			return
 		}
 
+		// 添加更新时间
+		newFoundUser["updated_at"] = time.Now()
+
+		var updatedUser UserTrafficLogs
 		err = userTrafficLogsCol.FindOneAndUpdate(
 			ctx,
-			bson.M{"email_as_id": helper.SanitizeStr(user.Email_As_Id)},
+			bson.M{"email_as_id": helper.SanitizeStr(name)},
 			bson.M{"$set": newFoundUser},
-			options.FindOneAndUpdate().SetUpsert(false),
-		).Decode(&replacedDocument)
+			options.FindOneAndUpdate().SetReturnDocument(options.After),
+		).Decode(&updatedUser)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			log.Printf("error: %v", err)
+			log.Printf("error updating user: %v", err)
 			return
 		}
 
-		c.JSON(http.StatusOK, foundUser)
+		log.Printf("User %s updated successfully", updatedUser.Name)
+		c.JSON(http.StatusOK, gin.H{"message": "User updated successfully", "user": updatedUser})
 	}
-}
-
-func OfflineUserByName() gin.HandlerFunc {
-	return func(c *gin.Context) {
-
-		if err := helper.CheckUserType(c, "admin"); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
-		}
-
-		var ctx, cancel = context.WithTimeout(context.Background(), 60*time.Second)
-		defer cancel()
-
-		name := c.Param("name")
-
-		filter := bson.D{primitive.E{Key: "email_as_id", Value: name}}
-		update := bson.M{"$set": bson.M{"status": "deleted"}}
-		_, err := userTrafficLogsCol.UpdateOne(ctx, filter, update)
-		if err != nil {
-			msg := "database user info update failed."
-			c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
-			log.Printf("%s", msg)
-			return
-		}
-
-		log.Printf("Take user %s offline successfully!", name)
-		c.JSON(http.StatusOK, gin.H{"message": "Take user " + name + " offline successfully!"})
-	}
-
-}
-
-func OnlineUserByName() gin.HandlerFunc {
-	return func(c *gin.Context) {
-
-		if err := helper.CheckUserType(c, "admin"); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
-		}
-
-		name := c.Param("name")
-
-		var user UserTrafficLogs
-		filter := bson.M{"email_as_id": name}
-		var projections = bson.D{
-			{Key: "email_as_id", Value: 1},
-			{Key: "name", Value: 1},
-		}
-		err := userTrafficLogsCol.FindOne(context.TODO(), filter, options.FindOne().SetProjection(projections)).Decode(&user)
-		if err != nil {
-			msg := "database get user failed."
-			c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
-			log.Printf("%s", msg)
-			return
-		}
-
-		update := bson.M{"$set": bson.M{"status": "plain"}}
-		_, err = userTrafficLogsCol.UpdateOne(context.TODO(), filter, update)
-		if err != nil {
-			msg := "database user info update failed."
-			c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
-			log.Printf("%s", msg)
-			return
-		}
-
-		log.Printf("Take user %s online successfully!", user.Name)
-		c.JSON(http.StatusOK, gin.H{"message": "Take user " + user.Name + " online successfully!"})
-	}
-
 }
 
 func DeleteUserByUserName() gin.HandlerFunc {
@@ -405,6 +347,12 @@ func DeleteUserByUserName() gin.HandlerFunc {
 		}
 
 		name := c.Param("name")
+		log.Printf("Attempting to delete user: %s", name)
+
+		if name == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "user name is required"})
+			return
+		}
 
 		var user UserTrafficLogs
 		filter := bson.M{"email_as_id": name}
@@ -414,16 +362,22 @@ func DeleteUserByUserName() gin.HandlerFunc {
 		}
 		err := userTrafficLogsCol.FindOne(context.TODO(), filter, options.FindOne().SetProjection(projections)).Decode(&user)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			log.Printf("DeleteUserByUserName: %s", err.Error())
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "user not found"})
+			log.Printf("DeleteUserByUserName - user not found: %s, error: %s", name, err.Error())
 			return
 		}
 
 		// delete user from userTrafficLogsCol
-		_, err = userTrafficLogsCol.DeleteOne(context.TODO(), filter)
+		result, err := userTrafficLogsCol.DeleteOne(context.TODO(), filter)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			log.Printf("DeleteUserByUserName: %s", err.Error())
+			log.Printf("DeleteUserByUserName - delete failed: %s", err.Error())
+			return
+		}
+
+		if result.DeletedCount == 0 {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "user not deleted"})
+			log.Printf("DeleteUserByUserName - no documents deleted for user: %s", name)
 			return
 		}
 
@@ -451,6 +405,7 @@ func GetAllUsers() gin.HandlerFunc {
 				{Key: "role", Value: 1},
 				{Key: "status", Value: 1},
 				{Key: "used", Value: 1},
+				{Key: "updated_at", Value: 1},
 				{Key: "daily_logs", Value: bson.D{
 					{Key: "$slice", Value: bson.A{
 						bson.D{
@@ -529,6 +484,8 @@ func GetUserByName() gin.HandlerFunc {
 			{Key: "daily_logs", Value: 1},
 			{Key: "monthly_logs", Value: 1},
 			{Key: "yearly_logs", Value: 1},
+			{Key: "created_at", Value: 1},
+			{Key: "updated_at", Value: 1},
 		}
 
 		var user UserTrafficLogs

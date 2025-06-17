@@ -28,78 +28,96 @@ function App() {
 	return (
 		<BrowserRouter>
 			<Routes>
-			<Route path="/home" element={
-						<RequireAuth>
-							<div className="local_container" fluid="true">
-								<Menu />
+				<Route path="/home" element={
+					<RequireAuth>
+						<div className="min-h-screen bg-gray-900 flex flex-col">
+							<Menu />
+							<div className="flex-1">
 								<Home />
-								<Footer />
 							</div>
-						</RequireAuth> } >
-				</Route>
-				<Route path="/login" element={ <Login /> }></Route>
-				<Route path="/mypanel" element={ 
-						<RequireAuth> <div className="local_container" fluid="true">
-								<Menu />
+							<Footer />
+						</div>
+					</RequireAuth>
+				} />
+				<Route path="/login" element={<Login />} />
+				<Route path="/mypanel" element={
+					<RequireAuth>
+						<div className="min-h-screen bg-gray-900 flex flex-col">
+							<Menu />
+							<div className="flex-1">
 								<Mypanel />
-								<Footer />
 							</div>
-						</RequireAuth> } >
-				</Route>
+							<Footer />
+						</div>
+					</RequireAuth>
+				} />
 				<Route path="/addnode" element={
-						<RequireAuth>
-							<div className="local_container" fluid="true">
-								<Menu />
+					<RequireAuth>
+						<div className="min-h-screen bg-gray-900 flex flex-col">
+							<Menu />
+							<div className="flex-1">
 								<AddNode />
-								<Footer />
 							</div>
-						</RequireAuth>}>
-				</Route>
+							<Footer />
+						</div>
+					</RequireAuth>
+				} />
 				<Route path="/nodes" element={
-						<RequireAuth> <div className="local_container" fluid="true">
-								<Menu />
+					<RequireAuth>
+						<div className="min-h-screen bg-gray-900 flex flex-col">
+							<Menu />
+							<div className="flex-1">
 								<Nodes />
-								<Footer />
 							</div>
-						</RequireAuth> } >
-				</Route>
+							<Footer />
+						</div>
+					</RequireAuth>
+				} />
 				<Route path="/macos" element={
-						<RequireAuth>
-							<div className="local_container" fluid="true">
-								<Menu />
+					<RequireAuth>
+						<div className="min-h-screen bg-gray-900 flex flex-col">
+							<Menu />
+							<div className="flex-1">
 								<Macos />
-								<Footer />
 							</div>
-						</RequireAuth> } >
-				</Route>
+							<Footer />
+						</div>
+					</RequireAuth>
+				} />
 				<Route path="/windows" element={
-						 <RequireAuth>
-							<div className="local_container" fluid="true">
-								<Menu />
+					<RequireAuth>
+						<div className="min-h-screen bg-gray-900 flex flex-col">
+							<Menu />
+							<div className="flex-1">
 								<Windows />
-								<Footer />
 							</div>
-						</RequireAuth> } >
-						</Route>
+							<Footer />
+						</div>
+					</RequireAuth>
+				} />
 				<Route path="/iphone" element={
-						<RequireAuth>
-							<div className="local_container" fluid="true">
-								<Menu />
+					<RequireAuth>
+						<div className="min-h-screen bg-gray-900 flex flex-col">
+							<Menu />
+							<div className="flex-1">
 								<Iphone />
-								<Footer />
 							</div>
-						</RequireAuth> } >
-				</Route>
+							<Footer />
+						</div>
+					</RequireAuth>
+				} />
 				<Route path="/android" element={
-						<RequireAuth>
-							<div className="local_container" fluid="true">
-								<Menu />
+					<RequireAuth>
+						<div className="min-h-screen bg-gray-900 flex flex-col">
+							<Menu />
+							<div className="flex-1">
 								<Android />
-								<Footer />
 							</div>
-						</RequireAuth> } >
-				</Route>
-				<Route path="/" element={ <Login /> }></Route>
+							<Footer />
+						</div>
+					</RequireAuth>
+				} />
+				<Route path="/" element={<Login />} />
 			</Routes>
 		</BrowserRouter>
 	);

@@ -20,16 +20,18 @@ protoc --go_out=. --go_opt=paths=source_relative \
 - v2ray v4.23.4
 - sing-box v1.18.1
 
-#### 开发环境
+#### 编译
 
 ```
-cd logv2fs
+# compile executable for linux on mac M1 - amd64
+cd ~/go/src/github/logv2fs; export GOOS=linux; export GOARCH=amd64; \
+go build -tags="with_gvisor,with_quic,with_wireguard,with_utls,with_reality_server,with_clash_api,with_v2ray_api,with_grpc" \
+-o ./logv2fs ./
 
-# 运行 v2ray 服务
-make backend
-
-# 运行 sing-box 服务
-make dev
+# compile executable for linux on mac M1 - arm
+cd ~/go/src/github/logv2fs; export GOOS=linux; export GOARCH=arm; \
+go build -tags="with_gvisor,with_quic,with_wireguard,with_utls,with_reality_server,with_clash_api,with_v2ray_api,with_grpc" \
+-o ./sing-box-full-platform/pre-config/logv2fs ./
 ```
 
 #### 以systemd service运行（以ubuntu 18.04为例）

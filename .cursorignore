@@ -79,11 +79,11 @@ CA/
 
 # ===== 容器和部署配置 =====
 # Docker 相关
-.dockerignore
-docker-compose.yml
-docker-compose.*.yml
-Dockerfile
-Dockerfile.*
+# .dockerignore
+# docker-compose.yml
+# docker-compose.*.yml
+# Dockerfile
+# Dockerfile.*
 
 # Cloudflare 配置
 cloudflare/

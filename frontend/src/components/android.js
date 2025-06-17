@@ -25,9 +25,7 @@ function Android() {
 				<li>
 					<h2 class="text-xl font-semibold text-gray-800 dark:text-white mb-2">下载客户端 Sing-box</h2>
 					<p class="text-gray-700 dark:text-gray-300">下载链接：
-						<a href="https://w8.undervineyard.com/dl/Singbox-for-Android-1.8.11-universal.apk" class="text-blue-500 hover:text-blue-600 underline">
-							https://w8.undervineyard.com/dl/Singbox-for-Android-1.8.11-universal.apk
-						</a>
+						<TapToCopied>{process.env.REACT_APP_FILE_AND_SUB_URL + "/dl/Singbox-for-Android-1.11.8-universal.apk"}</TapToCopied>
 					</p>
 				</li>
 
@@ -58,17 +56,16 @@ function Android() {
 				<li>
 					<h2 class="text-xl font-semibold text-gray-800 dark:text-white mb-2">验证安装</h2>
 					<ol class="list-decimal pl-6 space-y-2 text-gray-700 dark:text-gray-300">
-						<li>打开您的浏览器</li>
-						<li>尝试访问 <TapToCopied>www.google.com</TapToCopied></li>
+						<li>打开您的浏览器，输入 <TapToCopied>https://www.google.com</TapToCopied></li>
 						<li>如果能够成功打开，则表示安装和配置已完成</li>
 					</ol>
 				</li>
 			</ol >
 
-		<div class="bg-yellow-100 dark:bg-yellow-900 border-l-4 border-yellow-500 text-yellow-700 dark:text-yellow-200 p-4 mt-8">
-			<p class="font-semibold">提示：</p>
-			<p>如果在安装过程中遇到任何问题，请确保您的Android设备允许安装来自未知来源的应用，并检查网络连接是否正常。</p>
-		</div>
+			<div class="bg-yellow-100 dark:bg-yellow-900 border-l-4 border-yellow-500 text-yellow-700 dark:text-yellow-200 p-4 mt-8">
+				<p class="font-semibold">提示：</p>
+				<p>如果在安装过程中遇到任何问题，请确保您的Android设备允许安装来自未知来源的应用，并检查网络连接是否正常。</p>
+			</div>
 		</div >
 	);
 }

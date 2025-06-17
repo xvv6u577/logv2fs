@@ -4,7 +4,6 @@ go 1.20
 
 require (
 	github.com/gin-gonic/gin v1.7.7
-	github.com/lib/pq v1.10.9
 	github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d
 	github.com/v2fly/v2ray-core/v4 v4.44.0
 	go.mongodb.org/mongo-driver v1.16.1

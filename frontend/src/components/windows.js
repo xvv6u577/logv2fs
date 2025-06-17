@@ -27,7 +27,7 @@ function Windows() {
 					<h2 className="inline-block text-xl font-semibold mb-2">下载客户端 Clash Verge</h2>
 					<p className="ml-6 mt-2">
 						下载链接：
-						<TapToCopied>{process.env.REACT_APP_FILE_AND_SUB_URL + "/dl/Clash.Verge_1.7.3_x64-setup.exe"}</TapToCopied>
+						<TapToCopied>{process.env.REACT_APP_FILE_AND_SUB_URL + "/dl/Clash.Verge_2.2.3_x64-setup.exe"}</TapToCopied>
 					</p>
 				</li>
 
@@ -62,9 +62,8 @@ function Windows() {
 				<li>
 					<h2 className="inline-block text-xl font-semibold mb-2">验证安装</h2>
 					<p className="ml-6 mt-2">
-						1. 打开您的浏览器<br />
-						2. 尝试访问 <TapToCopied>www.google.com</TapToCopied><br />
-						3. 如果能够成功打开，则表示安装和配置已完成
+						1. 打开您的浏览器，输入 <TapToCopied>https://www.google.com</TapToCopied><br />
+						2. 如果能够成功打开，则表示安装和配置已完成
 					</p>
 				</li>
 			</ol>
