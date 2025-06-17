@@ -507,13 +507,12 @@ func GetSubscripionURL() gin.HandlerFunc {
 		var err error
 		name := helper.SanitizeStr(c.Param("name"))
 
-		// get globalVariable from GlobelCollection ActiveGlobalNodes
 		var activeGlobalNodes []Domain
 
 		cur, err := globalCollection.Find(context.TODO(), bson.D{})
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "error occured while getting globalVariable"})
-			log.Printf("Getting globalVariable error: %s", err.Error())
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "error occured while getting active global nodes"})
+			log.Printf("Getting active global nodes error: %s", err.Error())
 			return
 		}
 		defer cur.Close(context.Background())
@@ -600,13 +599,12 @@ func ReturnSingboxJson() gin.HandlerFunc {
 			return
 		}
 
-		// get globalVariable from GlobelCollection ActiveGlobalNodes
 		var activeGlobalNodes []Domain
 
 		cur, err := globalCollection.Find(context.TODO(), bson.D{})
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "error occured while getting globalVariable"})
-			log.Printf("Getting globalVariable error: %s", err.Error())
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "error occured while getting active global nodes"})
+			log.Printf("Getting active global nodes error: %s", err.Error())
 			return
 		}
 		defer cur.Close(context.Background())
@@ -848,12 +846,11 @@ func ReturnVergeYAML() gin.HandlerFunc {
 			return
 		}
 
-		// get globalVariable from GlobelCollection ActiveGlobalNodes
 		var activeGlobalNodes []Domain
 		cur, err := globalCollection.Find(context.TODO(), bson.D{})
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "error occured while getting globalVariable"})
-			log.Printf("Getting globalVariable error: %s", err.Error())
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "error occured while getting active global nodes"})
+			log.Printf("Getting active global nodes error: %s", err.Error())
 			return
 		}
 		defer cur.Close(context.Background())

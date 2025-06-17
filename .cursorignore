@@ -29,11 +29,11 @@ setup-rocket.chat/
 
 # ===== 开发环境和配置 =====
 # 环境变量文件（可能包含敏感信息）
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+# .env
+# .env.local
+# .env.development.local
+# .env.test.local
+# .env.production.local
 
 # 开发脚本
 setup-script*

@@ -37,13 +37,6 @@ type NodeAtPeriod struct {
 	UserTrafficAtPeriod map[string]int64 `json:"user_traffic_at_period" bson:"user_traffic_at_period"`
 }
 
-// var nodeGlobalList = NodeGlobalList{"domain": "remark"}
-type GlobalVariable struct {
-	Name                  string   `json:"name" bson:"name" validate:"required,min=2,max=100"`
-	WorkRelatedDomainList []Domain `json:"work_related_domain_list" bson:"work_related_domain_list"`
-	ActiveGlobalNodes     []Domain `json:"active_global_nodes" bson:"active_global_nodes"`
-}
-
 // Domain type: "work", "vmesstls", "vmessws", "reality", "hysteria2", "vlessCDN"
 type Domain struct {
 	Type         string `json:"type" bason:"type"`
