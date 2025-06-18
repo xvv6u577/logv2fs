@@ -3,6 +3,7 @@ package routes
 import (
 	"github.com/gin-contrib/static"
 	controller "github.com/xvv6u577/logv2fs/controllers"
+	"github.com/xvv6u577/logv2fs/database"
 
 	"github.com/gin-gonic/gin"
 )
@@ -28,16 +29,32 @@ func PublicRoutes(incomingRoutes *gin.Engine) {
 		incomingRoutes.Use(static.Serve(route, static.LocalFile("./frontend/build/", true)))
 	}
 
-	// login
-	incomingRoutes.POST("/v1/login", controller.Login())
+	// 根据环境变量决定使用PostgreSQL还是MongoDB版本的控制器
+	if database.IsUsingPostgres() {
+		// PostgreSQL版本的路由
+		// login
+		incomingRoutes.POST("/v1/login", controller.LoginPG())
 
-	// shadowrocket config
-	incomingRoutes.GET("/static/:name", controller.GetSubscripionURL())
+		// shadowrocket config
+		incomingRoutes.GET("/static/:name", controller.GetSubscripionURLPG())
 
-	// singbox config
-	incomingRoutes.GET("/singbox/:name", controller.ReturnSingboxJson())
+		// singbox config
+		incomingRoutes.GET("/singbox/:name", controller.ReturnSingboxJsonPG())
 
-	// verge config
-	incomingRoutes.GET("/verge/:name", controller.ReturnVergeYAML())
+		// verge config
+		incomingRoutes.GET("/verge/:name", controller.ReturnVergeYAMLPG())
+	} else {
+		// MongoDB版本的路由
+		// login
+		incomingRoutes.POST("/v1/login", controller.Login())
 
+		// shadowrocket config
+		incomingRoutes.GET("/static/:name", controller.GetSubscripionURL())
+
+		// singbox config
+		incomingRoutes.GET("/singbox/:name", controller.ReturnSingboxJson())
+
+		// verge config
+		incomingRoutes.GET("/verge/:name", controller.ReturnVergeYAML())
+	}
 }

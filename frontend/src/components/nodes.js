@@ -56,8 +56,8 @@ function Nodes() {
 			})
 		])
 		.then(([nodesResponse, domainsResponse]) => {
-			setSingboxNodes(nodesResponse.data);
-			setMonitoredDomains(domainsResponse.data);
+			setSingboxNodes(nodesResponse.data || []);
+			setMonitoredDomains(domainsResponse.data || []);
 			setLoading(false); // 加载完成
 		})
 		.catch((err) => {
@@ -85,9 +85,9 @@ function Nodes() {
 
 	const addNewDomain = () => {
 		if (newDomain.length > 0 && newRemark.length > 0) {
-			const tempDomains = monitoredDomains.filter(item => item.domain === newDomain);
+			const tempDomains = monitoredDomains?.filter(item => item.domain === newDomain) || [];
 			if (tempDomains.length === 0) {
-				setMonitoredDomains([...monitoredDomains, { 
+				setMonitoredDomains([...(monitoredDomains || []), { 
 					domain: newDomain, 
 					remark: newRemark, 
 					days_to_expire: -1, 
@@ -102,7 +102,7 @@ function Nodes() {
 	};
 
 	const removeDomain = (domainToRemove) => {
-		setMonitoredDomains(monitoredDomains.filter(item => item.domain !== domainToRemove));
+		setMonitoredDomains(monitoredDomains?.filter(item => item.domain !== domainToRemove) || []);
 	};
 
 	// 节点卡片组件
@@ -252,7 +252,7 @@ function Nodes() {
 							<div>
 								<h4 className="text-lg font-medium text-gray-300 mb-4">月度流量统计（过去12个月）</h4>
 								<div className="bg-gray-700 rounded-lg overflow-hidden max-h-80 overflow-y-auto">
-									{node?.monthly_logs && node.monthly_logs.length > 0 ? (
+									{node?.monthly_logs && (node.monthly_logs?.length || 0) > 0 ? (
 										<table className="w-full text-sm">
 											<thead className="bg-gray-600 sticky top-0">
 												<tr>
@@ -262,9 +262,9 @@ function Nodes() {
 											</thead>
 											<tbody>
 												{node.monthly_logs
-													.sort((a, b) => b.month - a.month)
-													.slice(0, 12)
-													.map((item, idx) => (
+													?.sort((a, b) => b.month - a.month)
+													?.slice(0, 12)
+													?.map((item, idx) => (
 														<tr key={idx} className="border-t border-gray-600 hover:bg-gray-650">
 															<td className="px-4 py-3">{item.month}</td>
 															<td className="px-4 py-3 text-right font-mono text-green-400">
@@ -286,7 +286,7 @@ function Nodes() {
 							<div>
 								<h4 className="text-lg font-medium text-gray-300 mb-4">日流量统计（过去30天）</h4>
 								<div className="bg-gray-700 rounded-lg overflow-hidden max-h-80 overflow-y-auto">
-									{node?.daily_logs && node.daily_logs.length > 0 ? (
+									{node?.daily_logs && (node.daily_logs?.length || 0) > 0 ? (
 										<table className="w-full text-sm">
 											<thead className="bg-gray-600 sticky top-0">
 												<tr>
@@ -296,9 +296,9 @@ function Nodes() {
 											</thead>
 											<tbody>
 												{node.daily_logs
-													.sort((a, b) => b.date - a.date)
-													.slice(0, 30)
-													.map((item, idx) => (
+													?.sort((a, b) => b.date - a.date)
+													?.slice(0, 30)
+													?.map((item, idx) => (
 														<tr key={idx} className="border-t border-gray-600 hover:bg-gray-650">
 															<td className="px-4 py-3">{item.date}</td>
 															<td className="px-4 py-3 text-right font-mono text-blue-400">
@@ -383,7 +383,7 @@ function Nodes() {
 							: "bg-gray-700 text-gray-300 hover:bg-gray-600"
 					}`}
 				>
-					节点监控 ({singboxNodes.length})
+					节点监控 ({singboxNodes?.length || 0})
 				</button>
 				<button
 					onClick={() => setActiveSection("domains")}
@@ -393,7 +393,7 @@ function Nodes() {
 							: "bg-gray-700 text-gray-300 hover:bg-gray-600"
 					}`}
 				>
-					域名监控 ({monitoredDomains.length})
+					域名监控 ({monitoredDomains?.length || 0})
 				</button>
 			</div>
 
@@ -412,7 +412,7 @@ function Nodes() {
 						</div>
 					) : (
 						<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-							{singboxNodes.length === 0 ? (
+							{(singboxNodes?.length || 0) === 0 ? (
 								<div className={`${styles.card} p-8 text-center col-span-full`}>
 									<svg className="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 										<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
@@ -421,9 +421,9 @@ function Nodes() {
 									<p className="text-gray-400">等待节点数据加载</p>
 								</div>
 							) : (
-								singboxNodes.map((node, index) => (
+								singboxNodes?.map((node, index) => (
 									<NodeCard key={index} node={node} index={index} />
-								))
+								)) || []
 							)}
 						</div>
 					)}
@@ -479,11 +479,11 @@ function Nodes() {
 								<p className="text-gray-400">正在获取域名监控数据</p>
 							</div>
 						</div>
-					) : monitoredDomains.length > 0 ? (
+					) : (monitoredDomains?.length || 0) > 0 ? (
 						<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-							{monitoredDomains.map((domain, index) => (
+							{monitoredDomains?.map((domain, index) => (
 								<DomainCard key={index} domain={domain} index={index} />
-							))}
+							)) || []}
 						</div>
 					) : (
 						<div className={`${styles.card} p-8 text-center`}>

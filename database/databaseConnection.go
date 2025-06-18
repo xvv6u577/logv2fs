@@ -12,7 +12,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/readpref"
 )
 
-//DBinstance func
+// DBinstance func
 func DBinstance() *mongo.Client {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
@@ -43,13 +43,32 @@ func DBinstance() *mongo.Client {
 	return client
 }
 
-//Client Database instance
+// Client Database instance
 var Client *mongo.Client = DBinstance()
 
-//OpenCollection is a  function makes a connection with a collection in the database
+// OpenCollection is a  function makes a connection with a collection in the database
 func OpenCollection(client *mongo.Client, collectionName string) *mongo.Collection {
 
 	var collection *mongo.Collection = client.Database("logV2rayTrafficDB").Collection(collectionName)
 
 	return collection
+}
+
+// GetDB 获取数据库连接，优先返回PostgreSQL连接，如果不可用则返回MongoDB连接
+func GetDB() interface{} {
+	// 尝试获取PostgreSQL连接
+	pgDB := GetPostgresDB()
+	if pgDB != nil {
+		return pgDB
+	}
+
+	// 如果PostgreSQL不可用，返回MongoDB连接
+	return Client
+}
+
+// IsUsingPostgres 检查是否使用PostgreSQL
+func IsUsingPostgres() bool {
+	// 从环境变量中读取配置
+	usePostgres := os.Getenv("USE_POSTGRES")
+	return usePostgres == "true" || usePostgres == "1" || usePostgres == "yes"
 }

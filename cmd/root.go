@@ -11,6 +11,7 @@ import (
 	"github.com/xvv6u577/logv2fs/database"
 	"github.com/xvv6u577/logv2fs/model"
 	"go.mongodb.org/mongo-driver/mongo"
+	"gorm.io/gorm"
 )
 
 var (
@@ -19,14 +20,18 @@ var (
 	SERVER_PORT    = os.Getenv("SERVER_PORT")
 	GIN_MODE       = os.Getenv("GIN_MODE")
 	// trafficCollection *mongo.Collection = database.OpenCollection(database.Client, "TRAFFIC")
-	globalCollection     *mongo.Collection = database.OpenCollection(database.Client, "GLOBAL")
-	nodeTrafficLogs                        = database.OpenCollection(database.Client, "NODE_TRAFFIC_LOGS")
-	userTrafficLogs                        = database.OpenCollection(database.Client, "USER_TRAFFIC_LOGS")
-	MoniteringDomainsCol *mongo.Collection = database.OpenCollection(database.Client, "Monitering_Domains")
-	address              string
-	tlsStatus            bool
-	authrRequired        bool
-	cronInstance         *cron.Cron
+	globalCollection     *mongo.Collection
+	nodeTrafficLogs      *mongo.Collection
+	userTrafficLogs      *mongo.Collection
+	MoniteringDomainsCol *mongo.Collection
+
+	// PostgreSQL数据库
+	PostgresDB *gorm.DB
+
+	address       string
+	tlsStatus     bool
+	authrRequired bool
+	cronInstance  *cron.Cron
 )
 
 type (
@@ -37,6 +42,11 @@ type (
 	TrafficAtPeriod = model.TrafficAtPeriod
 	UserTrafficLogs = model.UserTrafficLogs
 	NodeTrafficLogs = model.NodeTrafficLogs
+
+	// PostgreSQL模型
+	DomainPG          = model.DomainPG
+	UserTrafficLogsPG = model.UserTrafficLogsPG
+	NodeTrafficLogsPG = model.NodeTrafficLogsPG
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -59,4 +69,15 @@ func Execute() {
 }
 
 func init() {
+	// 根据环境变量决定使用哪个数据库
+	if database.IsUsingPostgres() {
+		// 使用PostgreSQL
+		PostgresDB = database.GetPostgresDB()
+	} else {
+		// 使用MongoDB
+		globalCollection = database.OpenCollection(database.Client, "GLOBAL")
+		nodeTrafficLogs = database.OpenCollection(database.Client, "NODE_TRAFFIC_LOGS")
+		userTrafficLogs = database.OpenCollection(database.Client, "USER_TRAFFIC_LOGS")
+		MoniteringDomainsCol = database.OpenCollection(database.Client, "Monitering_Domains")
+	}
 }

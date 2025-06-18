@@ -25,21 +25,14 @@ func InitPostgreSQL() *gorm.DB {
 		log.Printf("警告: 无法加载.env文件: %v", err)
 	}
 
-	// 从环境变量获取PostgreSQL连接信息
-	host := getEnvOrDefault("POSTGRES_HOST", "localhost")
-	port := getEnvOrDefault("POSTGRES_PORT", "5432")
-	dbname := getEnvOrDefault("POSTGRES_DB", "logv2fs")
-	username := getEnvOrDefault("POSTGRES_USER", "postgres")
-	password := getEnvOrDefault("POSTGRES_PASSWORD", "")
-	sslmode := getEnvOrDefault("POSTGRES_SSLMODE", "disable")
-	timezone := getEnvOrDefault("POSTGRES_TIMEZONE", "Asia/Shanghai")
-
-	// 构建连接字符串
-	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=%s TimeZone=%s",
-		host, username, password, dbname, port, sslmode, timezone)
+	// 从环境变量获取PostgreSQL连接URI
+	postgresURI := os.Getenv("postgresURI")
+	if postgresURI == "" {
+		log.Fatal("环境变量 postgresURI 未设置")
+	}
 
 	// 连接PostgreSQL
-	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
+	db, err := gorm.Open(postgres.Open(postgresURI), &gorm.Config{
 		Logger: logger.Default.LogMode(logger.Info), // 开启SQL日志
 		// 在迁移过程中禁用外键约束，避免迁移时的复杂性
 		DisableForeignKeyConstraintWhenMigrating: false,
@@ -65,9 +58,10 @@ func InitPostgreSQL() *gorm.DB {
 		log.Fatalf("PostgreSQL连接测试失败: %v", err)
 	}
 
-	log.Println("PostgreSQL连接成功，数据库:", dbname)
+	log.Println("PostgreSQL连接成功")
 
 	PostgresDB = db
+
 	return db
 }
 
