@@ -11,7 +11,6 @@ import (
 	"github.com/xvv6u577/logv2fs/database"
 	"github.com/xvv6u577/logv2fs/model"
 	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"gorm.io/datatypes"
 	"gorm.io/gorm"
@@ -351,35 +350,4 @@ func createUserTrafficLogsIndexes(db *gorm.DB) error {
 
 	log.Println("✅ UserTrafficLogs索引创建完成")
 	return nil
-}
-
-// parseTimestamp 解析时间戳，处理多种时间格式
-func parseTimestamp(timestamp interface{}) (time.Time, error) {
-	switch v := timestamp.(type) {
-	case time.Time:
-		return v, nil
-	case primitive.DateTime:
-		return v.Time(), nil
-	case string:
-		// 尝试解析RFC3339格式
-		if t, err := time.Parse(time.RFC3339, v); err == nil {
-			return t, nil
-		}
-		// 尝试解析其他常见格式
-		if t, err := time.Parse("2006-01-02T15:04:05Z", v); err == nil {
-			return t, nil
-		}
-		if t, err := time.Parse("2006-01-02 15:04:05", v); err == nil {
-			return t, nil
-		}
-		return time.Time{}, fmt.Errorf("无法解析时间格式: %s", v)
-	case int64:
-		// Unix时间戳
-		return time.Unix(v, 0), nil
-	case float64:
-		// Unix时间戳 (浮点数)
-		return time.Unix(int64(v), 0), nil
-	default:
-		return time.Time{}, fmt.Errorf("不支持的时间戳类型: %T", v)
-	}
 }

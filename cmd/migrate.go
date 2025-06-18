@@ -149,7 +149,7 @@ func migrateData(batchSize int, skipExisting bool, stats *model.MigrationStats) 
 	// 迁移Domains (先迁移Domain，因为其他表可能依赖它)
 	err := migrateDomainData(batchSize, skipExisting, stats)
 	if err != nil {
-		return fmt.Errorf("Domain迁移失败: %v", err)
+		return fmt.Errorf("domain迁移失败: %v", err)
 	}
 
 	// 迁移NodeTrafficLogs

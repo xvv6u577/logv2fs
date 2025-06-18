@@ -125,33 +125,6 @@ func convertDomainToPG(mongoDomain model.Domain) model.DomainPG {
 	}
 }
 
-// validateDomainData 验证Domain数据的完整性
-func validateDomainData(domain *model.DomainPG) error {
-	if domain.Domain == "" {
-		return fmt.Errorf("域名不能为空")
-	}
-
-	if domain.Type == "" {
-		domain.Type = "work" // 设置默认类型
-	}
-
-	// 验证类型是否合法
-	validTypes := map[string]bool{
-		"work":      true,
-		"vmesstls":  true,
-		"vmessws":   true,
-		"reality":   true,
-		"hysteria2": true,
-		"vlessCDN":  true,
-	}
-
-	if !validTypes[domain.Type] {
-		return fmt.Errorf("无效的域名类型: %s", domain.Type)
-	}
-
-	return nil
-}
-
 // createDomainIndexes 为Domain表创建额外的索引
 func createDomainIndexes(db *gorm.DB) error {
 	log.Println("🔍 为Domain表创建索引...")

@@ -4,14 +4,6 @@
         "timestamp": true
     },
     "experimental": {
-        "clash_api": {
-            "external_controller": "127.0.0.1:9090",
-            "external_ui_download_url": "",
-            "external_ui_download_detour": "",
-            "external_ui": "ui",
-            "secret": "",
-            "default_mode": "rule"
-        },
         "cache_file": {
             "enabled": true,
             "store_fakeip": false
@@ -59,14 +51,6 @@
             {
                 "rule_set": "geosite-cn",
                 "server": "localDns"
-            },
-            {
-                "clash_mode": "direct",
-                "server": "localDns"
-            },
-            {
-                "clash_mode": "global",
-                "server": "proxyDns"
             },
             {
                 "rule_set": "geosite-geolocation-!cn",
@@ -185,20 +169,8 @@
                 "action": "reject"
             },
             {
-                "clash_mode": "direct",
-                "outbound": "direct"
-            },
-            {
-                "clash_mode": "global",
-                "outbound": "manual-select"
-            },
-            {
                 "domain": [
-                    "rocketchat.uvp.uk.org",
                     "w8.undervineyard.com",
-                    "clash.razord.top",
-                    "yacd.metacubex.one",
-                    "yacd.haishan.me",
                     "d.metacubex.one"
                 ],
                 "outbound": "direct"

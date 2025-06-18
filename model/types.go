@@ -50,14 +50,6 @@ type Traffic struct {
 	Total int64  `json:"total" bson:"total"`
 }
 
-type TrafficInDB struct {
-	ID        primitive.ObjectID `json:"_id" bson:"_id"`
-	CreatedAt time.Time          `json:"created_at" bson:"created_at"`
-	Total     int64              `json:"total" bson:"total"`
-	Domain    string             `json:"domain" bson:"domain"`
-	Email     string             `json:"email" bson:"email"`
-}
-
 type Node struct {
 	Version     string `default:"2" json:"v"`
 	Remark      string `json:"ps"`

@@ -20,22 +20,15 @@ var (
 	SERVER_PORT    = os.Getenv("SERVER_PORT")
 	GIN_MODE       = os.Getenv("GIN_MODE")
 	// trafficCollection *mongo.Collection = database.OpenCollection(database.Client, "TRAFFIC")
-	globalCollection     *mongo.Collection
-	nodeTrafficLogs      *mongo.Collection
-	userTrafficLogs      *mongo.Collection
 	MoniteringDomainsCol *mongo.Collection
 
 	// PostgreSQL数据库
 	PostgresDB *gorm.DB
 
-	address       string
-	tlsStatus     bool
-	authrRequired bool
-	cronInstance  *cron.Cron
+	cronInstance *cron.Cron
 )
 
 type (
-	TrafficInDB     = model.TrafficInDB
 	NodeAtPeriod    = model.NodeAtPeriod
 	Domain          = model.Domain
 	Traffic         = model.Traffic
@@ -75,9 +68,6 @@ func init() {
 		PostgresDB = database.GetPostgresDB()
 	} else {
 		// 使用MongoDB
-		globalCollection = database.OpenCollection(database.Client, "GLOBAL")
-		nodeTrafficLogs = database.OpenCollection(database.Client, "NODE_TRAFFIC_LOGS")
-		userTrafficLogs = database.OpenCollection(database.Client, "USER_TRAFFIC_LOGS")
 		MoniteringDomainsCol = database.OpenCollection(database.Client, "Monitering_Domains")
 	}
 }

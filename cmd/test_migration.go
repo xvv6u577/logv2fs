@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"log"
 
@@ -69,7 +70,7 @@ func testMongoDBConnection() error {
 	}
 
 	// 尝试ping MongoDB
-	err := client.Ping(nil, nil)
+	err := client.Ping(context.TODO(), nil)
 	if err != nil {
 		return fmt.Errorf("无法连接到MongoDB: %v", err)
 	}

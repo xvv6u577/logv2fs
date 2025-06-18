@@ -4,8 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"io/ioutil"
-	"log"
+	"io"
 	"net/http"
 	"net/http/httptest"
 )
@@ -16,8 +15,6 @@ var (
 
 	// customed request headers for token authorization and so on
 	myHeaders = make(map[string]string, 0)
-
-	logging *log.Logger
 )
 
 // set the router
@@ -25,22 +22,9 @@ func SetRouter(r http.Handler) {
 	router = r
 }
 
-// set the log
-func SetLog(l *log.Logger) {
-	logging = l
-}
-
 // add custom request header
 func AddHeader(key, value string) {
 	myHeaders[key] = value
-}
-
-// printf log
-func printfLog(format string, v ...interface{}) {
-	if logging == nil {
-		return
-	}
-
 }
 
 // invoke handler
@@ -55,7 +39,7 @@ func invokeHandler(req *http.Request) (bodyByte []byte, err error) {
 	defer result.Body.Close()
 
 	// extract response body
-	bodyByte, err = ioutil.ReadAll(result.Body)
+	bodyByte, err = io.ReadAll(result.Body)
 	return
 }
 
@@ -83,6 +67,5 @@ func TestHandler(method string, url string, parameter interface{}) (bodyByte []b
 	request.Header.Set("Content-Type", "application/json;charset=utf-8")
 
 	bodyByte, err = invokeHandler(request)
-	printfLog("method: %v, url: %v, parameter: , response: %v", method, url, string(bodyByte))
 	return
 }
