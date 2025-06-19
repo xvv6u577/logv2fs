@@ -52,10 +52,6 @@ type NodeTrafficLogsPG struct {
 	DailyLogs   datatypes.JSON `json:"daily_logs" gorm:"type:jsonb"`
 	MonthlyLogs datatypes.JSON `json:"monthly_logs" gorm:"type:jsonb"`
 	YearlyLogs  datatypes.JSON `json:"yearly_logs" gorm:"type:jsonb"`
-
-	// 关联到Domain表
-	DomainID *uuid.UUID `json:"domain_id" gorm:"type:uuid;index"`
-	Domain   *DomainPG  `json:"domain" gorm:"foreignKey:DomainID"`
 }
 
 // 为PostgreSQL表设置表名
@@ -64,31 +60,23 @@ func (NodeTrafficLogsPG) TableName() string {
 }
 
 // PostgreSQL版本的Domain模型 - 完全关系化设计
-type DomainPG struct {
-	ID           uuid.UUID `json:"id" gorm:"type:uuid;primary_key;default:gen_random_uuid()"`
-	Type         string    `json:"type" gorm:"type:varchar(50);check:type IN ('work','vmesstls','vmessws','reality','hysteria2','vlessCDN');not null"`
-	Remark       string    `json:"remark"`
-	Domain       string    `json:"domain" gorm:"not null;index"`
-	IP           string    `json:"ip" gorm:"type:inet"`
-	SNI          string    `json:"sni"`
-	UUID         string    `json:"uuid" gorm:"index"`
-	Path         string    `json:"path"`
-	ServerPort   string    `json:"server_port"`
-	Password     string    `json:"password"`
-	PublicKey    string    `json:"public_key"`
-	ShortID      string    `json:"short_id"`
-	EnableOpenai bool      `json:"enable_openai" gorm:"default:false"`
-	CreatedAt    time.Time `json:"created_at"`
-	UpdatedAt    time.Time `json:"updated_at"`
-
-	// 反向关联到NodeTrafficLogs
-	NodeTrafficLogs []NodeTrafficLogsPG `json:"node_traffic_logs" gorm:"foreignKey:DomainID"`
-}
-
-// 为PostgreSQL表设置表名
-func (DomainPG) TableName() string {
-	return "domains"
-}
+// type DomainPG struct {
+// 	ID           uuid.UUID `json:"id" gorm:"type:uuid;primary_key;default:gen_random_uuid()"`
+// 	Type         string    `json:"type" gorm:"type:varchar(50);check:type IN ('vmesstls','vmessws','reality','hysteria2','vlessCDN');not null"`
+// 	Remark       string    `json:"remark"`
+// 	Domain       string    `json:"domain" gorm:"not null;index"`
+// 	IP           string    `json:"ip" gorm:"type:inet"`
+// 	SNI          string    `json:"sni"`
+// 	UUID         string    `json:"uuid" gorm:"index"`
+// 	Path         string    `json:"path"`
+// 	ServerPort   string    `json:"server_port"`
+// 	Password     string    `json:"password"`
+// 	PublicKey    string    `json:"public_key"`
+// 	ShortID      string    `json:"short_id"`
+// 	EnableOpenai bool      `json:"enable_openai" gorm:"default:false"`
+// 	CreatedAt    time.Time `json:"created_at"`
+// 	UpdatedAt    time.Time `json:"updated_at"`
+// }
 
 // 时间序列数据的结构定义 - 用于JSONB字段
 type TrafficLogEntry struct {
@@ -197,10 +185,51 @@ func (y *YearlyLogs) Scan(value interface{}) error {
 
 // 数据迁移辅助结构
 type MigrationStats struct {
-	UserRecordsMigrated   int64     `json:"user_records_migrated"`
-	NodeRecordsMigrated   int64     `json:"node_records_migrated"`
-	DomainRecordsMigrated int64     `json:"domain_records_migrated"`
-	StartTime             time.Time `json:"start_time"`
-	EndTime               time.Time `json:"end_time"`
-	Errors                []string  `json:"errors"`
+	UserRecordsMigrated       int64     `json:"user_records_migrated"`
+	NodeRecordsMigrated       int64     `json:"node_records_migrated"`
+	DomainRecordsMigrated     int64     `json:"domain_records_migrated"`
+	SubscriptionNodesMigrated int64     `json:"subscription_nodes_migrated"`
+	StartTime                 time.Time `json:"start_time"`
+	EndTime                   time.Time `json:"end_time"`
+	Errors                    []string  `json:"errors"`
+}
+
+// PostgreSQL版本的域名证书过期信息模型
+type ExpiryCheckDomainInfoPG struct {
+	ID           uuid.UUID `json:"id" gorm:"type:uuid;primary_key;default:gen_random_uuid()"`
+	Domain       string    `json:"domain" gorm:"not null;index"`
+	Remark       string    `json:"remark"`
+	ExpiredDate  string    `json:"expired_date"`
+	DaysToExpire int       `json:"days_to_expire"`
+	CreatedAt    time.Time `json:"created_at"`
+	UpdatedAt    time.Time `json:"updated_at"`
+}
+
+// 为PostgreSQL表设置表名
+func (ExpiryCheckDomainInfoPG) TableName() string {
+	return "expiry_check_domains"
+}
+
+// PostgreSQL版本的订阅节点模型
+type SubscriptionNodePG struct {
+	ID           uuid.UUID `json:"id" gorm:"type:uuid;primary_key;default:gen_random_uuid()"`
+	Type         string    `json:"type" gorm:"type:varchar(50);check:type IN ('reality','hysteria2','vlessCDN');not null"`
+	Remark       string    `json:"remark" gorm:"uniqueIndex;not null"`
+	Domain       string    `json:"domain" gorm:"not null;index"`
+	IP           string    `json:"ip" gorm:"type:inet"`
+	SNI          string    `json:"sni"`
+	UUID         string    `json:"uuid" gorm:"index"`
+	Path         string    `json:"path"`
+	ServerPort   string    `json:"server_port"`
+	Password     string    `json:"password"`
+	PublicKey    string    `json:"public_key"`
+	ShortID      string    `json:"short_id"`
+	EnableOpenai bool      `json:"enable_openai" gorm:"default:false"`
+	CreatedAt    time.Time `json:"created_at"`
+	UpdatedAt    time.Time `json:"updated_at"`
+}
+
+// 为PostgreSQL表设置表名
+func (SubscriptionNodePG) TableName() string {
+	return "subscritption_nodes"
 }

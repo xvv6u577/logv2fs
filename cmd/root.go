@@ -10,7 +10,6 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/xvv6u577/logv2fs/database"
 	"github.com/xvv6u577/logv2fs/model"
-	"go.mongodb.org/mongo-driver/mongo"
 	"gorm.io/gorm"
 )
 
@@ -19,8 +18,6 @@ var (
 	SERVER_ADDRESS = os.Getenv("SERVER_ADDRESS")
 	SERVER_PORT    = os.Getenv("SERVER_PORT")
 	GIN_MODE       = os.Getenv("GIN_MODE")
-	// trafficCollection *mongo.Collection = database.OpenCollection(database.Client, "TRAFFIC")
-	MoniteringDomainsCol *mongo.Collection
 
 	// PostgreSQL数据库
 	PostgresDB *gorm.DB
@@ -29,17 +26,19 @@ var (
 )
 
 type (
-	NodeAtPeriod    = model.NodeAtPeriod
-	Domain          = model.Domain
-	Traffic         = model.Traffic
-	TrafficAtPeriod = model.TrafficAtPeriod
-	UserTrafficLogs = model.UserTrafficLogs
-	NodeTrafficLogs = model.NodeTrafficLogs
+	NodeAtPeriod          = model.NodeAtPeriod
+	Domain                = model.SubscriptionNode
+	Traffic               = model.Traffic
+	TrafficAtPeriod       = model.TrafficAtPeriod
+	UserTrafficLogs       = model.UserTrafficLogs
+	NodeTrafficLogs       = model.NodeTrafficLogs
+	ExpiryCheckDomainInfo = model.ExpiryCheckDomainInfo
 
 	// PostgreSQL模型
-	DomainPG          = model.DomainPG
-	UserTrafficLogsPG = model.UserTrafficLogsPG
-	NodeTrafficLogsPG = model.NodeTrafficLogsPG
+	UserTrafficLogsPG       = model.UserTrafficLogsPG
+	NodeTrafficLogsPG       = model.NodeTrafficLogsPG
+	ExpiryCheckDomainInfoPG = model.ExpiryCheckDomainInfoPG
+	SubscriptionNodePG      = model.SubscriptionNodePG
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -68,6 +67,5 @@ func init() {
 		PostgresDB = database.GetPostgresDB()
 	} else {
 		// 使用MongoDB
-		MoniteringDomainsCol = database.OpenCollection(database.Client, "Monitering_Domains")
 	}
 }

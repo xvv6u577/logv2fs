@@ -121,7 +121,7 @@ func testSchemaCreation() error {
 
 	// 自动迁移表结构
 	err = db.AutoMigrate(
-		&model.DomainPG{},
+		&model.SubscriptionNodePG{},
 		&model.NodeTrafficLogsPG{},
 		&model.UserTrafficLogsPG{},
 	)
@@ -130,7 +130,7 @@ func testSchemaCreation() error {
 	}
 
 	// 验证表是否创建成功
-	if !db.Migrator().HasTable(&model.DomainPG{}) {
+	if !db.Migrator().HasTable(&model.SubscriptionNodePG{}) {
 		return fmt.Errorf("DomainPG表未创建")
 	}
 

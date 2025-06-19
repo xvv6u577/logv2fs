@@ -38,7 +38,7 @@ type NodeAtPeriod struct {
 }
 
 // Domain type: "work", "vmesstls", "vmessws", "reality", "hysteria2", "vlessCDN"
-type Domain struct {
+type SubscriptionNode struct {
 	Type         string `json:"type" bason:"type"`
 	Remark       string `json:"remark" bson:"remark"`
 	Domain       string `json:"domain" bson:"domain" validate:"required,min=2,max=100"`
@@ -51,4 +51,11 @@ type Domain struct {
 	PUBLIC_KEY   string `json:"public_key" bson:"public_key"`
 	SHORT_ID     string `json:"short_id" bson:"short_id"`
 	EnableOpenai bool   `json:"enable_openai" bson:"enable_openai"`
+}
+
+type ExpiryCheckDomainInfo struct {
+	Domain       string `json:"domain" bson:"domain"`
+	Remark       string `json:"remark" bson:"remark"`
+	ExpiredDate  string `json:"expired_date" bson:"expired_date"`
+	DaysToExpire int    `json:"days_to_expire" bson:"days_to_expire"`
 }

@@ -26,7 +26,7 @@ func GetSubscripionURLPG() gin.HandlerFunc {
 		name := helper.SanitizeStr(c.Param("name"))
 		db := database.GetPostgresDB()
 
-		var activeGlobalNodes []model.DomainPG
+		var activeGlobalNodes []model.SubscriptionNodePG
 
 		// 查询活跃的全局节点
 		if err := db.Where("type != ?", "work").Find(&activeGlobalNodes).Error; err != nil {
@@ -103,7 +103,7 @@ func ReturnSingboxJsonPG() gin.HandlerFunc {
 			return
 		}
 
-		var activeGlobalNodes []model.DomainPG
+		var activeGlobalNodes []model.SubscriptionNodePG
 
 		// 查询活跃的全局节点
 		if err := db.Where("type != ?", "work").Find(&activeGlobalNodes).Error; err != nil {
@@ -335,7 +335,7 @@ func ReturnVergeYAMLPG() gin.HandlerFunc {
 			return
 		}
 
-		var activeGlobalNodes []model.DomainPG
+		var activeGlobalNodes []model.SubscriptionNodePG
 
 		// 查询活跃的全局节点
 		if err := db.Where("type != ?", "work").Find(&activeGlobalNodes).Error; err != nil {

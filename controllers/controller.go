@@ -30,10 +30,8 @@ import (
 )
 
 var (
-	// userCollection     *mongo.Collection = database.OpenCollection(database.Client, "USERS")
-	// nodeCollection     *mongo.Collection = database.OpenCollection(database.Client, "NODES")
-	globalCollection     *mongo.Collection = database.OpenCollection(database.Client, "GLOBAL")
-	MoniteringDomainsCol *mongo.Collection = database.OpenCollection(database.Client, "Monitering_Domains")
+	subNodesCol          *mongo.Collection = database.OpenCollection(database.Client, "subscritption_nodes")
+	expiryCheckDomainCol *mongo.Collection = database.OpenCollection(database.Client, "expiry_check_domains")
 	nodeTrafficLogsCol                     = database.OpenCollection(database.Client, "NODE_TRAFFIC_LOGS")
 	userTrafficLogsCol                     = database.OpenCollection(database.Client, "USER_TRAFFIC_LOGS")
 	validate                               = validator.New()
@@ -46,7 +44,7 @@ var (
 type (
 	TrafficAtPeriod = model.TrafficAtPeriod
 	Node            = model.Node
-	Domain          = model.Domain
+	Domain          = model.SubscriptionNode
 	SingboxYAML     = model.SingboxYAML
 	SingboxJSON     = model.SingboxJSON
 	RealityJSON     = model.RealityJSON
@@ -509,7 +507,7 @@ func GetSubscripionURL() gin.HandlerFunc {
 
 		var activeGlobalNodes []Domain
 
-		cur, err := globalCollection.Find(context.TODO(), bson.D{})
+		cur, err := subNodesCol.Find(context.TODO(), bson.D{})
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "error occured while getting active global nodes"})
 			log.Printf("Getting active global nodes error: %s", err.Error())
@@ -601,7 +599,7 @@ func ReturnSingboxJson() gin.HandlerFunc {
 
 		var activeGlobalNodes []Domain
 
-		cur, err := globalCollection.Find(context.TODO(), bson.D{})
+		cur, err := subNodesCol.Find(context.TODO(), bson.D{})
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "error occured while getting active global nodes"})
 			log.Printf("Getting active global nodes error: %s", err.Error())
@@ -847,7 +845,7 @@ func ReturnVergeYAML() gin.HandlerFunc {
 		}
 
 		var activeGlobalNodes []Domain
-		cur, err := globalCollection.Find(context.TODO(), bson.D{})
+		cur, err := subNodesCol.Find(context.TODO(), bson.D{})
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "error occured while getting active global nodes"})
 			log.Printf("Getting active global nodes error: %s", err.Error())

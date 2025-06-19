@@ -181,21 +181,22 @@ func convertNodeTrafficLogsToPG(mongoNodeLog model.NodeTrafficLogs, db *gorm.DB)
 	return pgNodeLog, nil
 }
 
-// linkDomainToNodeTrafficLogs 尝试将NodeTrafficLogs关联到对应的Domain
+// linkDomainToNodeTrafficLogs 验证NodeTrafficLogs关联的域名是否存在
 func linkDomainToNodeTrafficLogs(pgNodeLog *model.NodeTrafficLogsPG, db *gorm.DB) error {
-	// 根据domain_as_id查找对应的Domain
-	var domain model.DomainPG
-	err := db.Where("domain = ?", pgNodeLog.DomainAsId).First(&domain).Error
+	// 根据domain_as_id查找对应的SubscriptionNode
+	var node model.SubscriptionNodePG
+	err := db.Where("domain = ?", pgNodeLog.DomainAsId).First(&node).Error
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
-			// Domain不存在，不设置外键关联
+			// 对应的SubscriptionNode不存在，但仍然可以创建记录
+			log.Printf("⚠️  找不到匹配的SubscriptionNode: %s", pgNodeLog.DomainAsId)
 			return nil
 		}
-		return fmt.Errorf("查找Domain失败: %v", err)
+		return fmt.Errorf("查找SubscriptionNode失败: %v", err)
 	}
 
-	// 设置外键关联
-	pgNodeLog.DomainID = &domain.ID
+	// 找到了匹配的SubscriptionNode，记录成功
+	log.Printf("✅ 找到匹配的SubscriptionNode: %s", node.Remark)
 	return nil
 }
 
@@ -321,10 +322,7 @@ func createNodeTrafficLogsIndexes(db *gorm.DB) error {
 		return fmt.Errorf("创建status索引失败: %v", err)
 	}
 
-	// 为domain_id外键创建索引
-	if err := db.Exec("CREATE INDEX IF NOT EXISTS idx_node_traffic_logs_domain_id ON node_traffic_logs(domain_id)").Error; err != nil {
-		return fmt.Errorf("创建domain_id索引失败: %v", err)
-	}
+	// domain_id字段已不存在，不再创建相关索引
 
 	// 复合索引 - status + created_at
 	if err := db.Exec("CREATE INDEX IF NOT EXISTS idx_node_traffic_logs_status_created_at ON node_traffic_logs(status, created_at)").Error; err != nil {

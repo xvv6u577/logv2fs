@@ -1,9 +1,12 @@
 package controllers
 
 import (
+	"crypto/tls"
 	"encoding/json"
 	"log"
+	"net"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -46,7 +49,7 @@ func AddNodePG() gin.HandlerFunc {
 			}
 
 			// 转换为PostgreSQL模型
-			pgDomain := model.DomainPG{
+			pgDomain := model.SubscriptionNodePG{
 				Type:         domain.Type,
 				Remark:       domain.Remark,
 				Domain:       domain.Domain,
@@ -64,7 +67,7 @@ func AddNodePG() gin.HandlerFunc {
 			}
 
 			// 使用Remark作为过滤条件，检查节点是否存在
-			var existingDomain model.DomainPG
+			var existingDomain model.SubscriptionNodePG
 			result := db.Where("remark = ?", domain.Remark).First(&existingDomain)
 
 			if result.Error != nil {
@@ -105,7 +108,7 @@ func AddNodePG() gin.HandlerFunc {
 		}
 
 		// 删除不在提交列表中的节点
-		if err := db.Where("remark NOT IN ?", remarks).Delete(&model.DomainPG{}).Error; err != nil {
+		if err := db.Where("remark NOT IN ?", remarks).Delete(&model.SubscriptionNodePG{}).Error; err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			log.Printf("Delete domains error: %v", err)
 			return
@@ -120,7 +123,7 @@ func AddNodePG() gin.HandlerFunc {
 			if result.Error != nil {
 				// 如果不存在，则创建新记录
 				// 查找对应的Domain记录
-				var domainRecord model.DomainPG
+				var domainRecord model.SubscriptionNodePG
 				if err := db.Where("domain = ?", domain.Domain).First(&domainRecord).Error; err == nil {
 					// 创建新的NodeTrafficLog记录
 					emptyHourlyLogs, _ := json.Marshal([]model.TrafficLogEntry{})
@@ -135,7 +138,6 @@ func AddNodePG() gin.HandlerFunc {
 						Status:      "active",
 						CreatedAt:   current,
 						UpdatedAt:   current,
-						DomainID:    &domainRecord.ID,
 						HourlyLogs:  emptyHourlyLogs,
 						DailyLogs:   emptyDailyLogs,
 						MonthlyLogs: emptyMonthlyLogs,
@@ -189,7 +191,7 @@ func GetActiveGlobalNodesPG() gin.HandlerFunc {
 		}
 
 		db := database.GetPostgresDB()
-		var pgDomains []model.DomainPG
+		var pgDomains []model.SubscriptionNodePG
 
 		// 查询非work类型的所有域名
 		if err := db.Where("type != ?", "work").Find(&pgDomains).Error; err != nil {
@@ -230,7 +232,7 @@ func GetWorkDomainInfoPG() gin.HandlerFunc {
 		}
 
 		db := database.GetPostgresDB()
-		var pgDomains []model.DomainPG
+		var pgDomains []model.SubscriptionNodePG
 
 		// 查询类型为work的域名
 		if err := db.Where("type = ?", "work").Find(&pgDomains).Error; err != nil {
@@ -239,29 +241,77 @@ func GetWorkDomainInfoPG() gin.HandlerFunc {
 			return
 		}
 
-		// 转换为Domain格式
-		var workDomains []Domain
+		// 准备结果数组和域名分类映射
+		var domainInfos []ExpiryCheckDomainInfo
+		normalDomains := make(map[string]string)
+		unreachableDomains := make(map[string]string)
+
+		// 并行处理域名可达性检查
+		var wg sync.WaitGroup
 		for _, pgDomain := range pgDomains {
-			workDomains = append(workDomains, Domain{
-				Domain: pgDomain.Domain,
-				Remark: pgDomain.Remark,
+			if pgDomain.Domain == "localhost" {
+				continue
+			}
+			wg.Add(1)
+			go func(d model.SubscriptionNodePG) {
+				defer wg.Done()
+				if helper.IsDomainReachable(d.Domain) {
+					normalDomains[d.Domain] = d.Remark
+				} else {
+					unreachableDomains[d.Domain] = d.Remark
+				}
+			}(pgDomain)
+		}
+		wg.Wait()
+
+		// 处理可达域名的证书信息
+		port := "443"
+		conf := &tls.Config{}
+
+		for domain, remark := range normalDomains {
+			conn, err := tls.DialWithDialer(&net.Dialer{Timeout: 20 * time.Second}, "tcp", domain+":"+port, conf)
+			if err != nil {
+				log.Printf("tls.DialWithDialer Error for domain %s: %v", domain, err)
+				// 如果TLS连接失败，将其标记为不可达
+				unreachableDomains[domain] = remark
+				continue
+			}
+
+			if err = conn.VerifyHostname(domain); err != nil {
+				log.Printf("conn.VerifyHostname Error for domain %s: %v", domain, err)
+				conn.Close()
+				// 如果主机名验证失败，将其标记为不可达
+				unreachableDomains[domain] = remark
+				continue
+			}
+
+			expiry := conn.ConnectionState().PeerCertificates[0].NotAfter
+			conn.Close()
+
+			domainInfos = append(domainInfos, ExpiryCheckDomainInfo{
+				Domain:       domain,
+				Remark:       remark,
+				ExpiredDate:  expiry.Local().Format("2006-01-02 15:04:05"),
+				DaysToExpire: int(time.Until(expiry).Hours() / 24),
 			})
 		}
 
-		// 获取域名过期状态
-		domainInfos, err := getDomainExpiredStatus(workDomains)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			log.Printf("Get domain expired status error: %v", err)
-			return
+		// 处理不可达域名
+		for domain, remark := range unreachableDomains {
+			domainInfos = append(domainInfos, ExpiryCheckDomainInfo{
+				Domain:       domain,
+				Remark:       remark,
+				ExpiredDate:  "unreachable",
+				DaysToExpire: -1,
+			})
 		}
 
 		c.JSON(http.StatusOK, domainInfos)
 	}
 }
 
-// UpdateDomainInfoPG 更新域名信息 - PostgreSQL版本
-func UpdateDomainInfoPG() gin.HandlerFunc {
+// UpdateExpiryCheckDomainsInfoPG 更新域名信息 - PostgreSQL版本
+func UpdateExpiryCheckDomainsInfoPG() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if err := helper.CheckUserType(c, "admin"); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -269,7 +319,7 @@ func UpdateDomainInfoPG() gin.HandlerFunc {
 		}
 
 		db := database.GetPostgresDB()
-		var domainOfWebForm []DomainInfo
+		var domainOfWebForm []ExpiryCheckDomainInfo
 
 		if err := c.BindJSON(&domainOfWebForm); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -282,31 +332,33 @@ func UpdateDomainInfoPG() gin.HandlerFunc {
 
 		// 更新或创建域名
 		for _, domainInfo := range domainOfWebForm {
-			var pgDomain model.DomainPG
-			result := db.Where("domain = ?", domainInfo.Domain).First(&pgDomain)
+			var expiryDomain model.ExpiryCheckDomainInfoPG
+			result := db.Where("domain = ?", domainInfo.Domain).First(&expiryDomain)
 
 			if result.Error != nil {
 				// 如果不存在，则创建新记录
-				pgDomain = model.DomainPG{
-					ID:        uuid.New(),
-					Type:      "work",
-					Domain:    domainInfo.Domain,
-					Remark:    domainInfo.Remark,
-					CreatedAt: time.Now(),
-					UpdatedAt: time.Now(),
+				expiryDomain = model.ExpiryCheckDomainInfoPG{
+					ID:           uuid.New(),
+					Domain:       domainInfo.Domain,
+					Remark:       domainInfo.Remark,
+					ExpiredDate:  domainInfo.ExpiredDate,
+					DaysToExpire: domainInfo.DaysToExpire,
+					CreatedAt:    time.Now(),
+					UpdatedAt:    time.Now(),
 				}
 
-				if err := db.Create(&pgDomain).Error; err != nil {
+				if err := db.Create(&expiryDomain).Error; err != nil {
 					c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 					log.Printf("Create domain error: %v", err)
 					return
 				}
 			} else {
 				// 如果存在，则更新记录
-				if err := db.Model(&pgDomain).Updates(map[string]interface{}{
-					"type":       "work",
-					"remark":     domainInfo.Remark,
-					"updated_at": time.Now(),
+				if err := db.Model(&expiryDomain).Updates(map[string]interface{}{
+					"remark":         domainInfo.Remark,
+					"expired_date":   domainInfo.ExpiredDate,
+					"days_to_expire": domainInfo.DaysToExpire,
+					"updated_at":     time.Now(),
 				}).Error; err != nil {
 					c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 					log.Printf("Update domain error: %v", err)
@@ -317,14 +369,14 @@ func UpdateDomainInfoPG() gin.HandlerFunc {
 			domainsToKeep = append(domainsToKeep, domainInfo.Domain)
 		}
 
-		// 删除不在domainOfWebForm中的work类型域名
-		if err := db.Where("domain NOT IN ? AND type = ?", domainsToKeep, "work").Delete(&model.DomainPG{}).Error; err != nil {
+		// 删除不在domainOfWebForm中的域名
+		if err := db.Where("domain NOT IN ?", domainsToKeep).Delete(&model.ExpiryCheckDomainInfoPG{}).Error; err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			log.Printf("Delete domains error: %v", err)
 			return
 		}
 
-		c.JSON(http.StatusOK, gin.H{"message": "Update GLOBAL domain list successfully!"})
+		c.JSON(http.StatusOK, gin.H{"message": "Update expiry check domains list successfully!"})
 	}
 }
 
@@ -347,5 +399,92 @@ func GetSingboxNodesPG() gin.HandlerFunc {
 		}
 
 		c.JSON(http.StatusOK, pgNodeTrafficLogs)
+	}
+}
+
+// GetDomainsExpiryInfoPG 获取域名证书过期信息 - PostgreSQL版本
+func GetDomainsExpiryInfoPG() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if err := helper.CheckUserType(c, "admin"); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		db := database.GetPostgresDB()
+		var expiryDomains []model.ExpiryCheckDomainInfoPG
+
+		// 查询所有需要检查过期的域名
+		if err := db.Find(&expiryDomains).Error; err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			log.Printf("Find expiry domains error: %v", err)
+			return
+		}
+
+		// 准备结果数组和域名分类映射
+		var domainInfos []ExpiryCheckDomainInfo
+		normalDomains := make(map[string]string)
+		unreachableDomains := make(map[string]string)
+
+		// 并行处理域名可达性检查
+		var wg sync.WaitGroup
+		for _, domain := range expiryDomains {
+			if domain.Domain == "localhost" {
+				continue
+			}
+			wg.Add(1)
+			go func(d model.ExpiryCheckDomainInfoPG) {
+				defer wg.Done()
+				if helper.IsDomainReachable(d.Domain) {
+					normalDomains[d.Domain] = d.Remark
+				} else {
+					unreachableDomains[d.Domain] = d.Remark
+				}
+			}(domain)
+		}
+		wg.Wait()
+
+		// 处理可达域名的证书信息
+		port := "443"
+		conf := &tls.Config{}
+
+		for domain, remark := range normalDomains {
+			conn, err := tls.DialWithDialer(&net.Dialer{Timeout: 20 * time.Second}, "tcp", domain+":"+port, conf)
+			if err != nil {
+				log.Printf("tls.DialWithDialer Error for domain %s: %v", domain, err)
+				// 如果TLS连接失败，将其标记为不可达
+				unreachableDomains[domain] = remark
+				continue
+			}
+
+			if err = conn.VerifyHostname(domain); err != nil {
+				log.Printf("conn.VerifyHostname Error for domain %s: %v", domain, err)
+				conn.Close()
+				// 如果主机名验证失败，将其标记为不可达
+				unreachableDomains[domain] = remark
+				continue
+			}
+
+			expiry := conn.ConnectionState().PeerCertificates[0].NotAfter
+			conn.Close()
+
+			domainInfos = append(domainInfos, ExpiryCheckDomainInfo{
+				Domain:       domain,
+				Remark:       remark,
+				ExpiredDate:  expiry.Local().Format("2006-01-02 15:04:05"),
+				DaysToExpire: int(time.Until(expiry).Hours() / 24),
+			})
+		}
+
+		// 处理不可达域名
+		for domain, remark := range unreachableDomains {
+			domainInfos = append(domainInfos, ExpiryCheckDomainInfo{
+				Domain:       domain,
+				Remark:       remark,
+				ExpiredDate:  "unreachable",
+				DaysToExpire: -1,
+			})
+		}
+
+		c.JSON(http.StatusOK, domainInfos)
 	}
 }

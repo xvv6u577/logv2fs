@@ -29,8 +29,8 @@ func AuthorizedRoutes(incomingRoutes *gin.Engine) {
 		incomingRoutes.GET("/v1/user/:name", controller.GetUserByNamePG())
 		incomingRoutes.GET("/v1/deluser/:name", controller.DeleteUserByUserNamePG())
 		incomingRoutes.PUT("/v1/759b0v", controller.AddNodePG())
-		incomingRoutes.GET("/v1/681p32", controller.GetWorkDomainInfoPG())
-		incomingRoutes.PUT("/v1/g7302b", controller.UpdateDomainInfoPG())
+		incomingRoutes.GET("/v1/681p32", controller.GetDomainsExpiryInfoPG())
+		incomingRoutes.PUT("/v1/g7302b", controller.UpdateExpiryCheckDomainsInfoPG())
 		incomingRoutes.GET("/v1/c47kr8", controller.GetSingboxNodesPG())
 		incomingRoutes.GET("/v1/t7k033", controller.GetActiveGlobalNodesPG())
 	} else {
@@ -41,8 +41,8 @@ func AuthorizedRoutes(incomingRoutes *gin.Engine) {
 		incomingRoutes.GET("/v1/user/:name", controller.GetUserByName())
 		incomingRoutes.GET("/v1/deluser/:name", controller.DeleteUserByUserName())
 		incomingRoutes.PUT("/v1/759b0v", controller.AddNode())
-		incomingRoutes.GET("/v1/681p32", controller.GetWorkDomainInfo())
-		incomingRoutes.PUT("/v1/g7302b", controller.UpdateDomainInfo())
+		incomingRoutes.GET("/v1/681p32", controller.GetDomainsExpiryInfo())
+		incomingRoutes.PUT("/v1/g7302b", controller.UpdateExpiryCheckDomainsInfo())
 		incomingRoutes.GET("/v1/c47kr8", controller.GetSingboxNodes())
 		incomingRoutes.GET("/v1/t7k033", controller.GetActiveGlobalNodes())
 	}

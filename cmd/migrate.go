@@ -4,14 +4,17 @@ Copyright © 2023 NAME HERE <EMAIL ADDRESS>
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/spf13/cobra"
 	"github.com/xvv6u577/logv2fs/database"
 	"github.com/xvv6u577/logv2fs/model"
+	"go.mongodb.org/mongo-driver/bson"
 	"gorm.io/gorm"
 )
 
@@ -112,9 +115,10 @@ func migrateSchema() error {
 
 	// 自动迁移表结构
 	err = db.AutoMigrate(
-		&model.DomainPG{},
 		&model.NodeTrafficLogsPG{},
 		&model.UserTrafficLogsPG{},
+		&model.ExpiryCheckDomainInfoPG{},
+		&model.SubscriptionNodePG{},
 	)
 	if err != nil {
 		return fmt.Errorf("自动迁移失败: %v", err)
@@ -146,10 +150,16 @@ func migrateData(batchSize int, skipExisting bool, stats *model.MigrationStats) 
 		return fmt.Errorf("PostgreSQL连接未初始化")
 	}
 
-	// 迁移Domains (先迁移Domain，因为其他表可能依赖它)
-	err := migrateDomainData(batchSize, skipExisting, stats)
+	// 迁移ExpiryCheckDomains
+	err := migrateExpiryCheckDomainsData(batchSize, skipExisting, stats)
 	if err != nil {
-		return fmt.Errorf("domain迁移失败: %v", err)
+		return fmt.Errorf("ExpiryCheckDomains迁移失败: %v", err)
+	}
+
+	// 迁移SubscriptionNodes
+	err = migrateSubscriptionNodesData(batchSize, skipExisting, stats)
+	if err != nil {
+		return fmt.Errorf("SubscriptionNodes迁移失败: %v", err)
 	}
 
 	// 迁移NodeTrafficLogs
@@ -165,6 +175,186 @@ func migrateData(batchSize int, skipExisting bool, stats *model.MigrationStats) 
 	}
 
 	log.Println("✅ 数据迁移完成")
+	return nil
+}
+
+// migrateExpiryCheckDomainsData 迁移ExpiryCheckDomains数据
+func migrateExpiryCheckDomainsData(batchSize int, skipExisting bool, stats *model.MigrationStats) error {
+	log.Println("🔄 开始迁移ExpiryCheckDomains数据...")
+
+	// 获取数据库连接
+	mongoClient := database.Client
+	postgresDB := database.GetPostgresDB()
+
+	// 获取MongoDB集合
+	expiryCheckDomainCol := database.OpenCollection(mongoClient, "expiry_check_domains")
+
+	// 查询所有记录
+	ctx := context.Background()
+	cursor, err := expiryCheckDomainCol.Find(ctx, bson.M{})
+	if err != nil {
+		return fmt.Errorf("查询MongoDB ExpiryCheckDomains失败: %v", err)
+	}
+	defer cursor.Close(ctx)
+
+	// 迁移数据
+	var migratedCount int64
+	for cursor.Next(ctx) {
+		// 解析MongoDB记录
+		var mongoDomain model.ExpiryCheckDomainInfo
+		if err := cursor.Decode(&mongoDomain); err != nil {
+			stats.Errors = append(stats.Errors, fmt.Sprintf("解析MongoDB ExpiryCheckDomain失败: %v", err))
+			continue
+		}
+
+		// 检查PostgreSQL中是否已存在该记录
+		var existingCount int64
+		if err := postgresDB.Model(&model.ExpiryCheckDomainInfoPG{}).Where("domain = ?", mongoDomain.Domain).Count(&existingCount).Error; err != nil {
+			stats.Errors = append(stats.Errors, fmt.Sprintf("检查PostgreSQL ExpiryCheckDomain是否存在失败: %v", err))
+			continue
+		}
+
+		if existingCount > 0 && skipExisting {
+			log.Printf("跳过已存在的ExpiryCheckDomain记录: %s", mongoDomain.Domain)
+			continue
+		}
+
+		// 创建PostgreSQL记录
+		pgDomain := model.ExpiryCheckDomainInfoPG{
+			ID:           uuid.New(),
+			Domain:       mongoDomain.Domain,
+			Remark:       mongoDomain.Remark,
+			ExpiredDate:  mongoDomain.ExpiredDate,
+			DaysToExpire: mongoDomain.DaysToExpire,
+			CreatedAt:    time.Now(),
+			UpdatedAt:    time.Now(),
+		}
+
+		// 插入或更新记录
+		if existingCount > 0 {
+			if err := postgresDB.Model(&model.ExpiryCheckDomainInfoPG{}).Where("domain = ?", mongoDomain.Domain).Updates(map[string]interface{}{
+				"remark":         pgDomain.Remark,
+				"expired_date":   pgDomain.ExpiredDate,
+				"days_to_expire": pgDomain.DaysToExpire,
+				"updated_at":     pgDomain.UpdatedAt,
+			}).Error; err != nil {
+				stats.Errors = append(stats.Errors, fmt.Sprintf("更新PostgreSQL ExpiryCheckDomain失败: %v", err))
+				continue
+			}
+		} else {
+			if err := postgresDB.Create(&pgDomain).Error; err != nil {
+				stats.Errors = append(stats.Errors, fmt.Sprintf("插入PostgreSQL ExpiryCheckDomain失败: %v", err))
+				continue
+			}
+		}
+
+		migratedCount++
+		if migratedCount%int64(batchSize) == 0 {
+			log.Printf("已迁移 %d 条ExpiryCheckDomain记录", migratedCount)
+		}
+	}
+
+	// 更新统计信息
+	stats.DomainRecordsMigrated += migratedCount
+	log.Printf("✅ ExpiryCheckDomains迁移完成，共迁移 %d 条记录", migratedCount)
+	return nil
+}
+
+// migrateSubscriptionNodesData 迁移SubscriptionNodes数据
+func migrateSubscriptionNodesData(batchSize int, skipExisting bool, stats *model.MigrationStats) error {
+	log.Println("🔄 开始迁移SubscriptionNodes数据...")
+
+	// 获取数据库连接
+	mongoClient := database.Client
+	postgresDB := database.GetPostgresDB()
+
+	// 获取MongoDB集合
+	subNodesCol := database.OpenCollection(mongoClient, "subscritption_nodes")
+
+	// 查询所有记录
+	ctx := context.Background()
+	cursor, err := subNodesCol.Find(ctx, bson.M{})
+	if err != nil {
+		return fmt.Errorf("查询MongoDB SubscriptionNodes失败: %v", err)
+	}
+	defer cursor.Close(ctx)
+
+	// 迁移数据
+	var migratedCount int64
+	for cursor.Next(ctx) {
+		// 解析MongoDB记录
+		var mongoNode model.SubscriptionNode
+		if err := cursor.Decode(&mongoNode); err != nil {
+			stats.Errors = append(stats.Errors, fmt.Sprintf("解析MongoDB SubscriptionNode失败: %v", err))
+			continue
+		}
+
+		// 检查PostgreSQL中是否已存在该记录
+		var existingCount int64
+		if err := postgresDB.Model(&model.SubscriptionNodePG{}).Where("remark = ?", mongoNode.Remark).Count(&existingCount).Error; err != nil {
+			stats.Errors = append(stats.Errors, fmt.Sprintf("检查PostgreSQL SubscriptionNode是否存在失败: %v", err))
+			continue
+		}
+
+		if existingCount > 0 && skipExisting {
+			log.Printf("跳过已存在的SubscriptionNode记录: %s", mongoNode.Remark)
+			continue
+		}
+
+		// 创建PostgreSQL记录
+		pgNode := model.SubscriptionNodePG{
+			ID:           uuid.New(),
+			Type:         mongoNode.Type,
+			Remark:       mongoNode.Remark,
+			Domain:       mongoNode.Domain,
+			IP:           mongoNode.IP,
+			SNI:          mongoNode.SNI,
+			UUID:         mongoNode.UUID,
+			Path:         mongoNode.PATH,
+			ServerPort:   mongoNode.SERVER_PORT,
+			Password:     mongoNode.PASSWORD,
+			PublicKey:    mongoNode.PUBLIC_KEY,
+			ShortID:      mongoNode.SHORT_ID,
+			EnableOpenai: mongoNode.EnableOpenai,
+			CreatedAt:    time.Now(),
+			UpdatedAt:    time.Now(),
+		}
+
+		// 插入或更新记录
+		if existingCount > 0 {
+			if err := postgresDB.Model(&model.SubscriptionNodePG{}).Where("remark = ?", mongoNode.Remark).Updates(map[string]interface{}{
+				"type":          pgNode.Type,
+				"domain":        pgNode.Domain,
+				"ip":            pgNode.IP,
+				"sni":           pgNode.SNI,
+				"uuid":          pgNode.UUID,
+				"path":          pgNode.Path,
+				"server_port":   pgNode.ServerPort,
+				"password":      pgNode.Password,
+				"public_key":    pgNode.PublicKey,
+				"short_id":      pgNode.ShortID,
+				"enable_openai": pgNode.EnableOpenai,
+				"updated_at":    pgNode.UpdatedAt,
+			}).Error; err != nil {
+				stats.Errors = append(stats.Errors, fmt.Sprintf("更新PostgreSQL SubscriptionNode失败: %v", err))
+				continue
+			}
+		} else {
+			if err := postgresDB.Create(&pgNode).Error; err != nil {
+				stats.Errors = append(stats.Errors, fmt.Sprintf("插入PostgreSQL SubscriptionNode失败: %v", err))
+				continue
+			}
+		}
+
+		migratedCount++
+		if migratedCount%int64(batchSize) == 0 {
+			log.Printf("已迁移 %d 条SubscriptionNode记录", migratedCount)
+		}
+	}
+
+	// 更新统计信息
+	stats.SubscriptionNodesMigrated += migratedCount
+	log.Printf("✅ SubscriptionNodes迁移完成，共迁移 %d 条记录", migratedCount)
 	return nil
 }
 
@@ -202,10 +392,10 @@ func enablePostgresExtensions(db *gorm.DB) error {
 func createCustomIndexes(db *gorm.DB) error {
 	log.Println("🔍 创建自定义索引...")
 
-	// 创建Domain表的索引
-	err := createDomainIndexes(db)
+	// 创建ExpiryCheckDomains表的索引
+	err := createExpiryCheckDomainsIndexes(db)
 	if err != nil {
-		return fmt.Errorf("创建Domain索引失败: %v", err)
+		return fmt.Errorf("创建ExpiryCheckDomains索引失败: %v", err)
 	}
 
 	// 创建NodeTrafficLogs表的索引
@@ -264,6 +454,33 @@ func createJSONBIndexes(db *gorm.DB) error {
 	return nil
 }
 
+// createExpiryCheckDomainsIndexes 为ExpiryCheckDomains表创建索引
+func createExpiryCheckDomainsIndexes(db *gorm.DB) error {
+	log.Println("🔍 创建ExpiryCheckDomains索引...")
+
+	expiryCheckDomainsIndexes := []string{
+		// 域名索引
+		"CREATE INDEX IF NOT EXISTS idx_expiry_check_domains_domain ON expiry_check_domains(domain)",
+		// 过期日期索引
+		"CREATE INDEX IF NOT EXISTS idx_expiry_check_domains_expired_date ON expiry_check_domains(expired_date)",
+		// 剩余天数索引
+		"CREATE INDEX IF NOT EXISTS idx_expiry_check_domains_days_to_expire ON expiry_check_domains(days_to_expire)",
+		// 创建时间索引
+		"CREATE INDEX IF NOT EXISTS idx_expiry_check_domains_created_at ON expiry_check_domains(created_at)",
+		// 更新时间索引
+		"CREATE INDEX IF NOT EXISTS idx_expiry_check_domains_updated_at ON expiry_check_domains(updated_at)",
+	}
+
+	for _, indexSQL := range expiryCheckDomainsIndexes {
+		if err := db.Exec(indexSQL).Error; err != nil {
+			log.Printf("⚠️  创建ExpiryCheckDomains索引失败: %s, 错误: %v", indexSQL, err)
+		}
+	}
+
+	log.Println("✅ ExpiryCheckDomains索引创建完成")
+	return nil
+}
+
 // createTimeIndexes 创建时间相关索引
 func createTimeIndexes(db *gorm.DB) error {
 	log.Println("⏰ 创建时间相关索引...")
@@ -303,8 +520,9 @@ func printMigrationStats(stats *model.MigrationStats) {
 	fmt.Printf("🔗 域名记录: %d\n", stats.DomainRecordsMigrated)
 	fmt.Printf("🌐 节点记录: %d\n", stats.NodeRecordsMigrated)
 	fmt.Printf("👥 用户记录: %d\n", stats.UserRecordsMigrated)
+	fmt.Printf("📡 订阅节点: %d\n", stats.SubscriptionNodesMigrated)
 
-	totalRecords := stats.DomainRecordsMigrated + stats.NodeRecordsMigrated + stats.UserRecordsMigrated
+	totalRecords := stats.DomainRecordsMigrated + stats.NodeRecordsMigrated + stats.UserRecordsMigrated + stats.SubscriptionNodesMigrated
 	fmt.Printf("📈 总记录数: %d\n", totalRecords)
 
 	if duration.Seconds() > 0 {
