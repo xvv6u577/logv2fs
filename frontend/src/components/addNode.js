@@ -131,6 +131,17 @@ const AddNode = () => {
 		setNodes((prevState) => (prevState.filter((n) => n.remark !== remarkToRemove)));
 	};
 
+	const handleCopyNode = (nodeToCopy) => {
+		const { enable_openai, ...nodeData } = nodeToCopy;
+
+		setFormData({ ...initialState, ...nodeData });
+		setEnableOpenai(enable_openai || false);
+
+		window.scrollTo({ top: 0, behavior: "smooth" });
+		
+		dispatch(success({ show: true, content: `已复制节点 ${nodeToCopy.remark} 的信息到表单` }));
+	};
+
 	useEffect(() => {
 		if (message.show === true) {
 			setTimeout(() => {
@@ -142,14 +153,26 @@ const AddNode = () => {
 	// 节点卡片组件
 	const NodeCard = ({ node, index }) => (
 		<div className={`${styles.card} p-6 relative`}>
-			<button 
-				className="absolute top-4 right-4 text-gray-400 hover:text-red-400 transition-colors"
-				onClick={() => removeNode(node.remark)}
-			>
-				<svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-					<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-				</svg>
-			</button>
+			<div className="absolute top-4 right-4 flex items-center space-x-2">
+				<button
+					onClick={() => handleCopyNode(node)}
+					className="p-1 rounded-full text-gray-400 hover:bg-gray-700 hover:text-blue-400 transition-all duration-200"
+					title="复制到表单"
+				>
+					<svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+						<path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+					</svg>
+				</button>
+				<button
+					onClick={() => removeNode(node.remark)}
+					className="p-1 rounded-full text-gray-400 hover:bg-gray-700 hover:text-red-400 transition-all duration-200"
+					title="删除节点"
+				>
+					<svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+					</svg>
+				</button>
+			</div>
 
 			<div className="mb-4">
 				<div className="flex items-center space-x-3 mb-2">

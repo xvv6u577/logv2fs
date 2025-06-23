@@ -3,9 +3,11 @@ package controllers
 import (
 	"crypto/tls"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
@@ -66,34 +68,36 @@ func AddNodePG() gin.HandlerFunc {
 				UpdatedAt:    current,
 			}
 
-			// 使用Remark作为过滤条件，检查节点是否存在
+			// 使用原始SQL查询替代GORM的高级API，避免prepared statement缓存问题
 			var existingDomain model.SubscriptionNodePG
-			result := db.Where("remark = ?", domain.Remark).First(&existingDomain)
+			query := `SELECT * FROM "subscritption_nodes" WHERE remark = $1 LIMIT 1`
+			result := db.Raw(query, domain.Remark).Scan(&existingDomain)
 
 			if result.Error != nil {
-				// 如果不存在，则创建新节点
+				// 如果不存在，则使用原始SQL创建新节点
 				pgDomain.ID = uuid.New()
-				if err := db.Create(&pgDomain).Error; err != nil {
+				insertQuery := `INSERT INTO "subscritption_nodes" 
+							(id, type, remark, domain, ip, sni, uuid, path, server_port, password, public_key, short_id, enable_openai, created_at, updated_at) 
+							VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`
+				if err := db.Exec(insertQuery,
+					pgDomain.ID, pgDomain.Type, pgDomain.Remark, pgDomain.Domain, pgDomain.IP,
+					pgDomain.SNI, pgDomain.UUID, pgDomain.Path, pgDomain.ServerPort, pgDomain.Password,
+					pgDomain.PublicKey, pgDomain.ShortID, pgDomain.EnableOpenai, pgDomain.CreatedAt, pgDomain.UpdatedAt).Error; err != nil {
 					c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 					log.Printf("Create domain error: %v", err)
 					return
 				}
 			} else {
-				// 如果存在，则更新节点
-				if err := db.Model(&existingDomain).Updates(map[string]interface{}{
-					"type":          pgDomain.Type,
-					"domain":        pgDomain.Domain,
-					"ip":            pgDomain.IP,
-					"sni":           pgDomain.SNI,
-					"uuid":          pgDomain.UUID,
-					"path":          pgDomain.Path,
-					"server_port":   pgDomain.ServerPort,
-					"password":      pgDomain.Password,
-					"public_key":    pgDomain.PublicKey,
-					"short_id":      pgDomain.ShortID,
-					"enable_openai": pgDomain.EnableOpenai,
-					"updated_at":    current,
-				}).Error; err != nil {
+				// 如果存在，则使用原始SQL更新节点
+				updateQuery := `UPDATE "subscritption_nodes" 
+							   SET type = $1, domain = $2, ip = $3, sni = $4, uuid = $5, 
+							   path = $6, server_port = $7, password = $8, public_key = $9, 
+							   short_id = $10, enable_openai = $11, updated_at = $12
+							   WHERE id = $13`
+				if err := db.Exec(updateQuery,
+					pgDomain.Type, pgDomain.Domain, pgDomain.IP, pgDomain.SNI, pgDomain.UUID,
+					pgDomain.Path, pgDomain.ServerPort, pgDomain.Password, pgDomain.PublicKey,
+					pgDomain.ShortID, pgDomain.EnableOpenai, current, existingDomain.ID).Error; err != nil {
 					c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 					log.Printf("Update domain error: %v", err)
 					return
@@ -107,24 +111,38 @@ func AddNodePG() gin.HandlerFunc {
 			remarks[i] = domain.Remark
 		}
 
-		// 删除不在提交列表中的节点
-		if err := db.Where("remark NOT IN ?", remarks).Delete(&model.SubscriptionNodePG{}).Error; err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			log.Printf("Delete domains error: %v", err)
-			return
+		// 删除不在提交列表中的节点 - 使用原始SQL
+		if len(remarks) > 0 {
+			// 构建域名列表的字符串表示
+			placeholders := make([]string, len(remarks))
+			args := make([]interface{}, len(remarks))
+			for i, remark := range remarks {
+				placeholders[i] = fmt.Sprintf("$%d", i+1)
+				args[i] = remark
+			}
+
+			// 使用原始SQL删除不在列表中的节点
+			query := fmt.Sprintf(`DELETE FROM "subscritption_nodes" WHERE remark NOT IN (%s)`, strings.Join(placeholders, ","))
+			if err := db.Exec(query, args...).Error; err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				log.Printf("Delete domains error: %v", err)
+				return
+			}
 		}
 
 		// 处理可收集数据的节点
 		for _, domain := range dataCollectableNodes {
-			// 查找或创建NodeTrafficLogs记录
+			// 查找或创建NodeTrafficLogs记录 - 使用原始SQL
 			var nodeTrafficLog model.NodeTrafficLogsPG
-			result := db.Where("domain_as_id = ?", domain.Domain).First(&nodeTrafficLog)
+			query := `SELECT * FROM "node_traffic_logs" WHERE domain_as_id = $1 LIMIT 1`
+			result := db.Raw(query, domain.Domain).Scan(&nodeTrafficLog)
 
 			if result.Error != nil {
 				// 如果不存在，则创建新记录
-				// 查找对应的Domain记录
+				// 查找对应的Domain记录 - 使用原始SQL
 				var domainRecord model.SubscriptionNodePG
-				if err := db.Where("domain = ?", domain.Domain).First(&domainRecord).Error; err == nil {
+				domainQuery := `SELECT * FROM "subscritption_nodes" WHERE domain = $1 LIMIT 1`
+				if err := db.Raw(domainQuery, domain.Domain).Scan(&domainRecord).Error; err == nil {
 					// 创建新的NodeTrafficLog记录
 					emptyHourlyLogs, _ := json.Marshal([]model.TrafficLogEntry{})
 					emptyDailyLogs, _ := json.Marshal([]model.DailyLogEntry{})
@@ -144,19 +162,27 @@ func AddNodePG() gin.HandlerFunc {
 						YearlyLogs:  emptyYearlyLogs,
 					}
 
-					if err := db.Create(&newNodeTrafficLog).Error; err != nil {
+					// 使用原始SQL创建新记录
+					insertQuery := `INSERT INTO "node_traffic_logs" 
+								(id, domain_as_id, remark, status, created_at, updated_at, hourly_logs, daily_logs, monthly_logs, yearly_logs) 
+								VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`
+					if err := db.Exec(insertQuery,
+						newNodeTrafficLog.ID, newNodeTrafficLog.DomainAsId, newNodeTrafficLog.Remark,
+						newNodeTrafficLog.Status, newNodeTrafficLog.CreatedAt, newNodeTrafficLog.UpdatedAt,
+						newNodeTrafficLog.HourlyLogs, newNodeTrafficLog.DailyLogs,
+						newNodeTrafficLog.MonthlyLogs, newNodeTrafficLog.YearlyLogs).Error; err != nil {
 						c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 						log.Printf("Create node traffic log error: %v", err)
 						return
 					}
 				}
 			} else {
-				// 如果存在，则更新记录
-				if err := db.Model(&nodeTrafficLog).Updates(map[string]interface{}{
-					"remark":     domain.Remark,
-					"status":     "active",
-					"updated_at": current,
-				}).Error; err != nil {
+				// 如果存在，则使用原始SQL更新记录
+				updateQuery := `UPDATE "node_traffic_logs" 
+							   SET remark = $1, status = $2, updated_at = $3
+							   WHERE id = $4`
+				if err := db.Exec(updateQuery,
+					domain.Remark, "active", current, nodeTrafficLog.ID).Error; err != nil {
 					c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 					log.Printf("Update node traffic log error: %v", err)
 					return
@@ -170,12 +196,33 @@ func AddNodePG() gin.HandlerFunc {
 			domainAsIds[i] = domain.Domain
 		}
 
-		if err := db.Model(&model.NodeTrafficLogsPG{}).
-			Where("domain_as_id NOT IN ?", domainAsIds).
-			Update("status", "inactive").Error; err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			log.Printf("Update inactive nodes error: %v", err)
-			return
+		// 使用原始SQL更新不在列表中的节点状态
+		if len(domainAsIds) > 0 {
+			// 构建域名列表的字符串表示
+			placeholders := make([]string, len(domainAsIds))
+			args := make([]interface{}, len(domainAsIds))
+			for i, domain := range domainAsIds {
+				placeholders[i] = fmt.Sprintf("$%d", i+1)
+				args[i] = domain
+			}
+
+			// 使用原始SQL更新不在列表中的节点状态
+			query := fmt.Sprintf(`UPDATE "node_traffic_logs" SET status = 'inactive', updated_at = $%d WHERE domain_as_id NOT IN (%s)`,
+				len(args)+1, strings.Join(placeholders, ","))
+			args = append(args, current)
+
+			if err := db.Exec(query, args...).Error; err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				log.Printf("Update inactive nodes error: %v", err)
+				return
+			}
+		} else {
+			// 如果没有域名要保留，则将所有节点设为inactive
+			if err := db.Exec(`UPDATE "node_traffic_logs" SET status = 'inactive', updated_at = $1`, current).Error; err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				log.Printf("Update all nodes to inactive error: %v", err)
+				return
+			}
 		}
 
 		c.JSON(http.StatusOK, gin.H{"message": "Congrats! Nodes updated in success!"})
@@ -193,8 +240,9 @@ func GetActiveGlobalNodesPG() gin.HandlerFunc {
 		db := database.GetPostgresDB()
 		var pgDomains []model.SubscriptionNodePG
 
-		// 查询非work类型的所有域名
-		if err := db.Where("type != ?", "work").Find(&pgDomains).Error; err != nil {
+		// 使用原始SQL查询替代GORM的高级API，避免prepared statement缓存问题
+		query := `SELECT * FROM "subscritption_nodes" WHERE type != 'work'`
+		if err := db.Raw(query).Scan(&pgDomains).Error; err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			log.Printf("Find domains error: %v", err)
 			return
@@ -234,8 +282,9 @@ func GetWorkDomainInfoPG() gin.HandlerFunc {
 		db := database.GetPostgresDB()
 		var pgDomains []model.SubscriptionNodePG
 
-		// 查询类型为work的域名
-		if err := db.Where("type = ?", "work").Find(&pgDomains).Error; err != nil {
+		// 使用原始SQL查询替代GORM的高级API，避免prepared statement缓存问题
+		query := `SELECT * FROM "subscritption_nodes" WHERE type = 'work'`
+		if err := db.Raw(query).Scan(&pgDomains).Error; err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			log.Printf("Find work domains error: %v", err)
 			return
@@ -333,7 +382,9 @@ func UpdateExpiryCheckDomainsInfoPG() gin.HandlerFunc {
 		// 更新或创建域名
 		for _, domainInfo := range domainOfWebForm {
 			var expiryDomain model.ExpiryCheckDomainInfoPG
-			result := db.Where("domain = ?", domainInfo.Domain).First(&expiryDomain)
+			// 使用原始SQL查询替代GORM的高级API，避免prepared statement缓存问题
+			query := `SELECT * FROM "expiry_check_domains" WHERE domain = $1 LIMIT 1`
+			result := db.Raw(query, domainInfo.Domain).Scan(&expiryDomain)
 
 			if result.Error != nil {
 				// 如果不存在，则创建新记录
@@ -347,19 +398,33 @@ func UpdateExpiryCheckDomainsInfoPG() gin.HandlerFunc {
 					UpdatedAt:    time.Now(),
 				}
 
-				if err := db.Create(&expiryDomain).Error; err != nil {
+				// 使用原始SQL插入新记录
+				query := `INSERT INTO "expiry_check_domains" 
+						(id, domain, remark, expired_date, days_to_expire, created_at, updated_at) 
+						VALUES ($1, $2, $3, $4, $5, $6, $7)`
+				if err := db.Exec(query,
+					expiryDomain.ID,
+					expiryDomain.Domain,
+					expiryDomain.Remark,
+					expiryDomain.ExpiredDate,
+					expiryDomain.DaysToExpire,
+					expiryDomain.CreatedAt,
+					expiryDomain.UpdatedAt).Error; err != nil {
 					c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 					log.Printf("Create domain error: %v", err)
 					return
 				}
 			} else {
-				// 如果存在，则更新记录
-				if err := db.Model(&expiryDomain).Updates(map[string]interface{}{
-					"remark":         domainInfo.Remark,
-					"expired_date":   domainInfo.ExpiredDate,
-					"days_to_expire": domainInfo.DaysToExpire,
-					"updated_at":     time.Now(),
-				}).Error; err != nil {
+				// 如果存在，则使用原始SQL更新记录
+				updateQuery := `UPDATE "expiry_check_domains" 
+							   SET remark = $1, expired_date = $2, days_to_expire = $3, updated_at = $4
+							   WHERE domain = $5`
+				if err := db.Exec(updateQuery,
+					domainInfo.Remark,
+					domainInfo.ExpiredDate,
+					domainInfo.DaysToExpire,
+					time.Now(),
+					domainInfo.Domain).Error; err != nil {
 					c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 					log.Printf("Update domain error: %v", err)
 					return
@@ -369,11 +434,30 @@ func UpdateExpiryCheckDomainsInfoPG() gin.HandlerFunc {
 			domainsToKeep = append(domainsToKeep, domainInfo.Domain)
 		}
 
-		// 删除不在domainOfWebForm中的域名
-		if err := db.Where("domain NOT IN ?", domainsToKeep).Delete(&model.ExpiryCheckDomainInfoPG{}).Error; err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			log.Printf("Delete domains error: %v", err)
-			return
+		// 删除不在domainOfWebForm中的域名 - 使用原始SQL
+		if len(domainsToKeep) > 0 {
+			// 构建域名列表的字符串表示
+			placeholders := make([]string, len(domainsToKeep))
+			args := make([]interface{}, len(domainsToKeep))
+			for i, domain := range domainsToKeep {
+				placeholders[i] = fmt.Sprintf("$%d", i+1)
+				args[i] = domain
+			}
+
+			// 使用原始SQL删除不在列表中的域名
+			query := fmt.Sprintf(`DELETE FROM "expiry_check_domains" WHERE domain NOT IN (%s)`, strings.Join(placeholders, ","))
+			if err := db.Exec(query, args...).Error; err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				log.Printf("Delete domains error: %v", err)
+				return
+			}
+		} else {
+			// 如果没有域名要保留，则删除所有域名
+			if err := db.Exec(`DELETE FROM "expiry_check_domains"`).Error; err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				log.Printf("Delete all domains error: %v", err)
+				return
+			}
 		}
 
 		c.JSON(http.StatusOK, gin.H{"message": "Update expiry check domains list successfully!"})
@@ -391,8 +475,9 @@ func GetSingboxNodesPG() gin.HandlerFunc {
 		db := database.GetPostgresDB()
 		var pgNodeTrafficLogs []model.NodeTrafficLogsPG
 
-		// 查询状态为active的节点
-		if err := db.Where("status = ?", "active").Find(&pgNodeTrafficLogs).Error; err != nil {
+		// 使用原始SQL查询替代GORM的高级API，避免prepared statement缓存问题
+		query := `SELECT * FROM "node_traffic_logs" WHERE status = 'active'`
+		if err := db.Raw(query).Scan(&pgNodeTrafficLogs).Error; err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			log.Printf("Find active nodes error: %v", err)
 			return
@@ -413,8 +498,9 @@ func GetDomainsExpiryInfoPG() gin.HandlerFunc {
 		db := database.GetPostgresDB()
 		var expiryDomains []model.ExpiryCheckDomainInfoPG
 
-		// 查询所有需要检查过期的域名
-		if err := db.Find(&expiryDomains).Error; err != nil {
+		// 使用原始SQL查询替代GORM的高级API，避免prepared statement缓存问题
+		query := `SELECT * FROM "expiry_check_domains"`
+		if err := db.Raw(query).Scan(&expiryDomains).Error; err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			log.Printf("Find expiry domains error: %v", err)
 			return

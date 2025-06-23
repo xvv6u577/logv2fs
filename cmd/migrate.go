@@ -432,13 +432,11 @@ func createJSONBIndexes(db *gorm.DB) error {
 
 	jsonbIndexes := []string{
 		// UserTrafficLogs的JSONB索引
-		"CREATE INDEX IF NOT EXISTS idx_user_traffic_logs_hourly_logs ON user_traffic_logs USING GIN (hourly_logs)",
 		"CREATE INDEX IF NOT EXISTS idx_user_traffic_logs_daily_logs ON user_traffic_logs USING GIN (daily_logs)",
 		"CREATE INDEX IF NOT EXISTS idx_user_traffic_logs_monthly_logs ON user_traffic_logs USING GIN (monthly_logs)",
 		"CREATE INDEX IF NOT EXISTS idx_user_traffic_logs_yearly_logs ON user_traffic_logs USING GIN (yearly_logs)",
 
 		// NodeTrafficLogs的JSONB索引
-		"CREATE INDEX IF NOT EXISTS idx_node_traffic_logs_hourly_logs ON node_traffic_logs USING GIN (hourly_logs)",
 		"CREATE INDEX IF NOT EXISTS idx_node_traffic_logs_daily_logs ON node_traffic_logs USING GIN (daily_logs)",
 		"CREATE INDEX IF NOT EXISTS idx_node_traffic_logs_monthly_logs ON node_traffic_logs USING GIN (monthly_logs)",
 		"CREATE INDEX IF NOT EXISTS idx_node_traffic_logs_yearly_logs ON node_traffic_logs USING GIN (yearly_logs)",
@@ -459,12 +457,6 @@ func createExpiryCheckDomainsIndexes(db *gorm.DB) error {
 	log.Println("🔍 创建ExpiryCheckDomains索引...")
 
 	expiryCheckDomainsIndexes := []string{
-		// 域名索引
-		"CREATE INDEX IF NOT EXISTS idx_expiry_check_domains_domain ON expiry_check_domains(domain)",
-		// 过期日期索引
-		"CREATE INDEX IF NOT EXISTS idx_expiry_check_domains_expired_date ON expiry_check_domains(expired_date)",
-		// 剩余天数索引
-		"CREATE INDEX IF NOT EXISTS idx_expiry_check_domains_days_to_expire ON expiry_check_domains(days_to_expire)",
 		// 创建时间索引
 		"CREATE INDEX IF NOT EXISTS idx_expiry_check_domains_created_at ON expiry_check_domains(created_at)",
 		// 更新时间索引
@@ -493,10 +485,6 @@ func createTimeIndexes(db *gorm.DB) error {
 		// 更新时间索引
 		"CREATE INDEX IF NOT EXISTS idx_user_traffic_logs_updated_at ON user_traffic_logs(updated_at)",
 		"CREATE INDEX IF NOT EXISTS idx_node_traffic_logs_updated_at ON node_traffic_logs(updated_at)",
-
-		// 复合索引 - 状态+时间
-		"CREATE INDEX IF NOT EXISTS idx_user_traffic_logs_status_created_at ON user_traffic_logs(status, created_at)",
-		"CREATE INDEX IF NOT EXISTS idx_node_traffic_logs_status_created_at ON node_traffic_logs(status, created_at)",
 	}
 
 	for _, indexSQL := range timeIndexes {

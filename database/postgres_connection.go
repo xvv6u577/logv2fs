@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
+	"time"
 
 	"github.com/joho/godotenv"
 	"gorm.io/driver/postgres"
@@ -31,10 +33,22 @@ func InitPostgreSQL() *gorm.DB {
 		log.Fatal("环境变量 postgresURI 未设置")
 	}
 
+	// 最终解决方案：在DSN中强制禁用prepared statement缓存
+	dsn := postgresURI
+	paramSeparator := "?"
+	if strings.Contains(dsn, "?") {
+		paramSeparator = "&"
+	}
+
+	// 强制pgx驱动使用简单协议，彻底禁用prepared statements
+	// See: https://github.com/jackc/pgx/issues/634
+	dsn += paramSeparator + "default_query_exec_mode=simple_protocol"
+
+	log.Printf("使用DSN连接PostgreSQL（已禁用Prepared Statement）")
+
 	// 连接PostgreSQL
-	db, err := gorm.Open(postgres.Open(postgresURI), &gorm.Config{
-		Logger: logger.Default.LogMode(logger.Info), // 开启SQL日志
-		// 在迁移过程中禁用外键约束，避免迁移时的复杂性
+	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
+		Logger:                                   logger.Default.LogMode(logger.Info),
 		DisableForeignKeyConstraintWhenMigrating: false,
 	})
 
@@ -48,17 +62,18 @@ func InitPostgreSQL() *gorm.DB {
 		log.Fatalf("获取底层数据库连接失败: %v", err)
 	}
 
-	// 配置连接池
-	sqlDB.SetMaxIdleConns(10)   // 最大空闲连接数
-	sqlDB.SetMaxOpenConns(100)  // 最大打开连接数
-	sqlDB.SetConnMaxLifetime(0) // 连接最大生存时间
+	// 更严格的连接池配置，减少连接复用带来的缓存问题
+	sqlDB.SetMaxIdleConns(5)                   // 减少最大空闲连接数
+	sqlDB.SetMaxOpenConns(50)                  // 减少最大打开连接数
+	sqlDB.SetConnMaxLifetime(30 * time.Minute) // 设置连接最大生存时间，定期刷新连接
+	sqlDB.SetConnMaxIdleTime(5 * time.Minute)  // 设置连接最大空闲时间
 
 	// 测试连接
 	if err := sqlDB.Ping(); err != nil {
 		log.Fatalf("PostgreSQL连接测试失败: %v", err)
 	}
 
-	log.Println("PostgreSQL连接成功")
+	log.Println("PostgreSQL连接成功，已强制禁用Prepared Statement")
 
 	PostgresDB = db
 
@@ -68,6 +83,7 @@ func InitPostgreSQL() *gorm.DB {
 // GetPostgresDB 获取PostgreSQL数据库实例
 func GetPostgresDB() *gorm.DB {
 	if PostgresDB == nil {
+		log.Println("初始化新的PostgreSQL连接...")
 		PostgresDB = InitPostgreSQL()
 	}
 	return PostgresDB

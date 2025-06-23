@@ -283,8 +283,12 @@ func GetAllUsersPG() gin.HandlerFunc {
 		db := database.GetPostgresDB()
 		var users []model.UserTrafficLogsPG
 
+		// 使用原始SQL查询替代GORM的高级API，避免prepared statement缓存问题
 		// 查询所有用户，只选择需要的字段
-		if err := db.Select("email_as_id, uuid, name, role, status, used, updated_at, daily_logs, monthly_logs, yearly_logs").Find(&users).Error; err != nil {
+		query := `SELECT email_as_id, uuid, name, role, status, used, updated_at, daily_logs, monthly_logs, yearly_logs 
+				  FROM user_traffic_logs`
+
+		if err := db.Raw(query).Scan(&users).Error; err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			log.Printf("GetAllUsers: %s", err.Error())
 			return
@@ -343,9 +347,13 @@ func GetUserByNamePG() gin.HandlerFunc {
 		db := database.GetPostgresDB()
 		var user model.UserTrafficLogsPG
 
+		// 使用原始SQL查询替代GORM的高级API，避免prepared statement缓存问题
+		query := `SELECT email_as_id, used, uuid, name, status, role, credit, daily_logs, monthly_logs, yearly_logs, created_at, updated_at
+				  FROM user_traffic_logs
+				  WHERE email_as_id = ?`
+
 		// 查询用户
-		if err := db.Select("email_as_id, used, uuid, name, status, role, credit, daily_logs, monthly_logs, yearly_logs, created_at, updated_at").
-			Where("email_as_id = ?", name).First(&user).Error; err != nil {
+		if err := db.Raw(query, name).Scan(&user).Error; err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			log.Printf("GetUserByName: %s", err.Error())
 			return
