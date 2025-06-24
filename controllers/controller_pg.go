@@ -389,6 +389,105 @@ func limitJsonLogs(jsonData datatypes.JSON, limit int) datatypes.JSON {
 	return datatypes.JSON(result)
 }
 
+// DisableUserPG 禁用用户 - PostgreSQL版本
+func DisableUserPG() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if err := helper.CheckUserType(c, "admin"); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		db := database.GetPostgresDB()
+		name := c.Param("name")
+		log.Printf("Attempting to disable user: %s", name)
+
+		if name == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "user name is required"})
+			return
+		}
+
+		var pgUser model.UserTrafficLogsPG
+
+		// 查找用户
+		if err := db.Where("email_as_id = ?", helper.SanitizeStr(name)).First(&pgUser).Error; err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "user not found"})
+			log.Printf("DisableUser - user not found: %s, error: %s", name, err.Error())
+			return
+		}
+
+		// 不允许禁用管理员账户
+		if pgUser.Role == "admin" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "cannot disable admin user"})
+			log.Printf("attempted to disable admin user: %s", name)
+			return
+		}
+
+		// 更新用户状态为deleted
+		updates := map[string]interface{}{
+			"status":     "deleted",
+			"updated_at": time.Now(),
+		}
+
+		if err := db.Model(&model.UserTrafficLogsPG{}).Where("email_as_id = ?", helper.SanitizeStr(name)).Updates(updates).Error; err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			log.Printf("error disabling user: %v", err)
+			return
+		}
+
+		// 获取更新后的用户
+		db.Where("email_as_id = ?", helper.SanitizeStr(name)).First(&pgUser)
+
+		log.Printf("User %s disabled successfully", pgUser.Name)
+		c.JSON(http.StatusOK, gin.H{"message": "User " + pgUser.Name + " disabled successfully"})
+	}
+}
+
+// EnableUserPG 启用用户 - PostgreSQL版本
+func EnableUserPG() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if err := helper.CheckUserType(c, "admin"); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		db := database.GetPostgresDB()
+		name := c.Param("name")
+		log.Printf("Attempting to enable user: %s", name)
+
+		if name == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "user name is required"})
+			return
+		}
+
+		var pgUser model.UserTrafficLogsPG
+
+		// 查找用户
+		if err := db.Where("email_as_id = ?", helper.SanitizeStr(name)).First(&pgUser).Error; err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "user not found"})
+			log.Printf("EnableUser - user not found: %s, error: %s", name, err.Error())
+			return
+		}
+
+		// 更新用户状态为plain
+		updates := map[string]interface{}{
+			"status":     "plain",
+			"updated_at": time.Now(),
+		}
+
+		if err := db.Model(&model.UserTrafficLogsPG{}).Where("email_as_id = ?", helper.SanitizeStr(name)).Updates(updates).Error; err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			log.Printf("error enabling user: %v", err)
+			return
+		}
+
+		// 获取更新后的用户
+		db.Where("email_as_id = ?", helper.SanitizeStr(name)).First(&pgUser)
+
+		log.Printf("User %s enabled successfully", pgUser.Name)
+		c.JSON(http.StatusOK, gin.H{"message": "User " + pgUser.Name + " enabled successfully"})
+	}
+}
+
 // UpdateAllTokensPG 更新用户令牌 - PostgreSQL版本
 func UpdateAllTokensPG(db *gorm.DB, signedToken string, signedRefreshToken string, userId string) {
 	updates := map[string]interface{}{

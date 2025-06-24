@@ -991,3 +991,108 @@ func ReturnVergeYAML() gin.HandlerFunc {
 		c.YAML(http.StatusOK, singboxYAML)
 	}
 }
+
+// DisableUser 禁用用户 - 将用户状态设为deleted
+func DisableUser() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if err := helper.CheckUserType(c, "admin"); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		var ctx, cancel = context.WithTimeout(context.Background(), 60*time.Second)
+		defer cancel()
+
+		name := c.Param("name")
+		if name == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "user name is required"})
+			return
+		}
+
+		var foundUser UserTrafficLogs
+		err := userTrafficLogsCol.FindOne(ctx, bson.M{"email_as_id": helper.SanitizeStr(name)}).Decode(&foundUser)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "user not found"})
+			log.Printf("user not found: %s", name)
+			return
+		}
+
+		// 不允许禁用管理员账户
+		if foundUser.Role == "admin" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "cannot disable admin user"})
+			log.Printf("attempted to disable admin user: %s", name)
+			return
+		}
+
+		// 更新用户状态为deleted
+		updateData := bson.M{
+			"status":     "deleted",
+			"updated_at": time.Now(),
+		}
+
+		var updatedUser UserTrafficLogs
+		err = userTrafficLogsCol.FindOneAndUpdate(
+			ctx,
+			bson.M{"email_as_id": helper.SanitizeStr(name)},
+			bson.M{"$set": updateData},
+			options.FindOneAndUpdate().SetReturnDocument(options.After),
+		).Decode(&updatedUser)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			log.Printf("error disabling user: %v", err)
+			return
+		}
+
+		log.Printf("User %s disabled successfully", updatedUser.Name)
+		c.JSON(http.StatusOK, gin.H{"message": "User " + updatedUser.Name + " disabled successfully"})
+	}
+}
+
+// EnableUser 启用用户 - 将用户状态设为plain
+func EnableUser() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if err := helper.CheckUserType(c, "admin"); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		var ctx, cancel = context.WithTimeout(context.Background(), 60*time.Second)
+		defer cancel()
+
+		name := c.Param("name")
+		if name == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "user name is required"})
+			return
+		}
+
+		var foundUser UserTrafficLogs
+		err := userTrafficLogsCol.FindOne(ctx, bson.M{"email_as_id": helper.SanitizeStr(name)}).Decode(&foundUser)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "user not found"})
+			log.Printf("user not found: %s", name)
+			return
+		}
+
+		// 更新用户状态为plain
+		updateData := bson.M{
+			"status":     "plain",
+			"updated_at": time.Now(),
+		}
+
+		var updatedUser UserTrafficLogs
+		err = userTrafficLogsCol.FindOneAndUpdate(
+			ctx,
+			bson.M{"email_as_id": helper.SanitizeStr(name)},
+			bson.M{"$set": updateData},
+			options.FindOneAndUpdate().SetReturnDocument(options.After),
+		).Decode(&updatedUser)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			log.Printf("error enabling user: %v", err)
+			return
+		}
+
+		log.Printf("User %s enabled successfully", updatedUser.Name)
+		c.JSON(http.StatusOK, gin.H{"message": "User " + updatedUser.Name + " enabled successfully"})
+	}
+}

@@ -26,6 +26,8 @@ const Home = () => {
 		buttonPrimary: "bg-blue-600 hover:bg-blue-700 text-white focus:ring-blue-500",
 		buttonSecondary: "bg-gray-600 hover:bg-gray-700 text-white focus:ring-gray-500",
 		buttonDanger: "bg-red-600 hover:bg-red-700 text-white focus:ring-red-500",
+		buttonWarning: "bg-orange-600 hover:bg-orange-700 text-white focus:ring-orange-500",
+		buttonSuccess: "bg-green-600 hover:bg-green-700 text-white focus:ring-green-500",
 		buttonCopy: "px-2 py-1 bg-gray-600 hover:bg-gray-500 text-white text-xs rounded transition-colors",
 		input: "w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent",
 		select: "px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500",
@@ -35,6 +37,7 @@ const Home = () => {
 		badgeUser: "bg-blue-900 text-blue-300",
 		badgeOnline: "bg-green-900 text-green-300",
 		badgeOffline: "bg-red-900 text-red-300",
+		badgeDisabled: "bg-gray-900 text-gray-300",
 	};
 
 	// 排序函数
@@ -93,7 +96,12 @@ const Home = () => {
 
 		// 状态过滤
 		if (filterStatus !== "all") {
-			filtered = filtered.filter(user => user.status === filterStatus);
+			if (filterStatus === "offline") {
+				// 离线状态包括所有非"plain"和非"deleted"的状态
+				filtered = filtered.filter(user => user.status !== "plain" && user.status !== "deleted");
+			} else {
+				filtered = filtered.filter(user => user.status === filterStatus);
+			}
 		}
 
 		// 搜索过滤
@@ -228,6 +236,64 @@ const Home = () => {
 		}
 	};
 
+	// 禁用用户
+	const disableUser = (user) => {
+		if (window.confirm(`确定要禁用用户 "${user.name || user.email_as_id}" 吗？禁用后用户将无法使用服务。`)) {
+			axios
+				.put(`${process.env.REACT_APP_API_HOST}disableuser/${user.email_as_id}`, {}, {
+					headers: { 
+						token: loginState.token,
+						'Content-Type': 'application/json'
+					},
+				})
+				.then((response) => {
+					dispatch(alert({ show: true, content: response.data.message || "用户已禁用", type: "success" }));
+					// 更新用户列表中的状态
+					setUsers(users.map(u => 
+						u.email_as_id === user.email_as_id 
+							? { ...u, status: "deleted" }
+							: u
+					));
+				})
+				.catch((err) => {
+					if (err.response) {
+						dispatch(alert({ show: true, content: err.response.data.error || "禁用失败", type: "error" }));
+					} else {
+						dispatch(alert({ show: true, content: "禁用失败: " + err.toString(), type: "error" }));
+					}
+				});
+		}
+	};
+
+	// 启用用户
+	const enableUser = (user) => {
+		if (window.confirm(`确定要启用用户 "${user.name || user.email_as_id}" 吗？`)) {
+			axios
+				.put(`${process.env.REACT_APP_API_HOST}enableuser/${user.email_as_id}`, {}, {
+					headers: { 
+						token: loginState.token,
+						'Content-Type': 'application/json'
+					},
+				})
+				.then((response) => {
+					dispatch(alert({ show: true, content: response.data.message || "用户已启用", type: "success" }));
+					// 更新用户列表中的状态
+					setUsers(users.map(u => 
+						u.email_as_id === user.email_as_id 
+							? { ...u, status: "plain" }
+							: u
+					));
+				})
+				.catch((err) => {
+					if (err.response) {
+						dispatch(alert({ show: true, content: err.response.data.error || "启用失败", type: "error" }));
+					} else {
+						dispatch(alert({ show: true, content: "启用失败: " + err.toString(), type: "error" }));
+					}
+				});
+		}
+	};
+
 	// 打开用户详情模态框
 	const openUserModal = (user) => {
 		setModalUser(user);
@@ -278,8 +344,14 @@ const Home = () => {
 						<span className={`${styles.badge} ${user.role === "admin" ? styles.badgeAdmin : styles.badgeUser}`}>
 							{user.role === "admin" ? "管理员" : "用户"}
 						</span>
-						<span className={`${styles.badge} ${user.status === "plain" ? styles.badgeOnline : styles.badgeOffline}`}>
-							{user.status === "plain" ? "在线" : "离线"}
+						<span className={`${styles.badge} ${
+							user.status === "plain" ? styles.badgeOnline : 
+							user.status === "deleted" ? styles.badgeDisabled : 
+							styles.badgeOffline
+						}`}>
+							{user.status === "plain" ? "在线" : 
+							 user.status === "deleted" ? "已禁用" : 
+							 "离线"}
 						</span>
 					</div>
 
@@ -316,21 +388,45 @@ const Home = () => {
 					)}
 
 					{/* 操作按钮区域 */}
-					<div className="flex space-x-2">
-						<button
-							onClick={() => openUserModal(user)}
-							className={`${styles.button} ${styles.buttonPrimary} flex-1 text-xs`}
-						>
-							详情
-						</button>
-						{user.email_as_id && (
+					<div className="space-y-2">
+						<div className="flex space-x-2">
 							<button
-								onClick={() => copyToClipboard(user.email_as_id)}
-								className={`${styles.button} ${styles.buttonSecondary} flex-1 text-xs`}
-								title="复制邮箱"
+								onClick={() => openUserModal(user)}
+								className={`${styles.button} ${styles.buttonPrimary} flex-1 text-xs`}
 							>
-								复制
+								详情
 							</button>
+							{user.email_as_id && (
+								<button
+									onClick={() => copyToClipboard(user.email_as_id)}
+									className={`${styles.button} ${styles.buttonSecondary} flex-1 text-xs`}
+									title="复制邮箱"
+								>
+									复制
+								</button>
+							)}
+						</div>
+						{/* 用户管理按钮 - 只对非管理员用户显示 */}
+						{user.role !== "admin" && (
+							<div className="flex space-x-2">
+								{user.status === "deleted" ? (
+									<button
+										onClick={() => enableUser(user)}
+										className={`${styles.button} ${styles.buttonSuccess} flex-1 text-xs`}
+										title="启用用户"
+									>
+										启用
+									</button>
+								) : (
+									<button
+										onClick={() => disableUser(user)}
+										className={`${styles.button} ${styles.buttonWarning} flex-1 text-xs`}
+										title="禁用用户"
+									>
+										禁用
+									</button>
+								)}
+							</div>
 						)}
 					</div>
 				</div>
@@ -423,8 +519,14 @@ const Home = () => {
 									</div>
 									<div>
 										<span className="text-gray-400">状态: </span>
-										<span className={modalUser.status === "plain" ? "text-green-400" : "text-red-400"}>
-											{modalUser.status === "plain" ? "活跃" : "非活跃"}
+										<span className={
+											modalUser.status === "plain" ? "text-green-400" : 
+											modalUser.status === "deleted" ? "text-gray-400" : 
+											"text-red-400"
+										}>
+											{modalUser.status === "plain" ? "活跃" : 
+											 modalUser.status === "deleted" ? "已禁用" : 
+											 "非活跃"}
 										</span>
 									</div>
 									<div>
@@ -573,7 +675,7 @@ const Home = () => {
 							</div>
 
 							{/* 操作按钮区域 */}
-							<div className="flex space-x-4 pt-4 border-t border-gray-700">
+							<div className="flex flex-wrap gap-3 pt-4 border-t border-gray-700">
 								<button 
 									className={`${styles.button} ${styles.buttonPrimary}`}
 									onClick={() => {
@@ -584,15 +686,38 @@ const Home = () => {
 									编辑用户
 								</button>
 								{modalUser.role !== "admin" && (
-									<button 
-										className={`${styles.button} ${styles.buttonDanger}`}
-										onClick={() => {
-											closeUserModal();
-											deleteUser(modalUser);
-										}}
-									>
-										删除用户
-									</button>
+									<>
+										{modalUser.status === "deleted" ? (
+											<button 
+												className={`${styles.button} ${styles.buttonSuccess}`}
+												onClick={() => {
+													closeUserModal();
+													enableUser(modalUser);
+												}}
+											>
+												启用用户
+											</button>
+										) : (
+											<button 
+												className={`${styles.button} ${styles.buttonWarning}`}
+												onClick={() => {
+													closeUserModal();
+													disableUser(modalUser);
+												}}
+											>
+												禁用用户
+											</button>
+										)}
+										<button 
+											className={`${styles.button} ${styles.buttonDanger}`}
+											onClick={() => {
+												closeUserModal();
+												deleteUser(modalUser);
+											}}
+										>
+											删除用户
+										</button>
+									</>
 								)}
 								<button 
 									className={`${styles.button} ${styles.buttonSecondary}`}
@@ -728,6 +853,7 @@ const Home = () => {
 				>
 					<option value="all">所有状态</option>
 					<option value="plain">在线</option>
+					<option value="deleted">已禁用</option>
 					<option value="offline">离线</option>
 				</select>
 
