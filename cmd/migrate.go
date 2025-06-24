@@ -269,7 +269,7 @@ func migrateSubscriptionNodesData(batchSize int, skipExisting bool, stats *model
 	postgresDB := database.GetPostgresDB()
 
 	// 获取MongoDB集合
-	subNodesCol := database.OpenCollection(mongoClient, "subscritption_nodes")
+	subNodesCol := database.OpenCollection(mongoClient, "subscription_nodes")
 
 	// 查询所有记录
 	ctx := context.Background()

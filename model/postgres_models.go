@@ -59,25 +59,6 @@ func (NodeTrafficLogsPG) TableName() string {
 	return "node_traffic_logs"
 }
 
-// PostgreSQL版本的Domain模型 - 完全关系化设计
-// type DomainPG struct {
-// 	ID           uuid.UUID `json:"id" gorm:"type:uuid;primary_key;default:gen_random_uuid()"`
-// 	Type         string    `json:"type" gorm:"type:varchar(50);check:type IN ('vmesstls','vmessws','reality','hysteria2','vlessCDN');not null"`
-// 	Remark       string    `json:"remark"`
-// 	Domain       string    `json:"domain" gorm:"not null;index"`
-// 	IP           string    `json:"ip" gorm:"type:inet"`
-// 	SNI          string    `json:"sni"`
-// 	UUID         string    `json:"uuid" gorm:"index"`
-// 	Path         string    `json:"path"`
-// 	ServerPort   string    `json:"server_port"`
-// 	Password     string    `json:"password"`
-// 	PublicKey    string    `json:"public_key"`
-// 	ShortID      string    `json:"short_id"`
-// 	EnableOpenai bool      `json:"enable_openai" gorm:"default:false"`
-// 	CreatedAt    time.Time `json:"created_at"`
-// 	UpdatedAt    time.Time `json:"updated_at"`
-// }
-
 // 时间序列数据的结构定义 - 用于JSONB字段
 type TrafficLogEntry struct {
 	Timestamp time.Time `json:"timestamp"`
@@ -231,5 +212,5 @@ type SubscriptionNodePG struct {
 
 // 为PostgreSQL表设置表名
 func (SubscriptionNodePG) TableName() string {
-	return "subscritption_nodes"
+	return "subscription_nodes"
 }

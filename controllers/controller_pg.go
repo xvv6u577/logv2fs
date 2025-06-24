@@ -283,7 +283,6 @@ func GetAllUsersPG() gin.HandlerFunc {
 		db := database.GetPostgresDB()
 		var users []model.UserTrafficLogsPG
 
-		// 使用原始SQL查询替代GORM的高级API，避免prepared statement缓存问题
 		// 查询所有用户，只选择需要的字段
 		query := `SELECT email_as_id, uuid, name, role, status, used, updated_at, daily_logs, monthly_logs, yearly_logs 
 				  FROM user_traffic_logs`
@@ -347,7 +346,6 @@ func GetUserByNamePG() gin.HandlerFunc {
 		db := database.GetPostgresDB()
 		var user model.UserTrafficLogsPG
 
-		// 使用原始SQL查询替代GORM的高级API，避免prepared statement缓存问题
 		query := `SELECT email_as_id, used, uuid, name, status, role, credit, daily_logs, monthly_logs, yearly_logs, created_at, updated_at
 				  FROM user_traffic_logs
 				  WHERE email_as_id = ?`

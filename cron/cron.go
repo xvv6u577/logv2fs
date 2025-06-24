@@ -24,7 +24,6 @@ type (
 	// PostgreSQL相关类型别名
 	UserTrafficLogsPG = model.UserTrafficLogsPG
 	NodeTrafficLogsPG = model.NodeTrafficLogsPG
-	TrafficLogEntry   = model.TrafficLogEntry
 	DailyLogEntry     = model.DailyLogEntry
 	MonthlyLogEntry   = model.MonthlyLogEntry
 	YearlyLogEntry    = model.YearlyLogEntry
@@ -33,8 +32,6 @@ type (
 var (
 	currentDomain = os.Getenv("CURRENT_DOMAIN")
 	// MongoDB 集合
-	// userCollection = database.OpenCollection(database.Client, "USERS")
-	// nodesCollection = database.OpenCollection(database.Client, "NODES")
 	nodeTrafficLogs = database.OpenCollection(database.Client, "NODE_TRAFFIC_LOGS")
 	userTrafficLogs = database.OpenCollection(database.Client, "USER_TRAFFIC_LOGS")
 )
@@ -74,12 +71,10 @@ func LogUserTrafficPG(db *gorm.DB, email string, timestamp time.Time, traffic in
 		}
 
 		// 初始化日志数组
-		hourlyLogs, _ := json.Marshal([]TrafficLogEntry{{Timestamp: timestamp, Traffic: traffic}})
 		dailyLogs, _ := json.Marshal([]DailyLogEntry{{Date: date, Traffic: traffic}})
 		monthlyLogs, _ := json.Marshal([]MonthlyLogEntry{{Month: month, Traffic: traffic}})
 		yearlyLogs, _ := json.Marshal([]YearlyLogEntry{{Year: year, Traffic: traffic}})
 
-		userLog.HourlyLogs = datatypes.JSON(hourlyLogs)
 		userLog.DailyLogs = datatypes.JSON(dailyLogs)
 		userLog.MonthlyLogs = datatypes.JSON(monthlyLogs)
 		userLog.YearlyLogs = datatypes.JSON(yearlyLogs)
@@ -88,19 +83,13 @@ func LogUserTrafficPG(db *gorm.DB, email string, timestamp time.Time, traffic in
 	}
 
 	// 更新现有记录
-	// 解析现有的日志数据
-	var hourlyLogs []TrafficLogEntry
 	var dailyLogs []DailyLogEntry
 	var monthlyLogs []MonthlyLogEntry
 	var yearlyLogs []YearlyLogEntry
 
-	json.Unmarshal([]byte(userLog.HourlyLogs), &hourlyLogs)
 	json.Unmarshal([]byte(userLog.DailyLogs), &dailyLogs)
 	json.Unmarshal([]byte(userLog.MonthlyLogs), &monthlyLogs)
 	json.Unmarshal([]byte(userLog.YearlyLogs), &yearlyLogs)
-
-	// 添加小时级记录
-	hourlyLogs = append(hourlyLogs, TrafficLogEntry{Timestamp: timestamp, Traffic: traffic})
 
 	// 更新或创建日级记录
 	found := false
@@ -142,7 +131,6 @@ func LogUserTrafficPG(db *gorm.DB, email string, timestamp time.Time, traffic in
 	}
 
 	// 将更新后的数据转换为JSON
-	hourlyJSON, _ := json.Marshal(hourlyLogs)
 	dailyJSON, _ := json.Marshal(dailyLogs)
 	monthlyJSON, _ := json.Marshal(monthlyLogs)
 	yearlyJSON, _ := json.Marshal(yearlyLogs)
@@ -151,7 +139,6 @@ func LogUserTrafficPG(db *gorm.DB, email string, timestamp time.Time, traffic in
 	return db.Model(&userLog).Updates(map[string]interface{}{
 		"used":         gorm.Expr("used + ?", traffic),
 		"updated_at":   timestamp,
-		"hourly_logs":  datatypes.JSON(hourlyJSON),
 		"daily_logs":   datatypes.JSON(dailyJSON),
 		"monthly_logs": datatypes.JSON(monthlyJSON),
 		"yearly_logs":  datatypes.JSON(yearlyJSON),
@@ -186,12 +173,10 @@ func LogNodeTrafficPG(db *gorm.DB, domain string, timestamp time.Time, traffic i
 		}
 
 		// 初始化日志数组
-		hourlyLogs, _ := json.Marshal([]TrafficLogEntry{{Timestamp: timestamp, Traffic: traffic}})
 		dailyLogs, _ := json.Marshal([]DailyLogEntry{{Date: date, Traffic: traffic}})
 		monthlyLogs, _ := json.Marshal([]MonthlyLogEntry{{Month: month, Traffic: traffic}})
 		yearlyLogs, _ := json.Marshal([]YearlyLogEntry{{Year: year, Traffic: traffic}})
 
-		nodeLog.HourlyLogs = datatypes.JSON(hourlyLogs)
 		nodeLog.DailyLogs = datatypes.JSON(dailyLogs)
 		nodeLog.MonthlyLogs = datatypes.JSON(monthlyLogs)
 		nodeLog.YearlyLogs = datatypes.JSON(yearlyLogs)
@@ -199,19 +184,14 @@ func LogNodeTrafficPG(db *gorm.DB, domain string, timestamp time.Time, traffic i
 		return db.Create(&nodeLog).Error
 	}
 
-	// 更新现有记录 - 类似用户记录的逻辑
-	var hourlyLogs []TrafficLogEntry
+	// 更新现有记录
 	var dailyLogs []DailyLogEntry
 	var monthlyLogs []MonthlyLogEntry
 	var yearlyLogs []YearlyLogEntry
 
-	json.Unmarshal([]byte(nodeLog.HourlyLogs), &hourlyLogs)
 	json.Unmarshal([]byte(nodeLog.DailyLogs), &dailyLogs)
 	json.Unmarshal([]byte(nodeLog.MonthlyLogs), &monthlyLogs)
 	json.Unmarshal([]byte(nodeLog.YearlyLogs), &yearlyLogs)
-
-	// 添加小时级记录
-	hourlyLogs = append(hourlyLogs, TrafficLogEntry{Timestamp: timestamp, Traffic: traffic})
 
 	// 更新或创建日级记录
 	found := false
@@ -253,7 +233,6 @@ func LogNodeTrafficPG(db *gorm.DB, domain string, timestamp time.Time, traffic i
 	}
 
 	// 将更新后的数据转换为JSON
-	hourlyJSON, _ := json.Marshal(hourlyLogs)
 	dailyJSON, _ := json.Marshal(dailyLogs)
 	monthlyJSON, _ := json.Marshal(monthlyLogs)
 	yearlyJSON, _ := json.Marshal(yearlyLogs)
@@ -261,7 +240,6 @@ func LogNodeTrafficPG(db *gorm.DB, domain string, timestamp time.Time, traffic i
 	// 更新数据库记录
 	return db.Model(&nodeLog).Updates(map[string]interface{}{
 		"updated_at":   timestamp,
-		"hourly_logs":  datatypes.JSON(hourlyJSON),
 		"daily_logs":   datatypes.JSON(dailyJSON),
 		"monthly_logs": datatypes.JSON(monthlyJSON),
 		"yearly_logs":  datatypes.JSON(yearlyJSON),
@@ -461,7 +439,8 @@ func LogNodeTraffic(collection *mongo.Collection, domain string, timestamp time.
 func Cron_loggingJobs(c *cron.Cron, instance *box.Box) {
 
 	// cron job by 15 mins - 支持MongoDB和PostgreSQL两种数据库
-	c.AddFunc("0 */15 * * * *", func() {
+	// c.AddFunc("0 */15 * * * *", func() {
+	c.AddFunc("0 */1 * * * *", func() {
 
 		timesteamp := time.Now().Local()
 		usageData, err := thirdparty.UsageDataOfAll(instance)

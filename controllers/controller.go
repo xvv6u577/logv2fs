@@ -30,7 +30,7 @@ import (
 )
 
 var (
-	subNodesCol          *mongo.Collection = database.OpenCollection(database.Client, "subscritption_nodes")
+	subNodesCol          *mongo.Collection = database.OpenCollection(database.Client, "subscription_nodes")
 	expiryCheckDomainCol *mongo.Collection = database.OpenCollection(database.Client, "expiry_check_domains")
 	nodeTrafficLogsCol                     = database.OpenCollection(database.Client, "NODE_TRAFFIC_LOGS")
 	userTrafficLogsCol                     = database.OpenCollection(database.Client, "USER_TRAFFIC_LOGS")

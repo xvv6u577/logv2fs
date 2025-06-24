@@ -33,18 +33,13 @@ func InitPostgreSQL() *gorm.DB {
 		log.Fatal("环境变量 postgresURI 未设置")
 	}
 
-	// 最终解决方案：在DSN中强制禁用prepared statement缓存
 	dsn := postgresURI
 	paramSeparator := "?"
 	if strings.Contains(dsn, "?") {
 		paramSeparator = "&"
 	}
 
-	// 强制pgx驱动使用简单协议，彻底禁用prepared statements
-	// See: https://github.com/jackc/pgx/issues/634
 	dsn += paramSeparator + "default_query_exec_mode=simple_protocol"
-
-	log.Printf("使用DSN连接PostgreSQL（已禁用Prepared Statement）")
 
 	// 连接PostgreSQL
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
@@ -73,7 +68,7 @@ func InitPostgreSQL() *gorm.DB {
 		log.Fatalf("PostgreSQL连接测试失败: %v", err)
 	}
 
-	log.Println("PostgreSQL连接成功，已强制禁用Prepared Statement")
+	log.Println("PostgreSQL连接成功")
 
 	PostgresDB = db
 
@@ -83,7 +78,6 @@ func InitPostgreSQL() *gorm.DB {
 // GetPostgresDB 获取PostgreSQL数据库实例
 func GetPostgresDB() *gorm.DB {
 	if PostgresDB == nil {
-		log.Println("初始化新的PostgreSQL连接...")
 		PostgresDB = InitPostgreSQL()
 	}
 	return PostgresDB
