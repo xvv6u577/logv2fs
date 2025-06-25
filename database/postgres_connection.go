@@ -3,6 +3,7 @@ package database
 import (
 	"fmt"
 	"log"
+	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -15,12 +16,29 @@ import (
 
 var PostgresDB *gorm.DB
 
-// InitPostgreSQL 初始化PostgreSQL连接
-func InitPostgreSQL() *gorm.DB {
+// getLogLevel 根据 GIN_MODE 环境变量返回对应的日志级别
+func getLogLevel() logger.LogLevel {
+	ginMode := os.Getenv("GIN_MODE")
+
+	switch ginMode {
+	case "debug":
+		return logger.Info // 开发环境，显示详细日志
+	case "release":
+		return logger.Error // 生产环境，只显示错误信息
+	case "test":
+		return logger.Silent // 测试环境，静默模式
+	default:
+		// 默认情况下使用 Info 级别
+		return logger.Info
+	}
+}
+
+// 从URI获取PostgreSQL连接参数
+func getConnectionParamsFromURI(connectToSystemDB bool) (string, string, error) {
 	// 加载环境变量
 	pwd, err := os.Getwd()
 	if err != nil {
-		log.Panic("获取工作目录失败: ", err)
+		return "", "", fmt.Errorf("获取工作目录失败: %v", err)
 	}
 
 	if err := godotenv.Load(pwd + "/.env"); err != nil {
@@ -30,20 +48,50 @@ func InitPostgreSQL() *gorm.DB {
 	// 从环境变量获取PostgreSQL连接URI
 	postgresURI := os.Getenv("postgresURI")
 	if postgresURI == "" {
-		log.Fatal("环境变量 postgresURI 未设置")
+		return "", "", fmt.Errorf("环境变量 postgresURI 未设置")
 	}
 
-	dsn := postgresURI
+	// 解析 postgresURI 来获取连接信息
+	parsedURL, err := url.Parse(postgresURI)
+	if err != nil {
+		return "", "", fmt.Errorf("解析 postgresURI 失败: %v", err)
+	}
+
+	// 提取目标数据库名
+	targetDBName := strings.TrimPrefix(parsedURL.Path, "/")
+	if targetDBName == "" {
+		targetDBName = "logv2fs" // 默认数据库名
+	}
+
+	// 如果需要连接到系统数据库，则修改路径
+	if connectToSystemDB {
+		parsedURL.Path = "/postgres"
+	}
+
+	// 构建DSN
+	dsn := parsedURL.String()
+
+	// 添加查询参数
 	paramSeparator := "?"
 	if strings.Contains(dsn, "?") {
 		paramSeparator = "&"
 	}
-
 	dsn += paramSeparator + "default_query_exec_mode=simple_protocol"
 
-	// 连接PostgreSQL
+	return dsn, targetDBName, nil
+}
+
+// InitPostgreSQL 初始化PostgreSQL连接
+func InitPostgreSQL() *gorm.DB {
+	// 获取连接参数
+	dsn, _, err := getConnectionParamsFromURI(false)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// 连接PostgreSQL - 使用动态日志级别
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
-		Logger:                                   logger.Default.LogMode(logger.Info),
+		Logger:                                   logger.Default.LogMode(getLogLevel()),
 		DisableForeignKeyConstraintWhenMigrating: false,
 	})
 
@@ -99,29 +147,16 @@ func ClosePostgreSQL() {
 	}
 }
 
-// getEnvOrDefault 获取环境变量，如果不存在则使用默认值
-func getEnvOrDefault(key, defaultValue string) string {
-	if value := os.Getenv(key); value != "" {
-		return value
-	}
-	return defaultValue
-}
-
 // CreateDatabaseIfNotExists 创建数据库（如果不存在）
 func CreateDatabaseIfNotExists() error {
-	// 连接到postgres数据库来创建目标数据库
-	host := getEnvOrDefault("POSTGRES_HOST", "localhost")
-	port := getEnvOrDefault("POSTGRES_PORT", "5432")
-	username := getEnvOrDefault("POSTGRES_USER", "postgres")
-	password := getEnvOrDefault("POSTGRES_PASSWORD", "")
-	sslmode := getEnvOrDefault("POSTGRES_SSLMODE", "disable")
-	dbname := getEnvOrDefault("POSTGRES_DB", "logv2fs")
+	// 获取连接参数
+	postgresDSN, targetDBName, err := getConnectionParamsFromURI(true)
+	if err != nil {
+		return err
+	}
 
-	// 先连接到postgres数据库
-	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=postgres port=%s sslmode=%s",
-		host, username, password, port, sslmode)
-
-	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
+	// 连接到 postgres 数据库
+	db, err := gorm.Open(postgres.Open(postgresDSN), &gorm.Config{
 		Logger: logger.Default.LogMode(logger.Silent),
 	})
 	if err != nil {
@@ -130,20 +165,20 @@ func CreateDatabaseIfNotExists() error {
 
 	// 检查目标数据库是否存在，如果不存在则创建
 	var count int64
-	err = db.Raw("SELECT COUNT(*) FROM pg_database WHERE datname = ?", dbname).Scan(&count).Error
+	err = db.Raw("SELECT COUNT(*) FROM pg_database WHERE datname = ?", targetDBName).Scan(&count).Error
 	if err != nil {
 		return fmt.Errorf("检查数据库是否存在失败: %v", err)
 	}
 
 	if count == 0 {
 		// 创建数据库
-		err = db.Exec(fmt.Sprintf("CREATE DATABASE %s", dbname)).Error
+		err = db.Exec(fmt.Sprintf("CREATE DATABASE %s", targetDBName)).Error
 		if err != nil {
 			return fmt.Errorf("创建数据库失败: %v", err)
 		}
-		log.Printf("数据库 %s 创建成功", dbname)
+		log.Printf("数据库 %s 创建成功", targetDBName)
 	} else {
-		log.Printf("数据库 %s 已存在", dbname)
+		log.Printf("数据库 %s 已存在", targetDBName)
 	}
 
 	// 关闭连接

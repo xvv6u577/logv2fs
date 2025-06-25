@@ -439,8 +439,7 @@ func LogNodeTraffic(collection *mongo.Collection, domain string, timestamp time.
 func Cron_loggingJobs(c *cron.Cron, instance *box.Box) {
 
 	// cron job by 15 mins - 支持MongoDB和PostgreSQL两种数据库
-	// c.AddFunc("0 */15 * * * *", func() {
-	c.AddFunc("0 */1 * * * *", func() {
+	c.AddFunc("0 */15 * * * *", func() {
 
 		timesteamp := time.Now().Local()
 		usageData, err := thirdparty.UsageDataOfAll(instance)

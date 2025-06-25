@@ -31,3 +31,4 @@ logv2fs
 docker-compose.yml
 Dockerfile
 TODO.MD
+.cursorignore.temp
