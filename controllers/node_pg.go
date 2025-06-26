@@ -343,10 +343,17 @@ func UpdateExpiryCheckDomainsInfoPG() gin.HandlerFunc {
 		// 更新或创建域名
 		for _, domainInfo := range domainOfWebForm {
 			var expiryDomain model.ExpiryCheckDomainInfoPG
-			query := `SELECT * FROM "expiry_check_domains" WHERE domain = $1 LIMIT 1`
-			result := db.Raw(query, domainInfo.Domain).Scan(&expiryDomain)
+			var count int64
 
-			if result.Error != nil {
+			// 首先检查域名是否存在
+			if err := db.Model(&model.ExpiryCheckDomainInfoPG{}).Where("domain = ?", domainInfo.Domain).Count(&count).Error; err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				log.Printf("检查域名是否存在失败: %v", err)
+				return
+			}
+
+			// 明确判断是否需要创建新记录
+			if count == 0 {
 				// 如果不存在，则创建新记录
 				expiryDomain = model.ExpiryCheckDomainInfoPG{
 					ID:           uuid.New(),
@@ -358,37 +365,26 @@ func UpdateExpiryCheckDomainsInfoPG() gin.HandlerFunc {
 					UpdatedAt:    time.Now(),
 				}
 
-				// 使用原始SQL插入新记录
-				query := `INSERT INTO "expiry_check_domains" 
-						(id, domain, remark, expired_date, days_to_expire, created_at, updated_at) 
-						VALUES ($1, $2, $3, $4, $5, $6, $7)`
-				if err := db.Exec(query,
-					expiryDomain.ID,
-					expiryDomain.Domain,
-					expiryDomain.Remark,
-					expiryDomain.ExpiredDate,
-					expiryDomain.DaysToExpire,
-					expiryDomain.CreatedAt,
-					expiryDomain.UpdatedAt).Error; err != nil {
+				// 使用GORM的Create方法插入新记录
+				if err := db.Create(&expiryDomain).Error; err != nil {
 					c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-					log.Printf("Create domain error: %v", err)
+					log.Printf("创建域名记录失败 (域名: %s): %v", domainInfo.Domain, err)
 					return
 				}
+				log.Printf("✅ 成功创建新域名记录: %s (%s)", domainInfo.Domain, domainInfo.Remark)
 			} else {
-				// 如果存在，则使用原始SQL更新记录
-				updateQuery := `UPDATE "expiry_check_domains" 
-							   SET remark = $1, expired_date = $2, days_to_expire = $3, updated_at = $4
-							   WHERE domain = $5`
-				if err := db.Exec(updateQuery,
-					domainInfo.Remark,
-					domainInfo.ExpiredDate,
-					domainInfo.DaysToExpire,
-					time.Now(),
-					domainInfo.Domain).Error; err != nil {
+				// 如果存在，则使用GORM的Updates方法更新记录
+				if err := db.Model(&model.ExpiryCheckDomainInfoPG{}).Where("domain = ?", domainInfo.Domain).Updates(map[string]interface{}{
+					"remark":         domainInfo.Remark,
+					"expired_date":   domainInfo.ExpiredDate,
+					"days_to_expire": domainInfo.DaysToExpire,
+					"updated_at":     time.Now(),
+				}).Error; err != nil {
 					c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-					log.Printf("Update domain error: %v", err)
+					log.Printf("更新域名记录失败 (域名: %s): %v", domainInfo.Domain, err)
 					return
 				}
+				log.Printf("✅ 成功更新域名记录: %s (%s)", domainInfo.Domain, domainInfo.Remark)
 			}
 
 			domainsToKeep = append(domainsToKeep, domainInfo.Domain)
