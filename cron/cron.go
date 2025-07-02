@@ -268,7 +268,7 @@ func LogUserTraffic(collection *mongo.Collection, email string, timestamp time.T
 	update := bson.M{
 		"$set": bson.M{
 			"updated_at": time.Now(),
-			"used":       gorm.Expr("used + ?", traffic),
+			"used":       beforeUpdate.Used + traffic,
 		},
 		"$inc":  bson.M{},
 		"$push": bson.M{},
