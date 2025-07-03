@@ -14,6 +14,8 @@ const Home = () => {
 	const [editModalOpen, setEditModalOpen] = useState(false);
 	const [editingUser, setEditingUser] = useState(null);
 	const [editForm, setEditForm] = useState({ name: "", role: "" });
+	const [userPayments, setUserPayments] = useState([]);
+	const [paymentLoading, setPaymentLoading] = useState(false);
 
 	const dispatch = useDispatch();
 	const loginState = useSelector((state) => state.login);
@@ -294,14 +296,46 @@ const Home = () => {
 		}
 	};
 
+	// 获取用户缴费记录
+	const fetchUserPayments = (userEmail) => {
+		setPaymentLoading(true);
+		axios
+			.get(`${process.env.REACT_APP_API_HOST}payment/user/${userEmail}`, {
+				headers: { token: loginState.token },
+			})
+			.then((response) => {
+				setUserPayments(response.data.payments || []);
+			})
+			.catch((err) => {
+				setUserPayments([]);
+				if (err.response && err.response.status !== 404) {
+					dispatch(alert({ show: true, content: err.response.data.error || "获取缴费记录失败", type: "error" }));
+				}
+			})
+			.finally(() => {
+				setPaymentLoading(false);
+			});
+	};
+
+	// 格式化金额
+	const formatCurrency = (amount) => {
+		return new Intl.NumberFormat('zh-CN', {
+			style: 'currency',
+			currency: 'CNY',
+		}).format(amount);
+	};
+
 	// 打开用户详情模态框
 	const openUserModal = (user) => {
 		setModalUser(user);
+		setUserPayments([]);
+		fetchUserPayments(user.email_as_id);
 	};
 
 	// 关闭用户详情模态框
 	const closeUserModal = () => {
 		setModalUser(null);
+		setUserPayments([]);
 	};
 
 	// 重置所有过滤条件
@@ -471,7 +505,7 @@ const Home = () => {
 				close={() => { dispatch(reset({})); }} 
 			/>
 
-						{/* 用户详情模态框 */}
+			{/* 用户详情模态框 */}
 			{modalUser && (
 				<div 
 					className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
@@ -552,54 +586,75 @@ const Home = () => {
 								</div>
 							</div>
 
-							{/* 订阅链接 */}
+							{/* 缴费记录部分 */}
 							<div>
-								<h4 className="text-lg font-medium text-gray-300 mb-4">订阅链接</h4>
-								<div className="space-y-3">
-									{/* Shadowrocket/Surge 订阅 */}
-									<div className="flex items-center justify-between p-3 bg-gray-700 rounded-lg">
-										<div>
-											<span className="text-white font-medium">Shadowrocket/Surge 订阅</span>
-											<p className="text-gray-400 text-sm mt-1">适用于 iOS Shadowrocket 和 Surge</p>
+								<h4 className="text-lg font-medium text-gray-300 mb-4">缴费记录</h4>
+								<div className="bg-gray-700 rounded-lg overflow-hidden">
+									{paymentLoading ? (
+										<div className="p-4 text-center text-gray-400">
+											<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-2"></div>
+											<p>加载缴费记录中...</p>
 										</div>
-										<button
-											onClick={() => copyToClipboard(process.env.REACT_APP_FILE_AND_SUB_URL + "/static/" + modalUser.email_as_id)}
-											className={`${styles.button} ${styles.buttonPrimary} text-xs`}
-											title="复制订阅链接"
-										>
-											复制链接
-										</button>
-									</div>
-
-									{/* Verge 订阅 */}
-									<div className="flex items-center justify-between p-3 bg-gray-700 rounded-lg">
+									) : userPayments.length > 0 ? (
 										<div>
-											<span className="text-white font-medium">Verge 订阅</span>
-											<p className="text-gray-400 text-sm mt-1">适用于 Verge 客户端</p>
+											{/* 缴费汇总 */}
+											<div className="p-4 bg-gray-600">
+												<div className="grid grid-cols-3 gap-4 text-center">
+													<div>
+														<p className="text-gray-400 text-sm">总缴费金额</p>
+														<p className="text-xl font-bold text-green-400">
+															{formatCurrency(userPayments.reduce((sum, p) => sum + p.amount, 0))}
+														</p>
+													</div>
+													<div>
+														<p className="text-gray-400 text-sm">缴费次数</p>
+														<p className="text-xl font-bold text-blue-400">{userPayments.length}</p>
+													</div>
+													<div>
+														<p className="text-gray-400 text-sm">最近缴费</p>
+														<p className="text-sm text-white">
+															{userPayments[0] ? new Date(userPayments[0].start_date).toLocaleDateString('zh-CN') : '-'}
+														</p>
+													</div>
+												</div>
+											</div>
+											{/* 缴费记录列表 */}
+											<div className="max-h-64 overflow-y-auto">
+												<table className="w-full text-sm">
+													<thead className="bg-gray-600 sticky top-0">
+														<tr>
+															<th className="px-4 py-2 text-left">服务期间</th>
+															<th className="px-4 py-2 text-right">金额</th>
+															<th className="px-4 py-2 text-left">备注</th>
+														</tr>
+													</thead>
+													<tbody>
+														{userPayments.map((payment, idx) => {
+															const startDate = new Date(payment.start_date);
+															const endDate = new Date(payment.end_date);
+															return (
+																<tr key={payment._id || payment.id || idx} className="border-t border-gray-600">
+																	<td className="px-4 py-2">
+																		{startDate.toLocaleDateString('zh-CN')} ~ {endDate.toLocaleDateString('zh-CN')}
+																	</td>
+																	<td className="px-4 py-2 text-right font-mono text-green-400">
+																		{formatCurrency(payment.amount)}
+																	</td>
+																	<td className="px-4 py-2 text-gray-400">
+																		{payment.remark || '-'}
+																	</td>
+																</tr>
+															);
+														})}
+													</tbody>
+												</table>
+											</div>
 										</div>
-										<button
-											onClick={() => copyToClipboard(process.env.REACT_APP_FILE_AND_SUB_URL + "/verge/" + modalUser.email_as_id)}
-											className={`${styles.button} ${styles.buttonPrimary} text-xs`}
-											title="复制订阅链接"
-										>
-											复制链接
-										</button>
-									</div>
-
-									{/* Sing-box 订阅 */}
-									<div className="flex items-center justify-between p-3 bg-gray-700 rounded-lg">
-										<div>
-											<span className="text-white font-medium">Sing-box 订阅</span>
-											<p className="text-gray-400 text-sm mt-1">适用于 Sing-box 客户端</p>
+									) : (
+										<div className="p-4 text-center text-gray-400">
+											暂无缴费记录
 										</div>
-										<button
-											onClick={() => copyToClipboard(process.env.REACT_APP_FILE_AND_SUB_URL + "/singbox/" + modalUser.email_as_id)}
-											className={`${styles.button} ${styles.buttonPrimary} text-xs`}
-											title="复制订阅链接"
-										>
-											复制链接
-										</button>
-									</div>
+									)}
 								</div>
 							</div>
 
@@ -670,6 +725,57 @@ const Home = () => {
 												暂无日流量数据
 											</div>
 										)}
+									</div>
+								</div>
+							</div>
+
+							{/* 订阅链接 */}
+							<div>
+								<h4 className="text-lg font-medium text-gray-300 mb-4">订阅链接</h4>
+								<div className="space-y-3">
+									{/* Shadowrocket/Surge 订阅 */}
+									<div className="flex items-center justify-between p-3 bg-gray-700 rounded-lg">
+										<div>
+											<span className="text-white font-medium">Shadowrocket/Surge 订阅</span>
+											<p className="text-gray-400 text-sm mt-1">适用于 iOS Shadowrocket 和 Surge</p>
+										</div>
+										<button
+											onClick={() => copyToClipboard(process.env.REACT_APP_FILE_AND_SUB_URL + "/static/" + modalUser.email_as_id)}
+											className={`${styles.button} ${styles.buttonPrimary} text-xs`}
+											title="复制订阅链接"
+										>
+											复制链接
+										</button>
+									</div>
+
+									{/* Verge 订阅 */}
+									<div className="flex items-center justify-between p-3 bg-gray-700 rounded-lg">
+										<div>
+											<span className="text-white font-medium">Verge 订阅</span>
+											<p className="text-gray-400 text-sm mt-1">适用于 Verge 客户端</p>
+										</div>
+										<button
+											onClick={() => copyToClipboard(process.env.REACT_APP_FILE_AND_SUB_URL + "/verge/" + modalUser.email_as_id)}
+											className={`${styles.button} ${styles.buttonPrimary} text-xs`}
+											title="复制订阅链接"
+										>
+											复制链接
+										</button>
+									</div>
+
+									{/* Sing-box 订阅 */}
+									<div className="flex items-center justify-between p-3 bg-gray-700 rounded-lg">
+										<div>
+											<span className="text-white font-medium">Sing-box 订阅</span>
+											<p className="text-gray-400 text-sm mt-1">适用于 Sing-box 客户端</p>
+										</div>
+										<button
+											onClick={() => copyToClipboard(process.env.REACT_APP_FILE_AND_SUB_URL + "/singbox/" + modalUser.email_as_id)}
+											className={`${styles.button} ${styles.buttonPrimary} text-xs`}
+											title="复制订阅链接"
+										>
+											复制链接
+										</button>
 									</div>
 								</div>
 							</div>
@@ -789,18 +895,18 @@ const Home = () => {
 
 						{/* 按钮区域 */}
 						<div className="flex space-x-4 mt-6">
-				<button
+							<button
 								onClick={submitEditUser}
 								className={`${styles.button} ${styles.buttonPrimary} flex-1`}
 							>
 								保存
-				</button>
-				<button
+							</button>
+							<button
 								onClick={closeEditModal}
 								className={`${styles.button} ${styles.buttonSecondary} flex-1`}
 							>
 								取消
-				</button>
+							</button>
 						</div>
 					</div>
 				</div>

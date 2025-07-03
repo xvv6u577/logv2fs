@@ -13,6 +13,8 @@ import Footer from "./components/footer";
 import Mypanel from "./components/mypanel";
 import Nodes from "./components/nodes";
 import AddNode from "./components/addNode";
+import PaymentInput from "./components/paymentInput";
+import PaymentStatistics from "./components/paymentStatistics";
 
 function RequireAuth({ children }) {
 	const loginState = useSelector((state) => state.login);
@@ -112,6 +114,28 @@ function App() {
 							<Menu />
 							<div className="flex-1">
 								<Android />
+							</div>
+							<Footer />
+						</div>
+					</RequireAuth>
+				} />
+				<Route path="/paymentinput" element={
+					<RequireAuth>
+						<div className="min-h-screen bg-gray-900 flex flex-col">
+							<Menu />
+							<div className="flex-1">
+								<PaymentInput />
+							</div>
+							<Footer />
+						</div>
+					</RequireAuth>
+				} />
+				<Route path="/paymentstatistics" element={
+					<RequireAuth>
+						<div className="min-h-screen bg-gray-900 flex flex-col">
+							<Menu />
+							<div className="flex-1">
+								<PaymentStatistics />
 							</div>
 							<Footer />
 						</div>

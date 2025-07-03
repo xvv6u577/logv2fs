@@ -23,6 +23,8 @@ func PublicRoutes(incomingRoutes *gin.Engine) {
 		"/android",
 		"/nodes",
 		"/addnode",
+		"/paymentinput",      // 添加缴费记录页面
+		"/paymentstatistics", // 费用统计页面
 		"/",
 	}
 	for _, route := range frontendRoutes {

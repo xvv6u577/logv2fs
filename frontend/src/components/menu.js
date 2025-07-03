@@ -23,6 +23,8 @@ const Menu = () => {
 							<a className="mr-5 hover:text-white" href="/home">User</a>
 							<a className="mr-5 hover:text-white" href="/nodes">Nodes</a>
 							<a className="mr-5 hover:text-white" href="/addnode">Add Node</a>
+							<a className="mr-5 hover:text-white" href="/paymentinput">Add Payment</a>
+							<a className="mr-5 hover:text-white" href="/paymentstatistics">Payment Stats</a>
 						</>
 					)}
 					<a className="mr-5 hover:text-white" href="/mypanel">My Panel</a>

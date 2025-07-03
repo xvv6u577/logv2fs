@@ -35,6 +35,13 @@ func AuthorizedRoutes(incomingRoutes *gin.Engine) {
 		incomingRoutes.PUT("/v1/g7302b", controller.UpdateExpiryCheckDomainsInfoPG())
 		incomingRoutes.GET("/v1/c47kr8", controller.GetSingboxNodesPG())
 		incomingRoutes.GET("/v1/t7k033", controller.GetActiveGlobalNodesPG())
+
+		// 费用管理相关路由 - PostgreSQL版本
+		incomingRoutes.POST("/v1/payment", controller.AddPaymentRecordPG())
+		incomingRoutes.GET("/v1/payment/user/:email", controller.GetUserPaymentsPG())
+		incomingRoutes.GET("/v1/payment/statistics", controller.GetPaymentStatisticsPG())
+		incomingRoutes.DELETE("/v1/payment/:id", controller.DeletePaymentRecordPG())
+		incomingRoutes.PUT("/v1/payment/:id", controller.UpdatePaymentRecordPG())
 	} else {
 		// MongoDB版本的路由
 		incomingRoutes.POST("/v1/signup", controller.SignUp())
@@ -49,5 +56,12 @@ func AuthorizedRoutes(incomingRoutes *gin.Engine) {
 		incomingRoutes.PUT("/v1/g7302b", controller.UpdateExpiryCheckDomainsInfo())
 		incomingRoutes.GET("/v1/c47kr8", controller.GetSingboxNodes())
 		incomingRoutes.GET("/v1/t7k033", controller.GetActiveGlobalNodes())
+
+		// 费用管理相关路由 - MongoDB版本
+		incomingRoutes.POST("/v1/payment", controller.AddPaymentRecord())
+		incomingRoutes.GET("/v1/payment/user/:email", controller.GetUserPayments())
+		incomingRoutes.GET("/v1/payment/statistics", controller.GetPaymentStatistics())
+		incomingRoutes.DELETE("/v1/payment/:id", controller.DeletePaymentRecord())
+		incomingRoutes.PUT("/v1/payment/:id", controller.UpdatePaymentRecord())
 	}
 }
