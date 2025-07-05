@@ -2,7 +2,7 @@ package cron
 
 import (
 	"context"
-	"encoding/json"
+	"fmt"
 	"log"
 	"os"
 	"time"
@@ -15,8 +15,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
-	"gorm.io/datatypes"
-	"gorm.io/gorm"
 )
 
 type (
@@ -28,6 +26,20 @@ type (
 	MonthlyLogEntry   = model.MonthlyLogEntry
 	YearlyLogEntry    = model.YearlyLogEntry
 )
+
+// UserTrafficRequest 定义调用 upsert_user_traffic_log 函数的请求参数
+type UserTrafficRequest struct {
+	Email     string    `json:"p_email"`
+	Timestamp time.Time `json:"p_timestamp"`
+	Traffic   int64     `json:"p_traffic"`
+}
+
+// NodeTrafficRequest 定义调用 upsert_node_traffic_log 函数的请求参数
+type NodeTrafficRequest struct {
+	Domain    string    `json:"p_domain"`
+	Timestamp time.Time `json:"p_timestamp"`
+	Traffic   int64     `json:"p_traffic"`
+}
 
 var (
 	currentDomain = os.Getenv("CURRENT_DOMAIN")
@@ -42,208 +54,73 @@ func isUsingPostgreSQL() bool {
 }
 
 // PostgreSQL版本的用户流量记录函数
-func LogUserTrafficPG(db *gorm.DB, email string, timestamp time.Time, traffic int64) error {
-	var date = timestamp.Format("20060102")
-	var month = timestamp.Format("200601")
-	var year = timestamp.Format("2006")
-
-	var userLog UserTrafficLogsPG
-
-	// 查找用户记录，如果不存在会在后续的Upsert中创建
-	result := db.Where("email_as_id = ?", email).First(&userLog)
-	if result.Error != nil && result.Error != gorm.ErrRecordNotFound {
-		log.Printf("查找用户流量记录失败: %v\n", result.Error)
-		return result.Error
+// 优化版本：使用 Supabase RPC 调用方式执行流量记录
+func LogUserTrafficPG(email string, timestamp time.Time, traffic int64) error {
+	// 获取 Supabase 客户端
+	supaClient := database.GetSupabaseClient()
+	if supaClient == nil {
+		log.Printf("Supabase 客户端初始化失败")
+		return fmt.Errorf("Supabase 客户端初始化失败")
 	}
 
-	isNewRecord := result.Error == gorm.ErrRecordNotFound
+	// 创建上下文
+	ctx := context.Background()
 
-	if isNewRecord {
-		// 创建新的用户记录
-		userLog = UserTrafficLogsPG{
-			EmailAsId: email,
-			Name:      email, // 默认使用email作为name
-			Status:    "plain",
-			Role:      "normal",
-			Used:      traffic,
-			CreatedAt: timestamp,
-			UpdatedAt: timestamp,
-		}
-
-		// 初始化日志数组
-		dailyLogs, _ := json.Marshal([]DailyLogEntry{{Date: date, Traffic: traffic}})
-		monthlyLogs, _ := json.Marshal([]MonthlyLogEntry{{Month: month, Traffic: traffic}})
-		yearlyLogs, _ := json.Marshal([]YearlyLogEntry{{Year: year, Traffic: traffic}})
-
-		userLog.DailyLogs = datatypes.JSON(dailyLogs)
-		userLog.MonthlyLogs = datatypes.JSON(monthlyLogs)
-		userLog.YearlyLogs = datatypes.JSON(yearlyLogs)
-
-		return db.Create(&userLog).Error
+	// 准备请求参数
+	userRequest := UserTrafficRequest{
+		Email:     email,
+		Timestamp: timestamp,
+		Traffic:   traffic,
 	}
 
-	// 更新现有记录
-	var dailyLogs []DailyLogEntry
-	var monthlyLogs []MonthlyLogEntry
-	var yearlyLogs []YearlyLogEntry
+	// 使用 Supabase RPC 方法调用 upsert_user_traffic_log 函数
+	rpcBuilder := supaClient.DB.RPC("upsert_user_traffic_log", userRequest)
 
-	json.Unmarshal([]byte(userLog.DailyLogs), &dailyLogs)
-	json.Unmarshal([]byte(userLog.MonthlyLogs), &monthlyLogs)
-	json.Unmarshal([]byte(userLog.YearlyLogs), &yearlyLogs)
-
-	// 更新或创建日级记录
-	found := false
-	for i := range dailyLogs {
-		if dailyLogs[i].Date == date {
-			dailyLogs[i].Traffic += traffic
-			found = true
-			break
-		}
-	}
-	if !found {
-		dailyLogs = append(dailyLogs, DailyLogEntry{Date: date, Traffic: traffic})
+	// 执行 RPC 调用
+	err := rpcBuilder.Execute(ctx, nil)
+	if err != nil {
+		log.Printf("用户流量记录 RPC 调用失败: %v", err)
+		return err
 	}
 
-	// 更新或创建月级记录
-	found = false
-	for i := range monthlyLogs {
-		if monthlyLogs[i].Month == month {
-			monthlyLogs[i].Traffic += traffic
-			found = true
-			break
-		}
-	}
-	if !found {
-		monthlyLogs = append(monthlyLogs, MonthlyLogEntry{Month: month, Traffic: traffic})
-	}
-
-	// 更新或创建年级记录
-	found = false
-	for i := range yearlyLogs {
-		if yearlyLogs[i].Year == year {
-			yearlyLogs[i].Traffic += traffic
-			found = true
-			break
-		}
-	}
-	if !found {
-		yearlyLogs = append(yearlyLogs, YearlyLogEntry{Year: year, Traffic: traffic})
-	}
-
-	// 将更新后的数据转换为JSON
-	dailyJSON, _ := json.Marshal(dailyLogs)
-	monthlyJSON, _ := json.Marshal(monthlyLogs)
-	yearlyJSON, _ := json.Marshal(yearlyLogs)
-
-	// 更新数据库记录
-	return db.Model(&userLog).Updates(map[string]interface{}{
-		"used":         gorm.Expr("used + ?", traffic),
-		"updated_at":   timestamp,
-		"daily_logs":   datatypes.JSON(dailyJSON),
-		"monthly_logs": datatypes.JSON(monthlyJSON),
-		"yearly_logs":  datatypes.JSON(yearlyJSON),
-	}).Error
+	log.Printf("用户流量记录成功 - 用户: %s, 流量: %d, 时间: %s",
+		email, traffic, timestamp.Format("2006-01-02 15:04:05"))
+	return nil
 }
 
 // PostgreSQL版本的节点流量记录函数
-func LogNodeTrafficPG(db *gorm.DB, domain string, timestamp time.Time, traffic int64) error {
-	var date = timestamp.Format("20060102")
-	var month = timestamp.Format("200601")
-	var year = timestamp.Format("2006")
-
-	var nodeLog NodeTrafficLogsPG
-
-	// 查找节点记录
-	result := db.Where("domain_as_id = ?", domain).First(&nodeLog)
-	if result.Error != nil && result.Error != gorm.ErrRecordNotFound {
-		log.Printf("查找节点流量记录失败: %v\n", result.Error)
-		return result.Error
+// 优化版本：使用 Supabase RPC 调用方式执行流量记录
+func LogNodeTrafficPG(domain string, timestamp time.Time, traffic int64) error {
+	// 获取 Supabase 客户端
+	supaClient := database.GetSupabaseClient()
+	if supaClient == nil {
+		log.Printf("Supabase 客户端初始化失败")
+		return fmt.Errorf("Supabase 客户端初始化失败")
 	}
 
-	isNewRecord := result.Error == gorm.ErrRecordNotFound
+	// 创建上下文
+	ctx := context.Background()
 
-	if isNewRecord {
-		// 创建新的节点记录
-		nodeLog = NodeTrafficLogsPG{
-			DomainAsId: domain,
-			Remark:     domain, // 默认使用domain作为remark
-			Status:     "active",
-			CreatedAt:  timestamp,
-			UpdatedAt:  timestamp,
-		}
-
-		// 初始化日志数组
-		dailyLogs, _ := json.Marshal([]DailyLogEntry{{Date: date, Traffic: traffic}})
-		monthlyLogs, _ := json.Marshal([]MonthlyLogEntry{{Month: month, Traffic: traffic}})
-		yearlyLogs, _ := json.Marshal([]YearlyLogEntry{{Year: year, Traffic: traffic}})
-
-		nodeLog.DailyLogs = datatypes.JSON(dailyLogs)
-		nodeLog.MonthlyLogs = datatypes.JSON(monthlyLogs)
-		nodeLog.YearlyLogs = datatypes.JSON(yearlyLogs)
-
-		return db.Create(&nodeLog).Error
+	// 准备请求参数
+	nodeRequest := NodeTrafficRequest{
+		Domain:    domain,
+		Timestamp: timestamp,
+		Traffic:   traffic,
 	}
 
-	// 更新现有记录
-	var dailyLogs []DailyLogEntry
-	var monthlyLogs []MonthlyLogEntry
-	var yearlyLogs []YearlyLogEntry
+	// 使用 Supabase RPC 方法调用 upsert_node_traffic_log 函数
+	rpcBuilder := supaClient.DB.RPC("upsert_node_traffic_log", nodeRequest)
 
-	json.Unmarshal([]byte(nodeLog.DailyLogs), &dailyLogs)
-	json.Unmarshal([]byte(nodeLog.MonthlyLogs), &monthlyLogs)
-	json.Unmarshal([]byte(nodeLog.YearlyLogs), &yearlyLogs)
-
-	// 更新或创建日级记录
-	found := false
-	for i := range dailyLogs {
-		if dailyLogs[i].Date == date {
-			dailyLogs[i].Traffic += traffic
-			found = true
-			break
-		}
-	}
-	if !found {
-		dailyLogs = append(dailyLogs, DailyLogEntry{Date: date, Traffic: traffic})
+	// 执行 RPC 调用
+	err := rpcBuilder.Execute(ctx, nil)
+	if err != nil {
+		log.Printf("节点流量记录 RPC 调用失败: %v", err)
+		return err
 	}
 
-	// 更新或创建月级记录
-	found = false
-	for i := range monthlyLogs {
-		if monthlyLogs[i].Month == month {
-			monthlyLogs[i].Traffic += traffic
-			found = true
-			break
-		}
-	}
-	if !found {
-		monthlyLogs = append(monthlyLogs, MonthlyLogEntry{Month: month, Traffic: traffic})
-	}
-
-	// 更新或创建年级记录
-	found = false
-	for i := range yearlyLogs {
-		if yearlyLogs[i].Year == year {
-			yearlyLogs[i].Traffic += traffic
-			found = true
-			break
-		}
-	}
-	if !found {
-		yearlyLogs = append(yearlyLogs, YearlyLogEntry{Year: year, Traffic: traffic})
-	}
-
-	// 将更新后的数据转换为JSON
-	dailyJSON, _ := json.Marshal(dailyLogs)
-	monthlyJSON, _ := json.Marshal(monthlyLogs)
-	yearlyJSON, _ := json.Marshal(yearlyLogs)
-
-	// 更新数据库记录
-	return db.Model(&nodeLog).Updates(map[string]interface{}{
-		"updated_at":   timestamp,
-		"daily_logs":   datatypes.JSON(dailyJSON),
-		"monthly_logs": datatypes.JSON(monthlyJSON),
-		"yearly_logs":  datatypes.JSON(yearlyJSON),
-	}).Error
+	log.Printf("节点流量记录成功 - 节点: %s, 流量: %d, 时间: %s",
+		domain, traffic, timestamp.Format("2006-01-02 15:04:05"))
+	return nil
 }
 
 // traffic: {Name: "tom", Total: 100}
@@ -461,29 +338,21 @@ func Cron_loggingJobs(c *cron.Cron, instance *box.Box) {
 
 		if usePostgreSQL {
 			log.Printf("使用PostgreSQL记录流量数据...")
-			db := database.GetPostgresDB()
-			if db == nil {
-				log.Printf("PostgreSQL数据库连接不可用，回退到MongoDB")
-				usePostgreSQL = false
-			} else {
-				// 使用PostgreSQL记录流量
-				for _, perUser := range usageData {
+			// 使用 Supabase RPC 调用方式记录流量
+			for _, perUser := range usageData {
 
-					// 记录用户流量
-					if err := LogUserTrafficPG(db, perUser.Name, timesteamp, perUser.Total); err != nil {
-						log.Printf("PostgreSQL用户流量记录失败: %v\n", err)
-					}
-
-					// 记录节点流量
-					if err := LogNodeTrafficPG(db, currentDomain, timesteamp, perUser.Total); err != nil {
-						log.Printf("PostgreSQL节点流量记录失败: %v\n", err)
-					}
+				// 记录用户流量
+				if err := LogUserTrafficPG(perUser.Name, timesteamp, perUser.Total); err != nil {
+					log.Printf("PostgreSQL用户流量记录失败: %v\n", err)
 				}
-				log.Printf("PostgreSQL流量记录完成: %v 用户=%d", timesteamp.Format("20060102 15:04:05"), len(usageData))
-			}
-		}
 
-		if !usePostgreSQL {
+				// 记录节点流量
+				if err := LogNodeTrafficPG(currentDomain, timesteamp, perUser.Total); err != nil {
+					log.Printf("PostgreSQL节点流量记录失败: %v\n", err)
+				}
+			}
+			log.Printf("PostgreSQL流量记录完成: %v 用户=%d", timesteamp.Format("20060102 15:04:05"), len(usageData))
+		} else {
 			log.Printf("使用MongoDB记录流量数据...")
 			// 使用原有的MongoDB逻辑
 			for _, perUser := range usageData {
