@@ -367,8 +367,8 @@ const PaymentRecords = () => {
 												<tr key={getRecordId(record)} className={styles.tableRow}>
 													<td className="px-6 py-4">
 														<div>
-															<div className="font-medium">{record.user_name}</div>
-															<div className="text-sm text-gray-400">{record.user_email_as_id}</div>
+															<div className="font-medium">{record.name || record.user_name}</div>
+															<div className="text-sm text-gray-400">{record.email_as_id || record.user_email_as_id}</div>
 														</div>
 													</td>
 													<td className="px-6 py-4 font-semibold text-green-400">

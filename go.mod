@@ -15,6 +15,7 @@ require (
 	github.com/go-playground/validator/v10 v10.9.0
 	github.com/google/uuid v1.6.0
 	github.com/joho/godotenv v1.4.0
+	github.com/lengzuo/supa v1.0.1
 	github.com/mrz1836/go-sanitize v1.1.5
 	github.com/robfig/cron v1.2.0
 	github.com/sagernet/sing v0.3.0
@@ -67,7 +68,6 @@ require (
 	github.com/json-iterator/go v1.1.9 // indirect
 	github.com/klauspost/compress v1.17.4 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.5 // indirect
-	github.com/lengzuo/supa v1.0.1 // indirect
 	github.com/leodido/go-urn v1.2.1 // indirect
 	github.com/libdns/alidns v1.0.3 // indirect
 	github.com/libdns/cloudflare v0.1.0 // indirect

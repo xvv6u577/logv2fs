@@ -170,15 +170,15 @@ func createDailyAllocationsPG(tx *gorm.DB, paymentRecordID uuid.UUID, payment mo
 // 获取用户名 - PostgreSQL版本
 func getUserNameByEmailPG(email string) string {
 	var user struct {
-		Username string `gorm:"column:username"`
+		Name string `gorm:"column:name"`
 	}
 
-	err := database.GetPostgresDB().Table("users").Select("username").Where("email = ?", email).First(&user).Error
+	err := database.GetPostgresDB().Table("user_traffic_logs").Select("name").Where("email_as_id = ?", email).First(&user).Error
 	if err != nil {
 		return email // 如果找不到用户名，返回邮箱
 	}
 
-	return user.Username
+	return user.Name
 }
 
 // GetPaymentStatisticsPG 获取费用统计 - PostgreSQL版本

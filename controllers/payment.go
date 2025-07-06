@@ -741,17 +741,17 @@ func getInt64(v interface{}) int64 {
 // 获取用户名
 func getUserNameByEmail(email string) string {
 	// 从users集合查询用户名
-	userCollection := database.OpenCollection(database.Client, "users")
+	userCollection := database.OpenCollection(database.Client, "USER_TRAFFIC_LOGS")
 	var user struct {
-		Username string `bson:"username"`
+		Name string `bson:"name"`
 	}
 
-	err := userCollection.FindOne(context.Background(), bson.M{"email": email}).Decode(&user)
+	err := userCollection.FindOne(context.Background(), bson.M{"email_as_id": email}).Decode(&user)
 	if err != nil {
 		return email // 如果找不到用户名，返回邮箱
 	}
 
-	return user.Username
+	return user.Name
 }
 
 // 创建每日分摊记录
