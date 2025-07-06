@@ -1,6 +1,5 @@
 import { useSelector, useDispatch } from "react-redux";
 import { logout } from "../store/login";
-import AddUser from "./adduser";
 
 const Menu = () => {
 	const loginState = useSelector((state) => state.login);
@@ -23,7 +22,7 @@ const Menu = () => {
 							<a className="mr-5 hover:text-white" href="/home">User</a>
 							<a className="mr-5 hover:text-white" href="/nodes">Nodes</a>
 							<a className="mr-5 hover:text-white" href="/addnode">Add Node</a>
-							<a className="mr-5 hover:text-white" href="/paymentinput">Add Payment</a>
+							<a className="mr-5 hover:text-white" href="/paymentrecords">Payment Records</a>
 							<a className="mr-5 hover:text-white" href="/paymentstatistics">Payment Stats</a>
 						</>
 					)}
@@ -33,25 +32,9 @@ const Menu = () => {
 					<a className="mr-5 hover:text-white" href="/iphone">IPhone/IPad</a>
 					<a className="mr-5 hover:text-white" href="/android">Android</a>
 				</nav>
-				{loginState.jwt.Role === "admin" && (
-					<>
-						{/* <button
-							className="w-full sm:w-auto block text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 
-								font-medium rounded-lg text-sm px-1.5 py-1 m-1 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
-							onClick={handleWriteToDB}
-						>
-							<svg xmlns="http://www.w3.org/2000/svg" className="inline-block h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
-								<path fillRule="evenodd" d="M8 4a3 3 0 00-3 3v4a5 5 0 0010 0V7a1 1 0 112 0v4a7 7 0 11-14 0V7a5 5 0 0110 0v4a3 3 0 11-6 0V7a1 1 0 012 0v4a1 1 0 102 0V7a3 3 0 00-3-3z" clipRule="evenodd" />
-							</svg>
-							WriteToDB
-						</button> */}
-						<AddUser btnName="AddUser" />
-					</>
-				)}
 				<span className="hover:text-white" href="#">Signed in as: <b>{loginState.jwt.Email}</b></span>
 				<button
 					className="w-full sm:w-auto block text-white-900 bg-white hover:bg-gray-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-1.5 py-1 m-1 text-center dark:bg-gray-600 dark:hover:bg-gray-800 dark:focus:ring-gray-800"
-					// className="w-full sm:w-auto text-gray-900 bg-white hover:bg-gray-100 border border-gray-200 focus:ring-4 focus:outline-none focus:ring-gray-100 font-medium rounded-md text-sm px-3 py-2.5 mx-2 text-center inline-flex items-center dark:focus:ring-gray-600 dark:bg-gray-800 dark:border-gray-700 dark:text-white dark:hover:bg-gray-700"
 					onClick={handleLogout}
 				>
 					<svg fill="none" className="inline-block h-4 w-4 mr-1" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24">
@@ -60,7 +43,6 @@ const Menu = () => {
 					logout
 				</button>
 			</div>
-
 		</header>
 	);
 };

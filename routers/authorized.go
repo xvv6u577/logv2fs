@@ -40,6 +40,7 @@ func AuthorizedRoutes(incomingRoutes *gin.Engine) {
 		incomingRoutes.POST("/v1/payment", controller.AddPaymentRecordPG())
 		incomingRoutes.GET("/v1/payment/user/:email", controller.GetUserPaymentsPG())
 		incomingRoutes.GET("/v1/payment/statistics", controller.GetPaymentStatisticsPG())
+		incomingRoutes.GET("/v1/payment/records", controller.GetPaymentRecordsPG())
 		incomingRoutes.DELETE("/v1/payment/:id", controller.DeletePaymentRecordPG())
 		incomingRoutes.PUT("/v1/payment/:id", controller.UpdatePaymentRecordPG())
 	} else {
@@ -61,6 +62,7 @@ func AuthorizedRoutes(incomingRoutes *gin.Engine) {
 		incomingRoutes.POST("/v1/payment", controller.AddPaymentRecord())
 		incomingRoutes.GET("/v1/payment/user/:email", controller.GetUserPayments())
 		incomingRoutes.GET("/v1/payment/statistics", controller.GetPaymentStatistics())
+		incomingRoutes.GET("/v1/payment/records", controller.GetPaymentRecords())
 		incomingRoutes.DELETE("/v1/payment/:id", controller.DeletePaymentRecord())
 		incomingRoutes.PUT("/v1/payment/:id", controller.UpdatePaymentRecord())
 	}

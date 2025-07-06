@@ -298,7 +298,7 @@ func EditUser() gin.HandlerFunc {
 
 		newFoundUser := bson.M{}
 
-		// 只允许编辑 name 和 role
+		// 允许编辑 name, role 和 password
 		if foundUser.Role != user.Role && user.Role != "" {
 			newFoundUser["role"] = user.Role
 			log.Printf("Updating role from %s to %s", foundUser.Role, user.Role)
@@ -307,6 +307,13 @@ func EditUser() gin.HandlerFunc {
 		if foundUser.Name != user.Name && user.Name != "" {
 			newFoundUser["name"] = user.Name
 			log.Printf("Updating name from %s to %s", foundUser.Name, user.Name)
+		}
+
+		// 添加密码更新支持
+		if user.Password != "" && len(user.Password) >= 6 {
+			hashedPassword := HashPassword(user.Password)
+			newFoundUser["password"] = hashedPassword
+			log.Printf("Updating password for user %s", foundUser.Email_As_Id)
 		}
 
 		if len(newFoundUser) == 0 {

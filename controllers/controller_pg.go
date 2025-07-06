@@ -14,6 +14,7 @@ import (
 	"github.com/xvv6u577/logv2fs/database"
 	helper "github.com/xvv6u577/logv2fs/helpers"
 	"github.com/xvv6u577/logv2fs/model"
+	"golang.org/x/crypto/bcrypt"
 	"gorm.io/datatypes"
 	"gorm.io/gorm"
 )
@@ -21,6 +22,29 @@ import (
 var (
 	validatePG = validator.New()
 )
+
+// HashPasswordPG is used to encrypt the password before it is stored in the DB (PostgreSQL version)
+func HashPasswordPG(password string) string {
+	bytes, err := bcrypt.GenerateFromPassword([]byte(password), 14)
+	if err != nil {
+		log.Panic(err)
+	}
+	return string(bytes)
+}
+
+// VerifyPasswordPG checks the input password while verifying it with the password in the DB (PostgreSQL version).
+func VerifyPasswordPG(userPassword string, providedPassword string) (bool, string) {
+	err := bcrypt.CompareHashAndPassword([]byte(providedPassword), []byte(userPassword))
+	check := true
+	msg := ""
+
+	if err != nil {
+		msg = "login or password is incorrect"
+		check = false
+	}
+
+	return check, msg
+}
 
 // PostgreSQL版本的用户操作函数
 
@@ -64,7 +88,7 @@ func SignUpPG() gin.HandlerFunc {
 			user.Name = user_email
 		}
 
-		password := HashPassword(user_email)
+		password := HashPasswordPG(user_email)
 
 		// 创建PostgreSQL用户记录
 		pgUser := model.UserTrafficLogsPG{
@@ -136,7 +160,7 @@ func LoginPG() gin.HandlerFunc {
 			return
 		}
 
-		passwordIsValid, msg := VerifyPassword(boundUser.Password, pgUser.Password)
+		passwordIsValid, msg := VerifyPasswordPG(boundUser.Password, pgUser.Password)
 		if !passwordIsValid {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
 			log.Printf("password is not valid: %s", msg)
@@ -193,7 +217,7 @@ func EditUserPG() gin.HandlerFunc {
 		updates := map[string]interface{}{"updated_at": time.Now()}
 		updateCount := 0
 
-		// 只允许编辑 name 和 role
+		// 允许编辑 name, role 和 password
 		if pgUser.Role != user.Role && user.Role != "" {
 			updates["role"] = user.Role
 			updateCount++
@@ -204,6 +228,14 @@ func EditUserPG() gin.HandlerFunc {
 			updates["name"] = user.Name
 			updateCount++
 			log.Printf("Updating name from %s to %s", pgUser.Name, user.Name)
+		}
+
+		// 添加密码更新支持
+		if user.Password != "" && len(user.Password) >= 6 {
+			hashedPassword := HashPasswordPG(user.Password)
+			updates["password"] = hashedPassword
+			updateCount++
+			log.Printf("Updating password for user %s", pgUser.EmailAsId)
 		}
 
 		if updateCount == 0 {

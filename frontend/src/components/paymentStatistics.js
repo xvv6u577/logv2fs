@@ -6,7 +6,7 @@ import axios from 'axios';
 const PaymentStatistics = () => {
 	const [statistics, setStatistics] = useState(null);
 	const [loading, setLoading] = useState(false);
-	const [statType, setStatType] = useState('daily');
+	const [statType, setStatType] = useState('monthly');
 	const [dateRange, setDateRange] = useState({
 		startDate: new Date(new Date().getFullYear(), 0, 1).toISOString().split('T')[0], // 今年第一天
 		endDate: new Date().toISOString().split('T')[0], // 今天

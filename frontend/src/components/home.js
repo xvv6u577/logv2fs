@@ -3,6 +3,7 @@ import { useSelector, useDispatch } from "react-redux";
 import { alert, reset } from "../store/message";
 import axios from "axios";
 import Alert from "./alert";
+import AddUser from "./adduser";
 
 const Home = () => {
 	const [users, setUsers] = useState([]);
@@ -13,7 +14,12 @@ const Home = () => {
 	const [modalUser, setModalUser] = useState(null);
 	const [editModalOpen, setEditModalOpen] = useState(false);
 	const [editingUser, setEditingUser] = useState(null);
-	const [editForm, setEditForm] = useState({ name: "", role: "" });
+	const [editForm, setEditForm] = useState({ 
+		name: "", 
+		role: "", 
+		password: "", 
+		confirmPassword: "" 
+	});
 	const [userPayments, setUserPayments] = useState([]);
 	const [paymentLoading, setPaymentLoading] = useState(false);
 
@@ -160,7 +166,9 @@ const Home = () => {
 		setEditingUser(user);
 		setEditForm({
 			name: user.name || "",
-			role: user.role || "normal"
+			role: user.role || "normal",
+			password: "",
+			confirmPassword: ""
 		});
 		setEditModalOpen(true);
 	};
@@ -169,7 +177,12 @@ const Home = () => {
 	const closeEditModal = () => {
 		setEditModalOpen(false);
 		setEditingUser(null);
-		setEditForm({ name: "", role: "" });
+		setEditForm({ 
+			name: "", 
+			role: "", 
+			password: "", 
+			confirmPassword: "" 
+		});
 	};
 
 	// 提交编辑用户
@@ -182,12 +195,29 @@ const Home = () => {
 			return;
 		}
 
+		// 验证密码（如果输入了密码）
+		if (editForm.password) {
+			if (editForm.password.length < 6) {
+				dispatch(alert({ show: true, content: "密码至少需要6个字符", type: "error" }));
+				return;
+			}
+			if (editForm.password !== editForm.confirmPassword) {
+				dispatch(alert({ show: true, content: "两次输入的密码不一致", type: "error" }));
+				return;
+			}
+		}
+
 		// 创建编辑用户的数据
 		const editData = {
 			email_as_id: editingUser.email_as_id,
 			name: editForm.name.trim(),
 			role: editForm.role
 		};
+
+		// 只有在输入了密码时才添加密码字段
+		if (editForm.password) {
+			editData.password = editForm.password;
+		}
 
 		// 调用编辑用户API
 		axios
@@ -847,7 +877,8 @@ const Home = () => {
 						className="bg-gray-800 rounded-lg p-6 w-full max-w-md"
 						onClick={(e) => e.stopPropagation()}
 					>
-						<h3 className="text-xl font-bold mb-4">编辑用户</h3>
+						<h3 className="text-xl font-bold mb-4">编辑用户信息</h3>
+						<p className="text-sm text-gray-400 mb-4">修改用户名、角色或密码</p>
 						
 						<div className="space-y-4">
 							{/* 邮箱ID（只读） */}
@@ -891,6 +922,46 @@ const Home = () => {
 									<option value="admin">管理员</option>
 								</select>
 							</div>
+
+							{/* 密码编辑区域 */}
+							<div className="border-t pt-4 border-gray-600">
+								<h4 className="text-lg font-medium text-gray-300 mb-3">修改密码（可选）</h4>
+								<p className="text-sm text-gray-400 mb-4">留空则保持当前密码不变</p>
+								
+								{/* 新密码 */}
+								<div className="mb-4">
+									<label className="block text-sm font-medium text-gray-300 mb-2">
+										新密码（至少6个字符）
+									</label>
+									<input
+										type="password"
+										value={editForm.password}
+										onChange={(e) => setEditForm({ ...editForm, password: e.target.value })}
+										className={styles.input}
+										placeholder="输入新密码"
+									/>
+								</div>
+
+								{/* 确认密码 */}
+								<div>
+									<label className="block text-sm font-medium text-gray-300 mb-2">
+										确认新密码
+									</label>
+									<input
+										type="password"
+										value={editForm.confirmPassword}
+										onChange={(e) => setEditForm({ ...editForm, confirmPassword: e.target.value })}
+										className={styles.input}
+										placeholder="再次输入新密码"
+									/>
+									{editForm.password && editForm.confirmPassword && editForm.password !== editForm.confirmPassword && (
+										<p className="mt-1 text-sm text-red-400">密码不一致</p>
+									)}
+									{editForm.password && editForm.password.length > 0 && editForm.password.length < 6 && (
+										<p className="mt-1 text-sm text-red-400">密码至少需要6个字符</p>
+									)}
+								</div>
+							</div>
 						</div>
 
 						{/* 按钮区域 */}
@@ -913,9 +984,16 @@ const Home = () => {
 			)}
 
 			{/* 页面标题 */}
-			<div className="mb-8">
-				<h1 className="text-3xl font-bold mb-2">用户管理</h1>
-				<p className="text-gray-400">管理和监控用户状态</p>
+			<div className="mb-8 flex flex-col md:flex-row md:items-center md:justify-between">
+				<div>
+					<h1 className="text-3xl font-bold mb-2">用户管理</h1>
+					<p className="text-gray-400">管理和监控用户状态</p>
+				</div>
+				{loginState.jwt.Role === "admin" && (
+					<div className="mt-4 md:mt-0">
+						<AddUser btnName="添加用户" />
+					</div>
+				)}
 			</div>
 
 			{/* 搜索和过滤控制栏 */}
