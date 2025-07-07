@@ -127,8 +127,8 @@ function Nodes() {
 					</div>
 				</div>
 
-				<h3 className="text-sm font-semibold text-white mb-2 truncate">{node.domain_as_id}</h3>
-				<p className="text-gray-400 mb-2 text-xs truncate">{node.remark}</p>
+				<h3 className="text-xl font-semibold text-white mb-2 truncate">{node.remark}</h3>
+				<p className="text-gray-400 mb-2 text-xs truncate">{node.domain_as_id}</p>
 				<p className="text-xs text-blue-400 mb-3 opacity-70 hover:opacity-100 transition-opacity">
 					💡 点击查看详细数据
 				</p>
@@ -136,7 +136,7 @@ function Nodes() {
 				<div className="grid grid-cols-1 gap-3">
 					<div className="text-center">
 						<p className="text-xs text-blue-200 mb-1">今日流量</p>
-						<p className="font-extrabold text-blue-400 text-lg">
+						<h3 className="font-extrabold text-blue-400 text-lg">
 							{(() => {
 								const today = new Date();
 								const todayStr = today.getFullYear().toString() + 
@@ -145,11 +145,11 @@ function Nodes() {
 								const todayLog = node?.daily_logs?.find(log => log.date === todayStr);
 								return todayLog ? formatBytes(todayLog.traffic) : "0";
 							})()}
-						</p>
+						</h3>
 					</div>
 					<div className="text-center">
 						<p className="text-xs text-green-200 mb-1">本月流量</p>
-						<p className="font-extrabold text-green-400 text-lg">
+						<h3 className="font-extrabold text-green-400 text-lg">
 							{(() => {
 								const today = new Date();
 								const currentMonth = today.getFullYear().toString() + 
@@ -157,7 +157,7 @@ function Nodes() {
 								const monthLog = node?.monthly_logs?.find(log => log.month === currentMonth);
 								return monthLog ? formatBytes(monthLog.traffic) : "0";
 							})()}
-						</p>
+						</h3>
 					</div>
 				</div>
 			</div>
@@ -335,10 +335,8 @@ function Nodes() {
 			</button>
 
 			<div className="mb-4">
+				<h2 className="text-xl font-bold text-blue-300 mb-2">{domain.remark}</h2>
 				<h3 className="text-lg font-semibold text-white mb-1">{domain.domain}</h3>
-				<span className={`${styles.badge} ${styles.badgeBlue}`}>
-					{domain.remark}
-				</span>
 			</div>
 
 			<div className="text-center">
