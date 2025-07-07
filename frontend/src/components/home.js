@@ -616,6 +616,57 @@ const Home = () => {
 								</div>
 							</div>
 
+							{/* 订阅链接 */}
+							<div>
+								<h4 className="text-lg font-medium text-gray-300 mb-4">订阅链接</h4>
+								<div className="space-y-3">
+									{/* Shadowrocket/Surge 订阅 */}
+									<div className="flex items-center justify-between p-3 bg-gray-700 rounded-lg">
+										<div>
+											<span className="text-white font-medium">Shadowrocket/Surge 订阅</span>
+											<p className="text-gray-400 text-sm mt-1">适用于 iOS Shadowrocket 和 Surge</p>
+										</div>
+										<button
+											onClick={() => copyToClipboard(process.env.REACT_APP_FILE_AND_SUB_URL + "/static/" + modalUser.email_as_id)}
+											className={`${styles.button} ${styles.buttonPrimary} text-xs`}
+											title="复制订阅链接"
+										>
+											复制链接
+										</button>
+									</div>
+
+									{/* Verge 订阅 */}
+									<div className="flex items-center justify-between p-3 bg-gray-700 rounded-lg">
+										<div>
+											<span className="text-white font-medium">Verge 订阅</span>
+											<p className="text-gray-400 text-sm mt-1">适用于 Verge 客户端</p>
+										</div>
+										<button
+											onClick={() => copyToClipboard(process.env.REACT_APP_FILE_AND_SUB_URL + "/verge/" + modalUser.email_as_id)}
+											className={`${styles.button} ${styles.buttonPrimary} text-xs`}
+											title="复制订阅链接"
+										>
+											复制链接
+										</button>
+									</div>
+
+									{/* Sing-box 订阅 */}
+									<div className="flex items-center justify-between p-3 bg-gray-700 rounded-lg">
+										<div>
+											<span className="text-white font-medium">Sing-box 订阅</span>
+											<p className="text-gray-400 text-sm mt-1">适用于 Sing-box 客户端</p>
+										</div>
+										<button
+											onClick={() => copyToClipboard(process.env.REACT_APP_FILE_AND_SUB_URL + "/singbox/" + modalUser.email_as_id)}
+											className={`${styles.button} ${styles.buttonPrimary} text-xs`}
+											title="复制订阅链接"
+										>
+											复制链接
+										</button>
+									</div>
+								</div>
+							</div>
+
 							{/* 缴费记录部分 */}
 							<div>
 								<h4 className="text-lg font-medium text-gray-300 mb-4">缴费记录</h4>
@@ -755,57 +806,6 @@ const Home = () => {
 												暂无日流量数据
 											</div>
 										)}
-									</div>
-								</div>
-							</div>
-
-							{/* 订阅链接 */}
-							<div>
-								<h4 className="text-lg font-medium text-gray-300 mb-4">订阅链接</h4>
-								<div className="space-y-3">
-									{/* Shadowrocket/Surge 订阅 */}
-									<div className="flex items-center justify-between p-3 bg-gray-700 rounded-lg">
-										<div>
-											<span className="text-white font-medium">Shadowrocket/Surge 订阅</span>
-											<p className="text-gray-400 text-sm mt-1">适用于 iOS Shadowrocket 和 Surge</p>
-										</div>
-										<button
-											onClick={() => copyToClipboard(process.env.REACT_APP_FILE_AND_SUB_URL + "/static/" + modalUser.email_as_id)}
-											className={`${styles.button} ${styles.buttonPrimary} text-xs`}
-											title="复制订阅链接"
-										>
-											复制链接
-										</button>
-									</div>
-
-									{/* Verge 订阅 */}
-									<div className="flex items-center justify-between p-3 bg-gray-700 rounded-lg">
-										<div>
-											<span className="text-white font-medium">Verge 订阅</span>
-											<p className="text-gray-400 text-sm mt-1">适用于 Verge 客户端</p>
-										</div>
-										<button
-											onClick={() => copyToClipboard(process.env.REACT_APP_FILE_AND_SUB_URL + "/verge/" + modalUser.email_as_id)}
-											className={`${styles.button} ${styles.buttonPrimary} text-xs`}
-											title="复制订阅链接"
-										>
-											复制链接
-										</button>
-									</div>
-
-									{/* Sing-box 订阅 */}
-									<div className="flex items-center justify-between p-3 bg-gray-700 rounded-lg">
-										<div>
-											<span className="text-white font-medium">Sing-box 订阅</span>
-											<p className="text-gray-400 text-sm mt-1">适用于 Sing-box 客户端</p>
-										</div>
-										<button
-											onClick={() => copyToClipboard(process.env.REACT_APP_FILE_AND_SUB_URL + "/singbox/" + modalUser.email_as_id)}
-											className={`${styles.button} ${styles.buttonPrimary} text-xs`}
-											title="复制订阅链接"
-										>
-											复制链接
-										</button>
 									</div>
 								</div>
 							</div>
