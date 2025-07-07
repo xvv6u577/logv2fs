@@ -32,3 +32,4 @@ docker-compose.yml
 Dockerfile
 TODO.MD
 .cursorignore.temp
+payment_records.json
