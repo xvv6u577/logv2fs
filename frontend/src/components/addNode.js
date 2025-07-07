@@ -292,14 +292,14 @@ const AddNode = () => {
 						<h3 className="text-lg font-medium text-gray-300 border-b border-gray-600 pb-2">连接信息</h3>
 						
 						<div>
-							<label className={styles.label}>IP 地址</label>
+							<label className={styles.label}>IP 地址/域名</label>
 							<input
 								type="text"
 								name="ip"
 								onChange={onChange}
 								value={ip}
 								className={styles.input}
-								placeholder="192.168.1.1"
+								placeholder="192.168.1.1 或 example.com"
 							/>
 						</div>
 

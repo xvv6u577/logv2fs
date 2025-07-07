@@ -197,7 +197,7 @@ type SubscriptionNodePG struct {
 	Type         string    `json:"type" gorm:"type:varchar(50);check:type IN ('reality','hysteria2','vlessCDN');not null"`
 	Remark       string    `json:"remark" gorm:"uniqueIndex;not null"`
 	Domain       string    `json:"domain" gorm:"not null;index"`
-	IP           string    `json:"ip" gorm:"type:inet"`
+	IP           string    `json:"ip" gorm:"type:text"`
 	SNI          string    `json:"sni"`
 	UUID         string    `json:"uuid" gorm:"index"`
 	Path         string    `json:"path"`
