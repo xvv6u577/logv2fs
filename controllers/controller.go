@@ -298,7 +298,7 @@ func EditUser() gin.HandlerFunc {
 
 		newFoundUser := bson.M{}
 
-		// 允许编辑 name, role 和 password
+		// 允许编辑 name, role, password 和 remark
 		if foundUser.Role != user.Role && user.Role != "" {
 			newFoundUser["role"] = user.Role
 			log.Printf("Updating role from %s to %s", foundUser.Role, user.Role)
@@ -307,6 +307,12 @@ func EditUser() gin.HandlerFunc {
 		if foundUser.Name != user.Name && user.Name != "" {
 			newFoundUser["name"] = user.Name
 			log.Printf("Updating name from %s to %s", foundUser.Name, user.Name)
+		}
+
+		// 添加备注更新支持（允许设置为空字符串）
+		if foundUser.Remark != user.Remark {
+			newFoundUser["remark"] = user.Remark
+			log.Printf("Updating remark from '%s' to '%s'", foundUser.Remark, user.Remark)
 		}
 
 		// 添加密码更新支持
@@ -410,6 +416,7 @@ func GetAllUsers() gin.HandlerFunc {
 				{Key: "role", Value: 1},
 				{Key: "status", Value: 1},
 				{Key: "used", Value: 1},
+				{Key: "remark", Value: 1},
 				{Key: "updated_at", Value: 1},
 				{Key: "daily_logs", Value: bson.D{
 					{Key: "$slice", Value: bson.A{
@@ -485,6 +492,7 @@ func GetUserByName() gin.HandlerFunc {
 			{Key: "name", Value: 1},
 			{Key: "status", Value: 1},
 			{Key: "role", Value: 1},
+			{Key: "remark", Value: 1},
 			{Key: "credit", Value: 1},
 			{Key: "daily_logs", Value: 1},
 			{Key: "monthly_logs", Value: 1},

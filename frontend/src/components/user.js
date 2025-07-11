@@ -5,7 +5,7 @@ import axios from "axios";
 import Alert from "./alert";
 import AddUser from "./adduser";
 
-const Home = () => {
+const User = () => {
 	const [users, setUsers] = useState([]);
 	const [loading, setLoading] = useState(true);
 	const [searchTerm, setSearchTerm] = useState("");
@@ -18,10 +18,22 @@ const Home = () => {
 		name: "", 
 		role: "", 
 		password: "", 
-		confirmPassword: "" 
+		confirmPassword: "",
+		remark: ""
 	});
 	const [userPayments, setUserPayments] = useState([]);
 	const [paymentLoading, setPaymentLoading] = useState(false);
+
+	// 添加缴费记录相关状态
+	const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+	const [paymentForm, setPaymentForm] = useState({
+		selectedUser: "",
+		amount: "",
+		startDate: new Date().toISOString().split('T')[0],
+		endDate: "",
+		remark: ""
+	});
+	const [paymentFormLoading, setPaymentFormLoading] = useState(false);
 
 	const dispatch = useDispatch();
 	const loginState = useSelector((state) => state.login);
@@ -168,7 +180,8 @@ const Home = () => {
 			name: user.name || "",
 			role: user.role || "normal",
 			password: "",
-			confirmPassword: ""
+			confirmPassword: "",
+			remark: user.remark || ""
 		});
 		setEditModalOpen(true);
 	};
@@ -181,7 +194,8 @@ const Home = () => {
 			name: "", 
 			role: "", 
 			password: "", 
-			confirmPassword: "" 
+			confirmPassword: "",
+			remark: ""
 		});
 	};
 
@@ -211,7 +225,8 @@ const Home = () => {
 		const editData = {
 			email_as_id: editingUser.email_as_id,
 			name: editForm.name.trim(),
-			role: editForm.role
+			role: editForm.role,
+			remark: editForm.remark.trim()
 		};
 
 		// 只有在输入了密码时才添加密码字段
@@ -382,6 +397,121 @@ const Home = () => {
 		}
 	};
 
+	// 打开添加缴费记录模态框
+	const openPaymentModal = (user) => {
+		setPaymentForm({
+			selectedUser: user.email_as_id,
+			amount: "",
+			startDate: new Date().toISOString().split('T')[0],
+			endDate: "",
+			remark: ""
+		});
+		setPaymentModalOpen(true);
+	};
+
+	// 关闭添加缴费记录模态框
+	const closePaymentModal = () => {
+		setPaymentModalOpen(false);
+		setPaymentForm({
+			selectedUser: "",
+			amount: "",
+			startDate: new Date().toISOString().split('T')[0],
+			endDate: "",
+			remark: ""
+		});
+	};
+
+	// 计算服务天数
+	const calculateDays = () => {
+		if (paymentForm.startDate && paymentForm.endDate) {
+			const start = new Date(paymentForm.startDate);
+			const end = new Date(paymentForm.endDate);
+			const diffTime = Math.abs(end - start);
+			const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+			return diffDays;
+		}
+		return 0;
+	};
+
+	// 提交添加缴费记录
+	const handleSubmitPayment = (e) => {
+		e.preventDefault();
+
+		// 验证表单
+		if (!paymentForm.selectedUser) {
+			dispatch(alert({ show: true, content: "用户未选择", type: "error" }));
+			return;
+		}
+
+		if (!paymentForm.amount || parseFloat(paymentForm.amount) <= 0) {
+			dispatch(alert({ show: true, content: "请输入有效的缴费金额", type: "error" }));
+			return;
+		}
+
+		if (!paymentForm.startDate || !paymentForm.endDate) {
+			dispatch(alert({ show: true, content: "请选择服务日期", type: "error" }));
+			return;
+		}
+
+		if (new Date(paymentForm.endDate) < new Date(paymentForm.startDate)) {
+			dispatch(alert({ show: true, content: "服务结束日期不能早于开始日期", type: "error" }));
+			return;
+		}
+
+		setPaymentFormLoading(true);
+
+		// 将日期字符串转换为ISO格式
+		const startDateTime = new Date(paymentForm.startDate + 'T00:00:00').toISOString();
+		const endDateTime = new Date(paymentForm.endDate + 'T23:59:59').toISOString();
+
+		const paymentData = {
+			user_email_as_id: paymentForm.selectedUser,
+			amount: parseFloat(paymentForm.amount),
+			start_date: startDateTime,
+			end_date: endDateTime,
+			remark: paymentForm.remark,
+		};
+
+		axios
+			.post(process.env.REACT_APP_API_HOST + "payment", paymentData, {
+				headers: {
+					token: loginState.token,
+					'Content-Type': 'application/json',
+				},
+			})
+			.then((response) => {
+				dispatch(alert({ show: true, content: response.data.message || "缴费记录添加成功", type: "success" }));
+				closePaymentModal();
+				// 如果当前正在查看该用户的详情，刷新缴费记录
+				if (modalUser && modalUser.email_as_id === paymentForm.selectedUser) {
+					fetchUserPayments(modalUser.email_as_id);
+				}
+			})
+			.catch((err) => {
+				if (err.response) {
+					dispatch(alert({ show: true, content: err.response.data.error || "添加失败", type: "error" }));
+				} else {
+					dispatch(alert({ show: true, content: "添加失败: " + err.toString(), type: "error" }));
+				}
+			})
+			.finally(() => {
+				setPaymentFormLoading(false);
+			});
+	};
+
+	// 当开始日期变化时，自动设置结束日期为30天后
+	useEffect(() => {
+		if (paymentForm.startDate && !paymentForm.endDate) {
+			const start = new Date(paymentForm.startDate);
+			const end = new Date(start);
+			end.setDate(end.getDate() + 30);
+			setPaymentForm(prev => ({
+				...prev,
+				endDate: end.toISOString().split('T')[0]
+			}));
+		}
+	}, [paymentForm.startDate, paymentForm.endDate]);
+
 	// 用户卡片组件
 	const UserCard = ({ user, index }) => {
 		return (
@@ -397,9 +527,22 @@ const Home = () => {
 							<h3 className="text-sm font-semibold text-white truncate">
 								{user.name || user.email_as_id || "未知用户"}
 							</h3>
-							<p className="text-gray-400 text-xs truncate">
-								{user.email_as_id || "无邮箱"}
-							</p>
+							<div className="flex items-center space-x-2">
+								<p className="text-gray-400 text-xs truncate flex-1">
+									{user.email_as_id || "无邮箱"}
+								</p>
+								{user.email_as_id && (
+									<button
+										onClick={() => copyToClipboard(user.email_as_id)}
+										className="px-1 py-0.5 bg-gray-600 hover:bg-gray-500 text-white text-xs rounded transition-colors flex-shrink-0"
+										title="复制邮箱ID"
+									>
+										<svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+										</svg>
+									</button>
+								)}
+							</div>
 						</div>
 					</div>
 
@@ -452,46 +595,20 @@ const Home = () => {
 					)}
 
 					{/* 操作按钮区域 */}
-					<div className="space-y-2">
-						<div className="flex space-x-2">
-							<button
-								onClick={() => openUserModal(user)}
-								className={`${styles.button} ${styles.buttonPrimary} flex-1 text-xs`}
-							>
-								详情
-							</button>
-							{user.email_as_id && (
-								<button
-									onClick={() => copyToClipboard(user.email_as_id)}
-									className={`${styles.button} ${styles.buttonSecondary} flex-1 text-xs`}
-									title="复制邮箱"
-								>
-									复制
-								</button>
-							)}
-						</div>
-						{/* 用户管理按钮 - 只对非管理员用户显示 */}
-						{user.role !== "admin" && (
-							<div className="flex space-x-2">
-								{user.status === "deleted" ? (
-									<button
-										onClick={() => enableUser(user)}
-										className={`${styles.button} ${styles.buttonSuccess} flex-1 text-xs`}
-										title="启用用户"
-									>
-										启用
-									</button>
-								) : (
-									<button
-										onClick={() => disableUser(user)}
-										className={`${styles.button} ${styles.buttonWarning} flex-1 text-xs`}
-										title="禁用用户"
-									>
-										禁用
-									</button>
-								)}
-							</div>
-						)}
+					<div className="flex space-x-2">
+						<button
+							onClick={() => openUserModal(user)}
+							className={`${styles.button} ${styles.buttonPrimary} flex-1 text-xs`}
+						>
+							详情
+						</button>
+						<button
+							onClick={() => openPaymentModal(user)}
+							className={`${styles.button} ${styles.buttonSuccess} flex-1 text-xs`}
+							title="添加缴费记录"
+						>
+							缴费
+						</button>
 					</div>
 				</div>
 			</div>
@@ -923,6 +1040,21 @@ const Home = () => {
 								</select>
 							</div>
 
+							{/* 备注 */}
+							<div>
+								<label className="block text-sm font-medium text-gray-300 mb-2">
+									用户备注
+								</label>
+								<textarea
+									value={editForm.remark}
+									onChange={(e) => setEditForm({ ...editForm, remark: e.target.value })}
+									className={styles.input}
+									placeholder="输入用户备注信息（可选）"
+									rows="3"
+								/>
+								<p className="text-xs text-gray-500 mt-1">用于记录用户的特殊说明或备注信息</p>
+							</div>
+
 							{/* 密码编辑区域 */}
 							<div className="border-t pt-4 border-gray-600">
 								<h4 className="text-lg font-medium text-gray-300 mb-3">修改密码（可选）</h4>
@@ -978,6 +1110,138 @@ const Home = () => {
 							>
 								取消
 							</button>
+						</div>
+					</div>
+				</div>
+			)}
+
+			{/* 添加缴费记录模态框 */}
+			{paymentModalOpen && (
+				<div 
+					className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+					onClick={closePaymentModal}
+				>
+					<div 
+						className="bg-gray-800 rounded-lg w-full max-w-md max-h-[90vh] overflow-y-auto"
+						onClick={(e) => e.stopPropagation()}
+					>
+						{/* 模态框头部 */}
+						<div className="flex items-center justify-between p-6 border-b border-gray-700">
+							<h3 className="text-xl font-bold text-white">添加缴费记录</h3>
+							<button
+								onClick={closePaymentModal}
+								className="text-gray-400 hover:text-white transition-colors"
+							>
+								<svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+								</svg>
+							</button>
+						</div>
+
+						{/* 模态框内容 */}
+						<div className="p-6">
+							<form onSubmit={handleSubmitPayment} className="space-y-6">
+								{/* 用户信息（只读） */}
+								<div>
+									<label className="block text-sm font-medium text-gray-300 mb-2">
+										用户
+									</label>
+									<input
+										type="text"
+										value={users.find(u => u.email_as_id === paymentForm.selectedUser)?.name || paymentForm.selectedUser}
+										disabled
+										className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-400 cursor-not-allowed"
+									/>
+								</div>
+
+								{/* 缴费金额 */}
+								<div>
+									<label className="block text-sm font-medium text-gray-300 mb-2">
+										续费金额（元）
+									</label>
+									<input
+										type="number"
+										step="0.01"
+										min="0.01"
+										placeholder="请输入续费金额"
+										value={paymentForm.amount}
+										onChange={(e) => setPaymentForm({...paymentForm, amount: e.target.value})}
+										className={styles.input}
+										required
+									/>
+								</div>
+
+								{/* 服务时间段 */}
+								<div className="grid grid-cols-1 gap-4">
+									<div>
+										<label className="block text-sm font-medium text-gray-300 mb-2">
+											服务开始日期
+										</label>
+										<input
+											type="date"
+											value={paymentForm.startDate}
+											onChange={(e) => setPaymentForm({...paymentForm, startDate: e.target.value})}
+											className={styles.input}
+											required
+										/>
+									</div>
+									<div>
+										<label className="block text-sm font-medium text-gray-300 mb-2">
+											服务结束日期
+										</label>
+										<input
+											type="date"
+											value={paymentForm.endDate}
+											onChange={(e) => setPaymentForm({...paymentForm, endDate: e.target.value})}
+											min={paymentForm.startDate}
+											className={styles.input}
+											required
+										/>
+									</div>
+								</div>
+
+								{/* 服务天数提示 */}
+								{paymentForm.startDate && paymentForm.endDate && (
+									<div className="bg-blue-900 bg-opacity-30 border border-blue-700 rounded-lg p-3">
+										<p className="text-blue-300 text-sm">
+											服务期限：<span className="font-semibold">{calculateDays()} 天</span>
+											（{paymentForm.startDate} 至 {paymentForm.endDate}）
+										</p>
+									</div>
+								)}
+
+								{/* 备注 */}
+								<div>
+									<label className="block text-sm font-medium text-gray-300 mb-2">
+										备注（可选）
+									</label>
+									<textarea
+										placeholder="输入备注信息..."
+										value={paymentForm.remark}
+										onChange={(e) => setPaymentForm({...paymentForm, remark: e.target.value})}
+										className={styles.input}
+										rows="3"
+									/>
+								</div>
+
+								{/* 按钮区域 */}
+								<div className="flex space-x-4 pt-4">
+									<button
+										type="submit"
+										disabled={paymentFormLoading}
+										className={`${styles.button} ${styles.buttonSuccess} flex-1 ${paymentFormLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+									>
+										{paymentFormLoading ? '提交中...' : '提交缴费记录'}
+									</button>
+									<button
+										type="button"
+										onClick={closePaymentModal}
+										className={`${styles.button} ${styles.buttonSecondary} flex-1`}
+									>
+										取消
+									</button>
+								</div>
+							</form>
 						</div>
 					</div>
 				</div>
@@ -1082,4 +1346,4 @@ const Home = () => {
 	);
 };
 
-export default Home;
+export default User;

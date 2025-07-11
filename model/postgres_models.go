@@ -18,6 +18,7 @@ type UserTrafficLogsPG struct {
 	Role         string    `json:"role" gorm:"type:varchar(20);check:role IN ('admin','normal');not null"`
 	Status       string    `json:"status" gorm:"type:varchar(20);check:status IN ('plain','deleted','overdue');not null"`
 	Name         string    `json:"name"`
+	Remark       string    `json:"remark" gorm:"type:text"` // 用户备注
 	Token        *string   `json:"token"`
 	RefreshToken *string   `json:"refresh_token"`
 	UserID       string    `json:"user_id" gorm:"index"`

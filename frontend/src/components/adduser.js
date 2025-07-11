@@ -11,10 +11,11 @@ function AddUser({ btnName }) {
 		name: "",
 		path: "ray",
 		role: "normal",
-		uuid: ""
+		uuid: "",
+		remark: ""
 	};
 	const [showModal, setShowModal] = useState(false);
-	const [{ email_as_id, name, path, role, uuid }, setState] = useState(initialState);
+	const [{ email_as_id, name, path, role, uuid, remark }, setState] = useState(initialState);
 	const [isLoading, setIsLoading] = useState(false);
 	const [emailError, setEmailError] = useState("");
 
@@ -63,7 +64,8 @@ function AddUser({ btnName }) {
 					name,
 					path,
 					status: "plain",
-					uuid
+					uuid,
+					remark
 				},
 			});
 			
@@ -216,6 +218,32 @@ function AddUser({ btnName }) {
 													focus:border-transparent transition-all duration-200"
 											/>
 										</div>
+									</div>
+
+									{/* 备注字段 */}
+									<div className="space-y-2">
+										<label htmlFor="remark" className="block text-sm font-medium text-gray-300">
+											用户备注
+										</label>
+										<div className="relative">
+											<div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+												<svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+													<path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-1l-4 4z" />
+												</svg>
+											</div>
+											<textarea
+												id="remark"
+												name="remark"
+												value={remark}
+												onChange={onChange}
+												placeholder="输入用户备注信息（可选）"
+												rows="3"
+												className="block w-full pl-10 pr-3 py-3 bg-gray-700 border border-gray-600 rounded-lg 
+													text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 
+													focus:border-transparent transition-all duration-200 resize-none"
+											/>
+										</div>
+										<p className="text-xs text-gray-500">用于记录用户的特殊说明或备注信息</p>
 									</div>
 
 									{/* 角色选择 */}

@@ -217,7 +217,7 @@ func EditUserPG() gin.HandlerFunc {
 		updates := map[string]interface{}{"updated_at": time.Now()}
 		updateCount := 0
 
-		// 允许编辑 name, role 和 password
+		// 允许编辑 name, role, password 和 remark
 		if pgUser.Role != user.Role && user.Role != "" {
 			updates["role"] = user.Role
 			updateCount++
@@ -228,6 +228,13 @@ func EditUserPG() gin.HandlerFunc {
 			updates["name"] = user.Name
 			updateCount++
 			log.Printf("Updating name from %s to %s", pgUser.Name, user.Name)
+		}
+
+		// 添加备注更新支持（允许设置为空字符串）
+		if pgUser.Remark != user.Remark {
+			updates["remark"] = user.Remark
+			updateCount++
+			log.Printf("Updating remark from '%s' to '%s'", pgUser.Remark, user.Remark)
 		}
 
 		// 添加密码更新支持
@@ -316,7 +323,7 @@ func GetAllUsersPG() gin.HandlerFunc {
 		var users []model.UserTrafficLogsPG
 
 		// 查询所有用户，只选择需要的字段
-		query := `SELECT email_as_id, uuid, name, role, status, used, updated_at, daily_logs, monthly_logs, yearly_logs 
+		query := `SELECT email_as_id, uuid, name, role, status, used, remark, updated_at, daily_logs, monthly_logs, yearly_logs 
 				  FROM user_traffic_logs`
 
 		if err := db.Raw(query).Scan(&users).Error; err != nil {
@@ -333,6 +340,7 @@ func GetAllUsersPG() gin.HandlerFunc {
 			Role        string         `json:"role"`
 			Status      string         `json:"status"`
 			Used        int64          `json:"used"`
+			Remark      string         `json:"remark"`
 			UpdatedAt   time.Time      `json:"updated_at"`
 			DailyLogs   datatypes.JSON `json:"daily_logs"`
 			MonthlyLogs datatypes.JSON `json:"monthly_logs"`
@@ -353,6 +361,7 @@ func GetAllUsersPG() gin.HandlerFunc {
 				Role:        user.Role,
 				Status:      user.Status,
 				Used:        user.Used,
+				Remark:      user.Remark,
 				UpdatedAt:   user.UpdatedAt,
 				DailyLogs:   dailyLogs,
 				MonthlyLogs: monthlyLogs,
@@ -378,7 +387,7 @@ func GetUserByNamePG() gin.HandlerFunc {
 		db := database.GetPostgresDB()
 		var user model.UserTrafficLogsPG
 
-		query := `SELECT email_as_id, used, uuid, name, status, role, credit, daily_logs, monthly_logs, yearly_logs, created_at, updated_at
+		query := `SELECT email_as_id, used, uuid, name, status, role, remark, credit, daily_logs, monthly_logs, yearly_logs, created_at, updated_at
 				  FROM user_traffic_logs
 				  WHERE email_as_id = ?`
 

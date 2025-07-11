@@ -3,7 +3,7 @@ import { useSelector } from "react-redux";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import "./App.css";
 import Login from "./components/login";
-import Home from "./components/home";
+import User from "./components/user";
 import Menu from "./components/menu";
 import Macos from "./components/macos";
 import Windows from "./components/windows";
@@ -31,12 +31,12 @@ function App() {
 	return (
 		<BrowserRouter>
 			<Routes>
-				<Route path="/home" element={
+				<Route path="/user" element={
 					<RequireAuth>
 						<div className="min-h-screen bg-gray-900 flex flex-col">
 							<Menu />
 							<div className="flex-1">
-								<Home />
+								<User />
 							</div>
 							<Footer />
 						</div>

@@ -14,6 +14,7 @@ type UserTrafficLogs struct {
 	Role          string             `json:"role" bson:"role" validate:"required,eq=admin|eq=normal"`                 // role: "admin", "normal"
 	Status        string             `json:"status" bson:"status" validate:"required,eq=plain|eq=deleted|eq=overdue"` // status: "plain", "deleted", "overdue"
 	Name          string             `json:"name" bson:"name"`
+	Remark        string             `json:"remark" bson:"remark"` // 用户备注
 	Token         *string            `json:"token"`
 	Refresh_token *string            `json:"refresh_token"`
 	User_id       string             `json:"user_id" bson:"user_id"`
