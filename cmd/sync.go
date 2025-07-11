@@ -160,11 +160,10 @@ func syncMongoToPostgres(batchSize int, stats *SyncStats) error {
 	log.Println("📤 开始从MongoDB同步到PostgreSQL...")
 
 	// 获取数据库连接
-	mongoClient := database.Client
 	postgresDB := database.GetPostgresDB()
 
 	// 获取MongoDB集合
-	collection := database.OpenCollection(mongoClient, "USER_TRAFFIC_LOGS")
+	collection := database.GetCollection(model.UserTrafficLogs{})
 
 	// 获取PostgreSQL中已存在的email_as_id列表
 	existingEmails, err := getExistingEmailsFromPostgres(postgresDB)
@@ -266,11 +265,10 @@ func syncPostgresToMongo(batchSize int, stats *SyncStats) error {
 	log.Println("📤 开始从PostgreSQL同步到MongoDB...")
 
 	// 获取数据库连接
-	mongoClient := database.Client
 	postgresDB := database.GetPostgresDB()
 
 	// 获取MongoDB集合
-	collection := database.OpenCollection(mongoClient, "USER_TRAFFIC_LOGS")
+	collection := database.GetCollection(model.UserTrafficLogs{})
 
 	// 获取MongoDB中已存在的email_as_id列表
 	existingEmails, err := getExistingEmailsFromMongo(collection)

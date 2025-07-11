@@ -31,6 +31,11 @@ type NodeTrafficLogs struct {
 	} `json:"yearly_logs" bson:"yearly_logs"`
 }
 
+// CollectionName 返回MongoDB集合名称
+func (NodeTrafficLogs) CollectionName() string {
+	return "NODE_TRAFFIC_LOGS"
+}
+
 type NodeAtPeriod struct {
 	Period              string           `json:"period" bson:"period" validate:"required,min=2,max=100"`
 	Amount              int64            `json:"amount" bson:"amount"`
@@ -53,9 +58,19 @@ type SubscriptionNode struct {
 	EnableOpenai bool   `json:"enable_openai" bson:"enable_openai"`
 }
 
+// CollectionName 返回MongoDB集合名称
+func (SubscriptionNode) CollectionName() string {
+	return "subscription_nodes"
+}
+
 type ExpiryCheckDomainInfo struct {
 	Domain       string `json:"domain" bson:"domain"`
 	Remark       string `json:"remark" bson:"remark"`
 	ExpiredDate  string `json:"expired_date" bson:"expired_date"`
 	DaysToExpire int    `json:"days_to_expire" bson:"days_to_expire"`
+}
+
+// CollectionName 返回MongoDB集合名称
+func (ExpiryCheckDomainInfo) CollectionName() string {
+	return "expiry_check_domains"
 }

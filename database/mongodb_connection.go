@@ -12,6 +12,11 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/readpref"
 )
 
+// 定义集合名称接口
+type CollectionNamer interface {
+	CollectionName() string
+}
+
 // DBinstance func
 func DBinstance() *mongo.Client {
 
@@ -52,6 +57,17 @@ func OpenCollection(client *mongo.Client, collectionName string) *mongo.Collecti
 	var collection *mongo.Collection = client.Database("logV2rayTrafficDB").Collection(collectionName)
 
 	return collection
+}
+
+// OpenCollectionByModel 通过模型获取MongoDB集合，使用模型的CollectionName方法
+func OpenCollectionByModel(client *mongo.Client, model CollectionNamer) *mongo.Collection {
+	collectionName := model.CollectionName()
+	return client.Database("logV2rayTrafficDB").Collection(collectionName)
+}
+
+// GetCollection 获取指定模型的MongoDB集合的便捷方法
+func GetCollection(model CollectionNamer) *mongo.Collection {
+	return OpenCollectionByModel(Client, model)
 }
 
 // GetDB 获取数据库连接，优先返回PostgreSQL连接，如果不可用则返回MongoDB连接

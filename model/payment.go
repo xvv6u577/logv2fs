@@ -24,6 +24,11 @@ type PaymentRecord struct {
 	UpdatedAt     time.Time          `json:"updated_at" bson:"updated_at"`
 }
 
+// CollectionName 返回MongoDB集合名称
+func (PaymentRecord) CollectionName() string {
+	return "payment_records"
+}
+
 // PaymentRecordPG PostgreSQL版本的缴费记录
 type PaymentRecordPG struct {
 	ID            uuid.UUID `json:"id" gorm:"type:uuid;primary_key;default:gen_random_uuid()"`
@@ -59,6 +64,11 @@ type DailyPaymentAllocation struct {
 	ServiceStartDate time.Time          `json:"service_start_date" bson:"service_start_date"` // 服务开始日期
 	ServiceEndDate   time.Time          `json:"service_end_date" bson:"service_end_date"`     // 服务结束日期
 	CreatedAt        time.Time          `json:"created_at" bson:"created_at"`
+}
+
+// CollectionName 返回MongoDB集合名称
+func (DailyPaymentAllocation) CollectionName() string {
+	return "daily_payment_allocations"
 }
 
 // DailyPaymentAllocationPG 每日费用分摊记录 - PostgreSQL版本

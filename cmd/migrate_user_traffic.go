@@ -21,11 +21,10 @@ func migrateUserTrafficLogsDataImpl(batchSize int, skipExisting bool, stats *mod
 	log.Println("👥 开始迁移UserTrafficLogs数据...")
 
 	// 获取数据库连接
-	mongoClient := database.Client
 	postgresDB := database.GetPostgresDB()
 
 	// 获取MongoDB集合
-	collection := database.OpenCollection(mongoClient, "USER_TRAFFIC_LOGS") // 假设用户集合名为users
+	collection := database.GetCollection(model.UserTrafficLogs{}) // 假设用户集合名为users
 
 	// 计算总数
 	totalCount, err := collection.CountDocuments(context.Background(), bson.M{})

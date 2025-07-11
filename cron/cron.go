@@ -44,8 +44,8 @@ type NodeTrafficRequest struct {
 var (
 	currentDomain = os.Getenv("CURRENT_DOMAIN")
 	// MongoDB 集合
-	nodeTrafficLogs = database.OpenCollection(database.Client, "NODE_TRAFFIC_LOGS")
-	userTrafficLogs = database.OpenCollection(database.Client, "USER_TRAFFIC_LOGS")
+	nodeTrafficLogs = database.GetCollection(model.NodeTrafficLogs{})
+	userTrafficLogs = database.GetCollection(model.UserTrafficLogs{})
 )
 
 // 检查是否使用PostgreSQL

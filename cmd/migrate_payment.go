@@ -129,7 +129,7 @@ func initializeMongoPaymentCollections() error {
 
 	// 初始化 payment_records 集合
 	log.Println("正在初始化 payment_records 集合...")
-	paymentRecordsCollection := database.OpenCollection(database.Client, "payment_records")
+	paymentRecordsCollection := database.GetCollection(model.PaymentRecord{})
 
 	// 创建 payment_records 索引
 	paymentRecordsIndexes := []mongo.IndexModel{
@@ -173,7 +173,7 @@ func initializeMongoPaymentCollections() error {
 
 	// 初始化 daily_payment_allocations 集合
 	log.Println("正在初始化 daily_payment_allocations 集合...")
-	dailyAllocationCollection := database.OpenCollection(database.Client, "daily_payment_allocations")
+	dailyAllocationCollection := database.GetCollection(model.DailyPaymentAllocation{})
 
 	// 创建 daily_payment_allocations 索引
 	dailyAllocationIndexes := []mongo.IndexModel{

@@ -13,6 +13,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/xvv6u577/logv2fs/database"
+	"github.com/xvv6u577/logv2fs/model"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
@@ -70,7 +71,7 @@ func exportUsersAsJSON() error {
 	log.Println("✅ MongoDB连接成功")
 
 	// 获取MongoDB集合
-	collection := database.OpenCollection(database.Client, "USER_TRAFFIC_LOGS")
+	collection := database.GetCollection(model.UserTrafficLogs{})
 
 	// 设置查询上下文超时
 	ctx, cancel = context.WithTimeout(context.Background(), 30*time.Second)

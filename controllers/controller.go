@@ -30,10 +30,11 @@ import (
 )
 
 var (
-	subNodesCol          *mongo.Collection = database.OpenCollection(database.Client, "subscription_nodes")
-	expiryCheckDomainCol *mongo.Collection = database.OpenCollection(database.Client, "expiry_check_domains")
-	nodeTrafficLogsCol                     = database.OpenCollection(database.Client, "NODE_TRAFFIC_LOGS")
-	userTrafficLogsCol                     = database.OpenCollection(database.Client, "USER_TRAFFIC_LOGS")
+	// 使用新的集合管理方法，从模型中获取集合名称
+	subNodesCol          *mongo.Collection = database.GetCollection(model.SubscriptionNode{})
+	expiryCheckDomainCol *mongo.Collection = database.GetCollection(model.ExpiryCheckDomainInfo{})
+	nodeTrafficLogsCol                     = database.GetCollection(model.NodeTrafficLogs{})
+	userTrafficLogsCol                     = database.GetCollection(model.UserTrafficLogs{})
 	validate                               = validator.New()
 	CURRENT_DOMAIN                         = os.Getenv("CURRENT_DOMAIN")
 	CREDIT                                 = os.Getenv("CREDIT")

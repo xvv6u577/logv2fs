@@ -27,7 +27,7 @@ type (
 
 var (
 	CURRENT_DOMAIN     = os.Getenv("CURRENT_DOMAIN")
-	userTrafficLogsCol = database.OpenCollection(database.Client, "USER_TRAFFIC_LOGS")
+	userTrafficLogsCol = database.GetCollection(model.UserTrafficLogs{})
 )
 
 // UpdateOptionsFromDB 根据配置从数据库更新 sing-box 选项

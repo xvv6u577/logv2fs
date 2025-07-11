@@ -290,7 +290,7 @@ func checkDuplicatePayment(userEmailAsId string, startDate, endDate time.Time) (
 
 // MongoDB - 检查重复付款记录
 func checkDuplicatePaymentMongoDB(userEmailAsId string, startDate, endDate time.Time) (bool, error) {
-	collection := database.OpenCollection(database.Client, "payment_records")
+	collection := database.GetCollection(model.PaymentRecord{})
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -338,7 +338,7 @@ func checkUserExists(userEmailAsId string) (string, bool, error) {
 
 // MongoDB - 检查用户是否存在
 func checkUserExistsMongoDB(userEmailAsId string) (string, bool, error) {
-	collection := database.OpenCollection(database.Client, "USER_TRAFFIC_LOGS")
+	collection := database.GetCollection(model.UserTrafficLogs{})
 
 	var user struct {
 		Name string `bson:"name"`
@@ -409,7 +409,7 @@ func insertToMongoDB(userID, userName, comment string, receivedDate, startDate, 
 	}
 
 	// 插入付款记录
-	collection := database.OpenCollection(database.Client, "payment_records")
+	collection := database.GetCollection(model.PaymentRecord{})
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -474,7 +474,7 @@ func insertToPostgreSQL(userID, userName, comment string, receivedDate, startDat
 
 // MongoDB - 创建每日分摊记录
 func createDailyAllocationsMongoDB(paymentRecordID primitive.ObjectID, payment model.PaymentRecord) error {
-	collection := database.OpenCollection(database.Client, "daily_payment_allocations")
+	collection := database.GetCollection(model.DailyPaymentAllocation{})
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
@@ -559,7 +559,7 @@ func updateUserRemark(userEmailAsId, newRemark string) error {
 
 // MongoDB - 更新用户备注
 func updateUserRemarkMongoDB(userEmailAsId, newRemark string) error {
-	collection := database.OpenCollection(database.Client, "USER_TRAFFIC_LOGS")
+	collection := database.GetCollection(model.UserTrafficLogs{})
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()

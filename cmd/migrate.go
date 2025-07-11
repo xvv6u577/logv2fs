@@ -183,11 +183,10 @@ func migrateExpiryCheckDomainsData(batchSize int, skipExisting bool, stats *mode
 	log.Println("🔄 开始迁移ExpiryCheckDomains数据...")
 
 	// 获取数据库连接
-	mongoClient := database.Client
 	postgresDB := database.GetPostgresDB()
 
 	// 获取MongoDB集合
-	expiryCheckDomainCol := database.OpenCollection(mongoClient, "expiry_check_domains")
+	expiryCheckDomainCol := database.GetCollection(model.ExpiryCheckDomainInfo{})
 
 	// 查询所有记录
 	ctx := context.Background()
@@ -265,11 +264,10 @@ func migrateSubscriptionNodesData(batchSize int, skipExisting bool, stats *model
 	log.Println("🔄 开始迁移SubscriptionNodes数据...")
 
 	// 获取数据库连接
-	mongoClient := database.Client
 	postgresDB := database.GetPostgresDB()
 
 	// 获取MongoDB集合
-	subNodesCol := database.OpenCollection(mongoClient, "subscription_nodes")
+	subNodesCol := database.GetCollection(model.SubscriptionNode{})
 
 	// 查询所有记录
 	ctx := context.Background()

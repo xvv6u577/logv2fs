@@ -40,6 +40,11 @@ type UserTrafficLogs struct {
 	} `json:"yearly_logs" bson:"yearly_logs"`
 }
 
+// CollectionName 返回MongoDB集合名称
+func (UserTrafficLogs) CollectionName() string {
+	return "USER_TRAFFIC_LOGS"
+}
+
 type TrafficAtPeriod struct {
 	Period       string           `json:"period" bson:"period"`
 	Amount       int64            `json:"amount" bson:"amount"`

@@ -19,7 +19,8 @@ import (
 )
 
 var (
-	paymentRecordsCol *mongo.Collection = database.OpenCollection(database.Client, "payment_records")
+	// 使用新的集合管理方法，从模型中获取集合名称
+	paymentRecordsCol *mongo.Collection = database.GetCollection(model.PaymentRecord{})
 )
 
 // AddPaymentRecord 添加缴费记录
@@ -228,7 +229,7 @@ func GetPaymentStatistics() gin.HandlerFunc {
 		}
 
 		// 基于每日分摊记录进行统计
-		collection := database.OpenCollection(database.Client, "daily_payment_allocations")
+		collection := database.GetCollection(model.DailyPaymentAllocation{})
 
 		switch statType {
 		case "daily":
@@ -501,7 +502,7 @@ func GetPaymentRecords() gin.HandlerFunc {
 			limit = 10
 		}
 
-		collection := database.OpenCollection(database.Client, "payment_records")
+		collection := database.GetCollection(model.PaymentRecord{})
 
 		// 构建查询条件
 		filter := bson.M{}
@@ -578,7 +579,7 @@ func DeletePaymentRecord() gin.HandlerFunc {
 		}
 
 		// 删除每日分摊记录
-		allocationCollection := database.OpenCollection(database.Client, "daily_payment_allocations")
+		allocationCollection := database.GetCollection(model.DailyPaymentAllocation{})
 		_, err = allocationCollection.DeleteMany(ctx, bson.M{"payment_record_id": objID})
 		if err != nil {
 			log.Printf("删除每日分摊记录失败: %v", err)
@@ -741,7 +742,7 @@ func getInt64(v interface{}) int64 {
 // 获取用户名
 func getUserNameByEmail(email string) string {
 	// 从users集合查询用户名
-	userCollection := database.OpenCollection(database.Client, "USER_TRAFFIC_LOGS")
+	userCollection := database.GetCollection(model.UserTrafficLogs{})
 	var user struct {
 		Name string `bson:"name"`
 	}
@@ -756,7 +757,7 @@ func getUserNameByEmail(email string) string {
 
 // 创建每日分摊记录
 func createDailyAllocations(paymentRecordID primitive.ObjectID, payment model.PaymentRecord) error {
-	collection := database.OpenCollection(database.Client, "daily_payment_allocations")
+	collection := database.GetCollection(model.DailyPaymentAllocation{})
 
 	// 生成从开始日期到结束日期的每日分摊记录
 	current := payment.StartDate
