@@ -13,7 +13,7 @@ func PublicRoutes(incomingRoutes *gin.Engine) {
 
 	frontendRoutes := []string{
 		"/login",
-		"/home",
+		"/user",
 		"/domain",
 		"/mypanel",
 		"/logout",
@@ -23,7 +23,7 @@ func PublicRoutes(incomingRoutes *gin.Engine) {
 		"/android",
 		"/nodes",
 		"/addnode",
-		"/paymentinput",      // 添加缴费记录页面
+		"/paymentrecords",    // 添加缴费记录页面
 		"/paymentstatistics", // 费用统计页面
 		"/",
 	}
