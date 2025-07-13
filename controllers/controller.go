@@ -750,7 +750,7 @@ func ReturnSingboxJson() gin.HandlerFunc {
 
 					for i, outbound := range singboxJSON.Outbounds {
 						if outboundMap, ok := outbound.(map[string]interface{}); ok {
-							if Contains(outboundTags, outboundMap["tag"].(string)) {
+							if Contains(outboundTags, outboundMap["tag"].(string)) || (node.EnableOpenai) && outboundMap["tag"] == "Openai" {
 								if outbounds, ok := singboxJSON.Outbounds[i].(map[string]interface{}); ok {
 									if outboundsList, ok := outbounds["outbounds"].([]interface{}); ok {
 										singboxJSON.Outbounds[i].(map[string]interface{})["outbounds"] = append(outboundsList, node.Remark)
