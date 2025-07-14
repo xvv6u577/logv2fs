@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { alert, reset } from "../store/message";
+import { alert, reset, success } from "../store/message";
 import { useSelector, useDispatch } from "react-redux";
 import axios from "axios";
 import Alert from "./alert";
@@ -52,9 +52,9 @@ function Mypanel() {
 	// 复制到剪贴板
 	const copyToClipboard = (text) => {
 		navigator.clipboard.writeText(text).then(() => {
-			dispatch(alert({ show: true, content: "已复制到剪贴板", type: "success" }));
+			dispatch(success({ show: true, content: "已复制到剪贴板" }));
 		}).catch(() => {
-			dispatch(alert({ show: true, content: "复制失败", type: "error" }));
+			dispatch(alert({ show: true, content: "复制失败" }));
 		});
 	};
 
@@ -75,7 +75,7 @@ function Mypanel() {
 				setUser(response.data);
 			})
 			.catch((err) => {
-				dispatch(alert({ show: true, content: err.toString(), type: "error" }));
+				dispatch(alert({ show: true, content: err.toString() }));
 			});
 	}, [loginState, dispatch, rerenderSignal]);
 

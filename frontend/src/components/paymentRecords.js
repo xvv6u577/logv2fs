@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { alert } from '../store/message';
+import { alert, success } from '../store/message';
 import axios from 'axios';
 
 const PaymentRecords = () => {
@@ -87,9 +87,9 @@ const PaymentRecords = () => {
 			})
 			.catch((err) => {
 				if (err.response) {
-					dispatch(alert({ show: true, content: err.response.data.error || "获取缴费记录失败", type: "error" }));
+					dispatch(alert({ show: true, content: err.response.data.error || "获取缴费记录失败" }));
 				} else {
-					dispatch(alert({ show: true, content: "网络错误: " + err.toString(), type: "error" }));
+					dispatch(alert({ show: true, content: "网络错误: " + err.toString() }));
 				}
 			})
 			.finally(() => {
@@ -108,9 +108,9 @@ const PaymentRecords = () => {
 			})
 			.catch((err) => {
 				if (err.response) {
-					dispatch(alert({ show: true, content: err.response.data.error || "加载用户失败", type: "error" }));
+					dispatch(alert({ show: true, content: err.response.data.error || "加载用户失败" }));
 				} else {
-					dispatch(alert({ show: true, content: "网络错误: " + err.toString(), type: "error" }));
+					dispatch(alert({ show: true, content: "网络错误: " + err.toString() }));
 				}
 			});
 	};
@@ -133,14 +133,14 @@ const PaymentRecords = () => {
 				headers: { token: loginState.token },
 			})
 			.then((response) => {
-				dispatch(alert({ show: true, content: response.data.message || "缴费记录删除成功", type: "success" }));
+				dispatch(success({ show: true, content: response.data.message || "缴费记录删除成功" }));
 				fetchRecords(); // 重新加载列表
 			})
 			.catch((err) => {
 				if (err.response) {
-					dispatch(alert({ show: true, content: err.response.data.error || "删除失败", type: "error" }));
+					dispatch(alert({ show: true, content: err.response.data.error || "删除失败" }));
 				} else {
-					dispatch(alert({ show: true, content: "删除失败: " + err.toString(), type: "error" }));
+					dispatch(alert({ show: true, content: "删除失败: " + err.toString() }));
 				}
 			})
 			.finally(() => {
@@ -193,22 +193,22 @@ const PaymentRecords = () => {
 
 		// 验证表单
 		if (!selectedUser) {
-			dispatch(alert({ show: true, content: "请选择用户", type: "error" }));
+			dispatch(alert({ show: true, content: "请选择用户" }));
 			return;
 		}
 
 		if (!amount || parseFloat(amount) <= 0) {
-			dispatch(alert({ show: true, content: "请输入有效的缴费金额", type: "error" }));
+			dispatch(alert({ show: true, content: "请输入有效的缴费金额" }));
 			return;
 		}
 
 		if (!startDate || !endDate) {
-			dispatch(alert({ show: true, content: "请选择服务日期", type: "error" }));
+			dispatch(alert({ show: true, content: "请选择服务日期" }));
 			return;
 		}
 
 		if (new Date(endDate) < new Date(startDate)) {
-			dispatch(alert({ show: true, content: "服务结束日期不能早于开始日期", type: "error" }));
+			dispatch(alert({ show: true, content: "服务结束日期不能早于开始日期" }));
 			return;
 		}
 
@@ -234,7 +234,7 @@ const PaymentRecords = () => {
 				},
 			})
 			.then((response) => {
-				dispatch(alert({ show: true, content: response.data.message || "缴费记录添加成功", type: "success" }));
+				dispatch(success({ show: true, content: response.data.message || "缴费记录添加成功" }));
 				// 重置表单
 				setSelectedUser('');
 				setAmount('');
@@ -247,9 +247,9 @@ const PaymentRecords = () => {
 			})
 			.catch((err) => {
 				if (err.response) {
-					dispatch(alert({ show: true, content: err.response.data.error || "添加失败", type: "error" }));
+					dispatch(alert({ show: true, content: err.response.data.error || "添加失败" }));
 				} else {
-					dispatch(alert({ show: true, content: "添加失败: " + err.toString(), type: "error" }));
+					dispatch(alert({ show: true, content: "添加失败: " + err.toString() }));
 				}
 			})
 			.finally(() => {

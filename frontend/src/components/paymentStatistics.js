@@ -75,9 +75,9 @@ const PaymentStatistics = () => {
 			})
 			.catch((err) => {
 				if (err.response) {
-					dispatch(alert({ show: true, content: err.response.data.error || "获取统计数据失败", type: "error" }));
+					dispatch(alert({ show: true, content: err.response.data.error || "获取统计数据失败" }));
 				} else {
-					dispatch(alert({ show: true, content: "网络错误: " + err.toString(), type: "error" }));
+					dispatch(alert({ show: true, content: "网络错误: " + err.toString() }));
 				}
 			})
 			.finally(() => {

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { Navigate } from "react-router-dom";
 import axios from "axios";
-import { alert } from "../store/message";
+import { alert, success } from "../store/message";
 import { login } from "../store/login";
 import Alert from "./alert";
 
@@ -38,14 +38,14 @@ const Login = () => {
 				if (response.data) {
 					localStorage.setItem("token", JSON.stringify(response.data.token));
 					dispatch(login({ token: response.data.token }));
-					dispatch(alert({ show: true, content: "登录成功！", type: "success" }));
+					dispatch(success({ show: true, content: "登录成功！" }));
 				}
 			})
 			.catch((err) => {
 				if (err.response) {
-					dispatch(alert({ show: true, content: err.response.data.error || "登录失败", type: "error" }));
+					dispatch(alert({ show: true, content: err.response.data.error || "登录失败" }));
 				} else {
-					dispatch(alert({ show: true, content: "用户名或密码错误！", type: "error" }));
+					dispatch(alert({ show: true, content: "用户名或密码错误！" }));
 				}
 				console.log(err.toString());
 			})

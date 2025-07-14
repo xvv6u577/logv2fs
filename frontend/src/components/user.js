@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
 import { useSelector, useDispatch } from "react-redux";
-import { alert, reset } from "../store/message";
+import { alert, reset, success } from "../store/message";
 import axios from "axios";
 import Alert from "./alert";
 import AddUser from "./adduser";
@@ -167,9 +167,9 @@ const User = () => {
 	// 复制到剪贴板
 	const copyToClipboard = (text) => {
 		navigator.clipboard.writeText(text).then(() => {
-			dispatch(alert({ show: true, content: "已复制到剪贴板", type: "success" }));
+			dispatch(success({ show: true, content: "已复制到剪贴板" }));
 		}).catch(() => {
-			dispatch(alert({ show: true, content: "复制失败", type: "error" }));
+			dispatch(alert({ show: true, content: "复制失败" }));
 		});
 	};
 
@@ -205,18 +205,18 @@ const User = () => {
 
 		// 验证表单数据
 		if (!editForm.name.trim()) {
-			dispatch(alert({ show: true, content: "用户名不能为空", type: "error" }));
+			dispatch(alert({ show: true, content: "用户名不能为空" }));
 			return;
 		}
 
 		// 验证密码（如果输入了密码）
 		if (editForm.password) {
 			if (editForm.password.length < 6) {
-				dispatch(alert({ show: true, content: "密码至少需要6个字符", type: "error" }));
+				dispatch(alert({ show: true, content: "密码至少需要6个字符" }));
 				return;
 			}
 			if (editForm.password !== editForm.confirmPassword) {
-				dispatch(alert({ show: true, content: "两次输入的密码不一致", type: "error" }));
+				dispatch(alert({ show: true, content: "两次输入的密码不一致" }));
 				return;
 			}
 		}
@@ -243,16 +243,16 @@ const User = () => {
 				},
 			})
 			.then((response) => {
-				dispatch(alert({ show: true, content: response.data.message || "用户编辑成功", type: "success" }));
+				dispatch(success({ show: true, content: response.data.message || "用户编辑成功" }));
 				closeEditModal();
 				// 重新获取用户列表
 				window.location.reload();
 			})
 			.catch((err) => {
 				if (err.response) {
-					dispatch(alert({ show: true, content: err.response.data.error || "编辑失败", type: "error" }));
+					dispatch(alert({ show: true, content: err.response.data.error || "编辑失败" }));
 				} else {
-					dispatch(alert({ show: true, content: "编辑失败: " + err.toString(), type: "error" }));
+					dispatch(alert({ show: true, content: "编辑失败: " + err.toString() }));
 				}
 			});
 	};
@@ -269,15 +269,15 @@ const User = () => {
 					},
 				})
 				.then((response) => {
-					dispatch(alert({ show: true, content: response.data.message || "用户删除成功", type: "success" }));
+					dispatch(success({ show: true, content: response.data.message || "用户删除成功" }));
 					// 重新获取用户列表
 					setUsers(users.filter(u => u.email_as_id !== user.email_as_id));
 				})
 				.catch((err) => {
 					if (err.response) {
-						dispatch(alert({ show: true, content: err.response.data.error || "删除失败", type: "error" }));
+						dispatch(alert({ show: true, content: err.response.data.error || "删除失败" }));
 					} else {
-						dispatch(alert({ show: true, content: "删除失败: " + err.toString(), type: "error" }));
+						dispatch(alert({ show: true, content: "删除失败: " + err.toString() }));
 					}
 				});
 		}
@@ -294,7 +294,7 @@ const User = () => {
 					},
 				})
 				.then((response) => {
-					dispatch(alert({ show: true, content: response.data.message || "用户已禁用", type: "success" }));
+					dispatch(success({ show: true, content: response.data.message || "用户已禁用" }));
 					// 更新用户列表中的状态
 					setUsers(users.map(u => 
 						u.email_as_id === user.email_as_id 
@@ -304,9 +304,9 @@ const User = () => {
 				})
 				.catch((err) => {
 					if (err.response) {
-						dispatch(alert({ show: true, content: err.response.data.error || "禁用失败", type: "error" }));
+						dispatch(alert({ show: true, content: err.response.data.error || "禁用失败" }));
 					} else {
-						dispatch(alert({ show: true, content: "禁用失败: " + err.toString(), type: "error" }));
+						dispatch(alert({ show: true, content: "禁用失败: " + err.toString() }));
 					}
 				});
 		}
@@ -323,7 +323,7 @@ const User = () => {
 					},
 				})
 				.then((response) => {
-					dispatch(alert({ show: true, content: response.data.message || "用户已启用", type: "success" }));
+					dispatch(success({ show: true, content: response.data.message || "用户已启用" }));
 					// 更新用户列表中的状态
 					setUsers(users.map(u => 
 						u.email_as_id === user.email_as_id 
@@ -333,9 +333,9 @@ const User = () => {
 				})
 				.catch((err) => {
 					if (err.response) {
-						dispatch(alert({ show: true, content: err.response.data.error || "启用失败", type: "error" }));
+						dispatch(alert({ show: true, content: err.response.data.error || "启用失败" }));
 					} else {
-						dispatch(alert({ show: true, content: "启用失败: " + err.toString(), type: "error" }));
+						dispatch(alert({ show: true, content: "启用失败: " + err.toString() }));
 					}
 				});
 		}
@@ -354,7 +354,7 @@ const User = () => {
 			.catch((err) => {
 				setUserPayments([]);
 				if (err.response && err.response.status !== 404) {
-					dispatch(alert({ show: true, content: err.response.data.error || "获取缴费记录失败", type: "error" }));
+					dispatch(alert({ show: true, content: err.response.data.error || "获取缴费记录失败" }));
 				}
 			})
 			.finally(() => {
@@ -439,22 +439,22 @@ const User = () => {
 
 		// 验证表单
 		if (!paymentForm.selectedUser) {
-			dispatch(alert({ show: true, content: "用户未选择", type: "error" }));
+			dispatch(alert({ show: true, content: "用户未选择" }));
 			return;
 		}
 
 		if (!paymentForm.amount || parseFloat(paymentForm.amount) <= 0) {
-			dispatch(alert({ show: true, content: "请输入有效的缴费金额", type: "error" }));
+			dispatch(alert({ show: true, content: "请输入有效的缴费金额" }));
 			return;
 		}
 
 		if (!paymentForm.startDate || !paymentForm.endDate) {
-			dispatch(alert({ show: true, content: "请选择服务日期", type: "error" }));
+			dispatch(alert({ show: true, content: "请选择服务日期" }));
 			return;
 		}
 
 		if (new Date(paymentForm.endDate) < new Date(paymentForm.startDate)) {
-			dispatch(alert({ show: true, content: "服务结束日期不能早于开始日期", type: "error" }));
+			dispatch(alert({ show: true, content: "服务结束日期不能早于开始日期" }));
 			return;
 		}
 
@@ -480,7 +480,7 @@ const User = () => {
 				},
 			})
 			.then((response) => {
-				dispatch(alert({ show: true, content: response.data.message || "缴费记录添加成功", type: "success" }));
+				dispatch(success({ show: true, content: response.data.message || "缴费记录添加成功" }));
 				closePaymentModal();
 				// 如果当前正在查看该用户的详情，刷新缴费记录
 				if (modalUser && modalUser.email_as_id === paymentForm.selectedUser) {
@@ -489,9 +489,9 @@ const User = () => {
 			})
 			.catch((err) => {
 				if (err.response) {
-					dispatch(alert({ show: true, content: err.response.data.error || "添加失败", type: "error" }));
+					dispatch(alert({ show: true, content: err.response.data.error || "添加失败" }));
 				} else {
-					dispatch(alert({ show: true, content: "添加失败: " + err.toString(), type: "error" }));
+					dispatch(alert({ show: true, content: "添加失败: " + err.toString() }));
 				}
 			})
 			.finally(() => {
@@ -636,9 +636,9 @@ const User = () => {
 			.catch((err) => {
 				setLoading(false);
 				if (err.response) {
-					dispatch(alert({ show: true, content: err.response.data.error || "加载用户失败", type: "error" }));
+					dispatch(alert({ show: true, content: err.response.data.error || "加载用户失败" }));
 				} else {
-					dispatch(alert({ show: true, content: "网络错误: " + err.toString(), type: "error" }));
+					dispatch(alert({ show: true, content: "网络错误: " + err.toString() }));
 				}
 			});
 	}, [rerenderSignal, loginState.jwt.Email, loginState.token, dispatch]);
