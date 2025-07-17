@@ -9,7 +9,7 @@ const PaymentStatistics = () => {
 	const [statType, setStatType] = useState('monthly');
 	const [dateRange, setDateRange] = useState({
 		startDate: new Date(new Date().getFullYear(), 0, 1).toISOString().split('T')[0], // 今年第一天
-		endDate: new Date().toISOString().split('T')[0], // 今天
+		endDate: new Date(new Date().getFullYear(), 11, 31).toISOString().split('T')[0], // 今年最后一天
 	});
 
 	const dispatch = useDispatch();
