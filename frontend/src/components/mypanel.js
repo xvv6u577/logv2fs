@@ -166,10 +166,23 @@ function Mypanel() {
 								)}
 							</div>
 						</div>
-						<div className="flex items-center justify-between">
-							<span className="text-gray-400">用户名:</span>
-							<span className="text-white">{user.name || "未设置"}</span>
-						</div>
+						{loginState.jwt.Role === "admin" && (
+							<div className="flex items-center justify-between">
+								<span className="text-gray-400">用户名:</span>
+								<div className="flex items-center space-x-2">
+									<span className="text-white">{user.name || "无"}</span>
+									{user.name && (
+										<button
+											onClick={() => copyToClipboard(user.name)}
+											className={styles.buttonCopy}
+											title="复制用户名"
+										>
+											复制
+										</button>
+									)}
+								</div>
+							</div>
+						)}
 						<div className="flex items-center justify-between">
 							<span className="text-gray-400">状态:</span>
 							<span className={`${styles.badge} ${user.status === "plain" ? styles.badgeOnline : styles.badgeOffline}`}>

@@ -25,6 +25,8 @@ const Login = () => {
 		card: "bg-gray-800 rounded-xl shadow-2xl border border-gray-700",
 	};
 
+	const year = new Date().getFullYear();
+
 	const handleSubmit = (e) => {
 		e.preventDefault();
 		setIsLoading(true);
@@ -185,7 +187,7 @@ const Login = () => {
 				{/* 底部信息 */}
 				<div className="mt-8 text-center">
 					<p className="text-gray-400 text-sm">
-						© 2024 用户管理系统. 保留所有权利.
+						© {year} Logv2 App. 保留所有权利.
 					</p>
 				</div>
 			</div>

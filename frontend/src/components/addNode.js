@@ -398,7 +398,7 @@ const AddNode = () => {
 				</div>
 
 				{/* 节点网格 */}
-				<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+				<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
 					{nodes.length === 0 ? (
 						<div className={`${styles.card} p-8 text-center col-span-full`}>
 							<svg className="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
