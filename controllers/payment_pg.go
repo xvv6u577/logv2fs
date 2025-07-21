@@ -112,7 +112,7 @@ func AddPaymentRecordPG() gin.HandlerFunc {
 		}
 
 		// 创建每日分摊记录
-		if err := createDailyAllocationsPG(tx, paymentRecord.ID, paymentRecord); err != nil {
+		if err := CreateDailyAllocationsPG(tx, paymentRecord.ID, paymentRecord); err != nil {
 			tx.Rollback()
 			log.Printf("创建每日分摊记录失败: %v", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "创建每日分摊记录失败"})
@@ -136,7 +136,7 @@ func AddPaymentRecordPG() gin.HandlerFunc {
 }
 
 // 创建每日分摊记录 - PostgreSQL版本
-func createDailyAllocationsPG(tx *gorm.DB, paymentRecordID uuid.UUID, payment model.PaymentRecordPG) error {
+func CreateDailyAllocationsPG(tx *gorm.DB, paymentRecordID uuid.UUID, payment model.PaymentRecordPG) error {
 	// 生成从开始日期到结束日期的每日分摊记录
 	current := payment.StartDate
 	allocations := []model.DailyPaymentAllocationPG{}
@@ -629,7 +629,7 @@ func UpdatePaymentRecordPG() gin.HandlerFunc {
 		updatedRecord.ServiceDays = serviceDays
 		updatedRecord.Remark = req.Remark
 
-		if err := createDailyAllocationsPG(tx, paymentID, updatedRecord); err != nil {
+		if err := CreateDailyAllocationsPG(tx, paymentID, updatedRecord); err != nil {
 			tx.Rollback()
 			log.Printf("创建新的每日分摊记录失败: %v", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "更新每日分摊记录失败"})

@@ -4,7 +4,8 @@
             "file:///Users/guestuser/go/src/github/logv2fs/cloudflare-CDN/template.yaml",
             "file:///Users/guestuser/go/src/github/logv2fs/config/template.yaml",
             "file:///Users/guestuser/Downloads/data.yaml"
-        ]
+        ],
+        "https://www.schemastore.org/yamllint.json": "file:///Users/guestuser/go/src/github/logv2fs/cloudflare/template.yaml"
     },
     "editor.fontSize": 13
 }

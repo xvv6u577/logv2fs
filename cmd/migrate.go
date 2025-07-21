@@ -12,6 +12,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/spf13/cobra"
+	"github.com/xvv6u577/logv2fs/controllers"
 	"github.com/xvv6u577/logv2fs/database"
 	"github.com/xvv6u577/logv2fs/model"
 	"go.mongodb.org/mongo-driver/bson"
@@ -28,6 +29,14 @@ var migrateCmd = &cobra.Command{
 - 核心字段使用关系型设计，便于查询和维护
 - 时间序列数据使用JSONB存储，保持灵活性
 - 支持增量迁移和断点续传
+	
+迁移的表包括:
+- ExpiryCheckDomains: 域名证书过期信息
+- SubscriptionNodes: 订阅节点配置
+- NodeTrafficLogs: 节点流量日志
+- UserTrafficLogs: 用户流量日志
+- PaymentRecords: 缴费记录 (每日费用分摊记录将自动生成)
+- PaymentStatistics: 费用统计信息
 	
 支持的迁移类型:
 - schema: 仅创建PostgreSQL表结构
@@ -119,6 +128,8 @@ func migrateSchema() error {
 		&model.UserTrafficLogsPG{},
 		&model.ExpiryCheckDomainInfoPG{},
 		&model.SubscriptionNodePG{},
+		&model.PaymentRecordPG{},          // 新增：缴费记录表
+		&model.DailyPaymentAllocationPG{}, // 新增：每日费用分摊表
 	)
 	if err != nil {
 		return fmt.Errorf("自动迁移失败: %v", err)
@@ -172,6 +183,12 @@ func migrateData(batchSize int, skipExisting bool, stats *model.MigrationStats) 
 	err = migrateUserTrafficLogsData(batchSize, skipExisting, stats)
 	if err != nil {
 		return fmt.Errorf("UserTrafficLogs迁移失败: %v", err)
+	}
+
+	// 迁移PaymentRecords
+	err = migratePaymentRecordsData(batchSize, skipExisting, stats)
+	if err != nil {
+		return fmt.Errorf("PaymentRecords迁移失败: %v", err)
 	}
 
 	log.Println("✅ 数据迁移完成")
@@ -408,6 +425,12 @@ func createCustomIndexes(db *gorm.DB) error {
 		return fmt.Errorf("创建UserTrafficLogs索引失败: %v", err)
 	}
 
+	// 创建Payment相关表的索引
+	err = createPaymentIndexes(db)
+	if err != nil {
+		return fmt.Errorf("创建Payment索引失败: %v", err)
+	}
+
 	// 创建JSONB字段的GIN索引
 	err = createJSONBIndexes(db)
 	if err != nil {
@@ -471,6 +494,47 @@ func createExpiryCheckDomainsIndexes(db *gorm.DB) error {
 	return nil
 }
 
+// createPaymentIndexes 为Payment相关表创建索引
+func createPaymentIndexes(db *gorm.DB) error {
+	log.Println("💰 创建Payment相关索引...")
+
+	paymentIndexes := []string{
+		// PaymentRecords表的索引
+		"CREATE INDEX IF NOT EXISTS idx_payment_records_user_email ON payment_records(user_email_as_id)",
+		"CREATE INDEX IF NOT EXISTS idx_payment_records_start_date ON payment_records(start_date)",
+		"CREATE INDEX IF NOT EXISTS idx_payment_records_end_date ON payment_records(end_date)",
+		"CREATE INDEX IF NOT EXISTS idx_payment_records_created_at ON payment_records(created_at)",
+		"CREATE INDEX IF NOT EXISTS idx_payment_records_operator ON payment_records(operator_email)",
+		// 联合索引，用于查询用户某个时间段的缴费记录
+		"CREATE INDEX IF NOT EXISTS idx_payment_records_user_date_range ON payment_records(user_email_as_id, start_date, end_date)",
+
+		// DailyPaymentAllocations表的索引
+		"CREATE INDEX IF NOT EXISTS idx_daily_payment_allocations_user_email ON daily_payment_allocations(user_email_as_id)",
+		"CREATE INDEX IF NOT EXISTS idx_daily_payment_allocations_date ON daily_payment_allocations(date)",
+		"CREATE INDEX IF NOT EXISTS idx_daily_payment_allocations_date_string ON daily_payment_allocations(date_string)",
+		"CREATE INDEX IF NOT EXISTS idx_daily_payment_allocations_payment_record_id ON daily_payment_allocations(payment_record_id)",
+		"CREATE INDEX IF NOT EXISTS idx_daily_payment_allocations_created_at ON daily_payment_allocations(created_at)",
+		// 联合索引，用于快速查询用户在某日期的费用分摊
+		"CREATE INDEX IF NOT EXISTS idx_daily_payment_allocations_user_date ON daily_payment_allocations(user_email_as_id, date_string)",
+
+		// PaymentStatistics表的索引
+		"CREATE INDEX IF NOT EXISTS idx_payment_statistics_stat_type ON payment_statistics(stat_type)",
+		"CREATE INDEX IF NOT EXISTS idx_payment_statistics_stat_date ON payment_statistics(stat_date)",
+		"CREATE INDEX IF NOT EXISTS idx_payment_statistics_created_at ON payment_statistics(created_at)",
+		// 联合索引，用于快速查询特定类型和日期的统计数据
+		"CREATE INDEX IF NOT EXISTS idx_payment_statistics_type_date ON payment_statistics(stat_type, stat_date)",
+	}
+
+	for _, indexSQL := range paymentIndexes {
+		if err := db.Exec(indexSQL).Error; err != nil {
+			log.Printf("⚠️  创建Payment索引失败: %s, 错误: %v", indexSQL, err)
+		}
+	}
+
+	log.Println("✅ Payment索引创建完成")
+	return nil
+}
+
 // createTimeIndexes 创建时间相关索引
 func createTimeIndexes(db *gorm.DB) error {
 	log.Println("⏰ 创建时间相关索引...")
@@ -507,8 +571,10 @@ func printMigrationStats(stats *model.MigrationStats) {
 	fmt.Printf("🌐 节点记录: %d\n", stats.NodeRecordsMigrated)
 	fmt.Printf("👥 用户记录: %d\n", stats.UserRecordsMigrated)
 	fmt.Printf("📡 订阅节点: %d\n", stats.SubscriptionNodesMigrated)
+	fmt.Printf("💰 缴费记录: %d\n", stats.PaymentRecordsMigrated)
+	fmt.Printf("📊 每日费用分摊: %d (自动生成)\n", stats.DailyPaymentAllocationsMigrated)
 
-	totalRecords := stats.DomainRecordsMigrated + stats.NodeRecordsMigrated + stats.UserRecordsMigrated + stats.SubscriptionNodesMigrated
+	totalRecords := stats.DomainRecordsMigrated + stats.NodeRecordsMigrated + stats.UserRecordsMigrated + stats.SubscriptionNodesMigrated + stats.PaymentRecordsMigrated + stats.DailyPaymentAllocationsMigrated
 	fmt.Printf("📈 总记录数: %d\n", totalRecords)
 
 	if duration.Seconds() > 0 {
@@ -535,6 +601,152 @@ func printMigrationStats(stats *model.MigrationStats) {
 	fmt.Println("🎉 数据库迁移完成！")
 	fmt.Println("💡 建议: 迁移完成后请验证数据完整性并进行性能测试")
 	fmt.Println(strings.Repeat("=", 60))
+}
+
+// migratePaymentRecordsData 迁移PaymentRecords数据
+func migratePaymentRecordsData(batchSize int, skipExisting bool, stats *model.MigrationStats) error {
+	log.Println("🔄 开始迁移PaymentRecords数据...")
+
+	// 获取数据库连接
+	postgresDB := database.GetPostgresDB()
+
+	// 获取MongoDB集合
+	paymentCol := database.GetCollection(model.PaymentRecord{})
+
+	// 查询所有记录
+	ctx := context.Background()
+	cursor, err := paymentCol.Find(ctx, bson.M{})
+	if err != nil {
+		return fmt.Errorf("查询MongoDB PaymentRecords失败: %v", err)
+	}
+	defer cursor.Close(ctx)
+
+	// 迁移数据
+	var migratedCount int64
+	for cursor.Next(ctx) {
+		// 解析MongoDB记录
+		var mongoPayment model.PaymentRecord
+		if err := cursor.Decode(&mongoPayment); err != nil {
+			stats.Errors = append(stats.Errors, fmt.Sprintf("解析MongoDB PaymentRecord失败: %v", err))
+			continue
+		}
+
+		// 检查PostgreSQL中是否已存在该记录
+		var existingCount int64
+		if err := postgresDB.Model(&model.PaymentRecordPG{}).Where("user_email_as_id = ? AND start_date = ? AND end_date = ?",
+			mongoPayment.UserEmailAsId, mongoPayment.StartDate, mongoPayment.EndDate).Count(&existingCount).Error; err != nil {
+			stats.Errors = append(stats.Errors, fmt.Sprintf("检查PostgreSQL PaymentRecord是否存在失败: %v", err))
+			continue
+		}
+
+		if existingCount > 0 && skipExisting {
+			log.Printf("跳过已存在的PaymentRecord记录: %s (%s - %s)",
+				mongoPayment.UserEmailAsId, mongoPayment.StartDate.Format("2006-01-02"), mongoPayment.EndDate.Format("2006-01-02"))
+			continue
+		}
+
+		// 创建PostgreSQL记录
+		pgPayment := model.PaymentRecordPG{
+			ID:            uuid.New(),
+			UserEmailAsId: mongoPayment.UserEmailAsId,
+			UserName:      mongoPayment.UserName,
+			Amount:        mongoPayment.Amount,
+			StartDate:     mongoPayment.StartDate,
+			EndDate:       mongoPayment.EndDate,
+			DailyAmount:   mongoPayment.DailyAmount,
+			ServiceDays:   mongoPayment.ServiceDays,
+			Remark:        mongoPayment.Remark,
+			OperatorEmail: mongoPayment.OperatorEmail,
+			OperatorName:  mongoPayment.OperatorName,
+			CreatedAt:     mongoPayment.CreatedAt,
+			UpdatedAt:     mongoPayment.UpdatedAt,
+		}
+
+		// 开始事务处理
+		tx := postgresDB.Begin()
+		defer func() {
+			if r := recover(); r != nil {
+				tx.Rollback()
+			}
+		}()
+
+		// 插入或更新记录
+		if existingCount > 0 {
+			if err := tx.Model(&model.PaymentRecordPG{}).Where("user_email_as_id = ? AND start_date = ? AND end_date = ?",
+				mongoPayment.UserEmailAsId, mongoPayment.StartDate, mongoPayment.EndDate).Updates(map[string]interface{}{
+				"user_name":      pgPayment.UserName,
+				"amount":         pgPayment.Amount,
+				"daily_amount":   pgPayment.DailyAmount,
+				"service_days":   pgPayment.ServiceDays,
+				"remark":         pgPayment.Remark,
+				"operator_email": pgPayment.OperatorEmail,
+				"operator_name":  pgPayment.OperatorName,
+				"updated_at":     time.Now(),
+			}).Error; err != nil {
+				tx.Rollback()
+				stats.Errors = append(stats.Errors, fmt.Sprintf("更新PostgreSQL PaymentRecord失败: %v", err))
+				continue
+			}
+
+			// 获取已存在记录的ID
+			var existingRecord model.PaymentRecordPG
+			if err := tx.Where("user_email_as_id = ? AND start_date = ? AND end_date = ?",
+				mongoPayment.UserEmailAsId, mongoPayment.StartDate, mongoPayment.EndDate).First(&existingRecord).Error; err != nil {
+				tx.Rollback()
+				stats.Errors = append(stats.Errors, fmt.Sprintf("查找已更新的PaymentRecord失败: %v", err))
+				continue
+			}
+
+			// 删除原有的每日分摊记录
+			if err := tx.Where("payment_record_id = ?", existingRecord.ID).Delete(&model.DailyPaymentAllocationPG{}).Error; err != nil {
+				tx.Rollback()
+				stats.Errors = append(stats.Errors, fmt.Sprintf("删除原有每日分摊记录失败: %v", err))
+				continue
+			}
+
+			// 重新创建每日分摊记录
+			if err := controllers.CreateDailyAllocationsPG(tx, existingRecord.ID, existingRecord); err != nil {
+				tx.Rollback()
+				stats.Errors = append(stats.Errors, fmt.Sprintf("重新创建每日分摊记录失败: %v", err))
+				continue
+			}
+
+			// 统计生成的每日分摊记录数量
+			stats.DailyPaymentAllocationsMigrated += int64(existingRecord.ServiceDays)
+		} else {
+			if err := tx.Create(&pgPayment).Error; err != nil {
+				tx.Rollback()
+				stats.Errors = append(stats.Errors, fmt.Sprintf("插入PostgreSQL PaymentRecord失败: %v", err))
+				continue
+			}
+
+			// 创建每日分摊记录
+			if err := controllers.CreateDailyAllocationsPG(tx, pgPayment.ID, pgPayment); err != nil {
+				tx.Rollback()
+				stats.Errors = append(stats.Errors, fmt.Sprintf("创建每日分摊记录失败: %v", err))
+				continue
+			}
+
+			// 统计生成的每日分摊记录数量
+			stats.DailyPaymentAllocationsMigrated += int64(pgPayment.ServiceDays)
+		}
+
+		// 提交事务
+		if err := tx.Commit().Error; err != nil {
+			stats.Errors = append(stats.Errors, fmt.Sprintf("提交事务失败: %v", err))
+			continue
+		}
+
+		migratedCount++
+		if migratedCount%int64(batchSize) == 0 {
+			log.Printf("已迁移 %d 条PaymentRecord记录", migratedCount)
+		}
+	}
+
+	// 更新统计信息
+	stats.PaymentRecordsMigrated += migratedCount
+	log.Printf("✅ PaymentRecords迁移完成，共迁移 %d 条记录", migratedCount)
+	return nil
 }
 
 func init() {

@@ -167,13 +167,15 @@ func (y *YearlyLogs) Scan(value interface{}) error {
 
 // 数据迁移辅助结构
 type MigrationStats struct {
-	UserRecordsMigrated       int64     `json:"user_records_migrated"`
-	NodeRecordsMigrated       int64     `json:"node_records_migrated"`
-	DomainRecordsMigrated     int64     `json:"domain_records_migrated"`
-	SubscriptionNodesMigrated int64     `json:"subscription_nodes_migrated"`
-	StartTime                 time.Time `json:"start_time"`
-	EndTime                   time.Time `json:"end_time"`
-	Errors                    []string  `json:"errors"`
+	UserRecordsMigrated             int64     `json:"user_records_migrated"`
+	NodeRecordsMigrated             int64     `json:"node_records_migrated"`
+	DomainRecordsMigrated           int64     `json:"domain_records_migrated"`
+	SubscriptionNodesMigrated       int64     `json:"subscription_nodes_migrated"`
+	PaymentRecordsMigrated          int64     `json:"payment_records_migrated"`           // 新增：缴费记录迁移数量
+	DailyPaymentAllocationsMigrated int64     `json:"daily_payment_allocations_migrated"` // 新增：每日费用分摊记录迁移数量
+	StartTime                       time.Time `json:"start_time"`
+	EndTime                         time.Time `json:"end_time"`
+	Errors                          []string  `json:"errors"`
 }
 
 // PostgreSQL版本的域名证书过期信息模型
