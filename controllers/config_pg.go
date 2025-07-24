@@ -46,27 +46,30 @@ func GetSubscripionURLPG() gin.HandlerFunc {
 		if pgUser.Status == "plain" {
 			var sub string
 			for _, node := range activeGlobalNodes {
+				// 格式化IP地址以支持IPv6
+				formattedIP := helper.FormatIPForURL(node.IP)
+
 				if node.Type == "reality" {
 					if len(sub) == 0 {
-						sub = "vless://" + pgUser.UUID + "@" + node.IP + ":" + node.ServerPort + "?encryption=none&flow=xtls-rprx-vision&security=reality&sni=itunes.apple.com&fp=chrome&pbk=" + node.PublicKey + "&sid=" + node.ShortID + "&type=tcp&headerType=none#" + node.Remark
+						sub = "vless://" + pgUser.UUID + "@" + formattedIP + ":" + node.ServerPort + "?encryption=none&flow=xtls-rprx-vision&security=reality&sni=itunes.apple.com&fp=chrome&pbk=" + node.PublicKey + "&sid=" + node.ShortID + "&type=tcp&headerType=none#" + node.Remark
 					} else {
-						sub = sub + "\n" + "vless://" + pgUser.UUID + "@" + node.IP + ":" + node.ServerPort + "?encryption=none&flow=xtls-rprx-vision&security=reality&sni=itunes.apple.com&fp=chrome&pbk=" + node.PublicKey + "&sid=" + node.ShortID + "&type=tcp&headerType=none#" + node.Remark
+						sub = sub + "\n" + "vless://" + pgUser.UUID + "@" + formattedIP + ":" + node.ServerPort + "?encryption=none&flow=xtls-rprx-vision&security=reality&sni=itunes.apple.com&fp=chrome&pbk=" + node.PublicKey + "&sid=" + node.ShortID + "&type=tcp&headerType=none#" + node.Remark
 					}
 				}
 
 				if node.Type == "hysteria2" {
 					if len(sub) == 0 {
-						sub = "hysteria2://" + pgUser.UserID + "@" + node.IP + ":" + node.ServerPort + "?insecure=1&sni=bing.com#" + node.Remark
+						sub = "hysteria2://" + pgUser.UserID + "@" + formattedIP + ":" + node.ServerPort + "?insecure=1&sni=bing.com#" + node.Remark
 					} else {
-						sub = sub + "\n" + "hysteria2://" + pgUser.UserID + "@" + node.IP + ":" + node.ServerPort + "?insecure=1&sni=bing.com#" + node.Remark
+						sub = sub + "\n" + "hysteria2://" + pgUser.UserID + "@" + formattedIP + ":" + node.ServerPort + "?insecure=1&sni=bing.com#" + node.Remark
 					}
 				}
 
 				if node.Type == "vlessCDN" {
 					if len(sub) == 0 {
-						sub = "vless://" + node.UUID + "@" + node.IP + ":" + node.ServerPort + "?encryption=none&security=tls&sni=" + node.Domain + "&fp=randomized&type=ws&host=" + node.Domain + "&path=%2F%3Fed%3D2048#" + node.Remark
+						sub = "vless://" + node.UUID + "@" + formattedIP + ":" + node.ServerPort + "?encryption=none&security=tls&sni=" + node.Domain + "&fp=randomized&type=ws&host=" + node.Domain + "&path=%2F%3Fed%3D2048#" + node.Remark
 					} else {
-						sub = sub + "\n" + "vless://" + node.UUID + "@" + node.IP + ":" + node.ServerPort + "?encryption=none&security=tls&sni=" + node.Domain + "&fp=randomized&type=ws&host=" + node.Domain + "&path=%2F%3Fed%3D2048#" + node.Remark
+						sub = sub + "\n" + "vless://" + node.UUID + "@" + formattedIP + ":" + node.ServerPort + "?encryption=none&security=tls&sni=" + node.Domain + "&fp=randomized&type=ws&host=" + node.Domain + "&path=%2F%3Fed%3D2048#" + node.Remark
 					}
 				}
 			}
@@ -158,7 +161,7 @@ func ReturnSingboxJsonPG() gin.HandlerFunc {
 						ServerPort:     server_port,
 						Flow:           "xtls-rprx-vision",
 						PacketEncoding: "xudp",
-						Server:         node.IP,
+						Server:         helper.FormatIPForURL(node.IP),
 						TLS: struct {
 							Enabled    bool   `json:"enabled"`
 							ServerName string `json:"server_name"`
@@ -210,7 +213,7 @@ func ReturnSingboxJsonPG() gin.HandlerFunc {
 					singboxJSON.Outbounds = append(singboxJSON.Outbounds, Hysteria2JSON{
 						Tag:        node.Remark,
 						Type:       "hysteria2",
-						Server:     node.IP,
+						Server:     helper.FormatIPForURL(node.IP),
 						ServerPort: server_port,
 						UpMbps:     100,
 						DownMbps:   100,
@@ -245,7 +248,7 @@ func ReturnSingboxJsonPG() gin.HandlerFunc {
 					singboxJSON.Outbounds = append(singboxJSON.Outbounds, CFVlessJSON{
 						Tag:        node.Remark,
 						Type:       "vless",
-						Server:     node.IP,
+						Server:     helper.FormatIPForURL(node.IP),
 						ServerPort: server_port,
 						UUID:       node.UUID,
 						Flow:       "",
@@ -372,7 +375,7 @@ func ReturnVergeYAMLPG() gin.HandlerFunc {
 					singboxYAML.Proxies = append(singboxYAML.Proxies, RealityYAML{
 						Name:              node.Remark,
 						Type:              "vless",
-						Server:            node.IP,
+						Server:            helper.FormatIPForURL(node.IP),
 						Port:              server_port,
 						UUID:              pgUser.UUID,
 						Network:           "tcp",
@@ -401,7 +404,7 @@ func ReturnVergeYAMLPG() gin.HandlerFunc {
 					singboxYAML.Proxies = append(singboxYAML.Proxies, Hysteria2YAML{
 						Name:           node.Remark,
 						Type:           "hysteria2",
-						Server:         node.IP,
+						Server:         helper.FormatIPForURL(node.IP),
 						Port:           server_port,
 						Password:       pgUser.UserID,
 						Sni:            "bing.com",
@@ -420,7 +423,7 @@ func ReturnVergeYAMLPG() gin.HandlerFunc {
 					singboxYAML.Proxies = append(singboxYAML.Proxies, CFVlessYAML{
 						Name:              node.Remark,
 						Type:              "vless",
-						Server:            node.IP,
+						Server:            helper.FormatIPForURL(node.IP),
 						Port:              server_port,
 						UUID:              node.UUID,
 						Network:           "ws",

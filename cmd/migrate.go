@@ -516,13 +516,6 @@ func createPaymentIndexes(db *gorm.DB) error {
 		"CREATE INDEX IF NOT EXISTS idx_daily_payment_allocations_created_at ON daily_payment_allocations(created_at)",
 		// 联合索引，用于快速查询用户在某日期的费用分摊
 		"CREATE INDEX IF NOT EXISTS idx_daily_payment_allocations_user_date ON daily_payment_allocations(user_email_as_id, date_string)",
-
-		// PaymentStatistics表的索引
-		"CREATE INDEX IF NOT EXISTS idx_payment_statistics_stat_type ON payment_statistics(stat_type)",
-		"CREATE INDEX IF NOT EXISTS idx_payment_statistics_stat_date ON payment_statistics(stat_date)",
-		"CREATE INDEX IF NOT EXISTS idx_payment_statistics_created_at ON payment_statistics(created_at)",
-		// 联合索引，用于快速查询特定类型和日期的统计数据
-		"CREATE INDEX IF NOT EXISTS idx_payment_statistics_type_date ON payment_statistics(stat_type, stat_date)",
 	}
 
 	for _, indexSQL := range paymentIndexes {
