@@ -6,7 +6,6 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"strconv"
 	"strings"
 	"time"
 
@@ -61,48 +60,20 @@ func IsDomainReachable(domain string) bool {
 
 // IsIPv6 检测字符串是否为IPv6地址
 func IsIPv6(ip string) bool {
-	// 移除可能的端口号
-	if colonIndex := strings.LastIndex(ip, ":"); colonIndex != -1 {
-		// 检查是否是端口号（不是IPv6地址的一部分）
-		portPart := ip[colonIndex+1:]
-		if _, err := strconv.Atoi(portPart); err == nil {
-			ip = ip[:colonIndex]
-		}
-	}
-
 	// 解析IP地址
 	parsedIP := net.ParseIP(ip)
 	if parsedIP == nil {
 		return false
 	}
 
-	// 检查是否为IPv6地址
+	// 检查是否为IPv6地址（IPv4地址的To4()方法返回非nil，IPv6地址返回nil）
 	return parsedIP.To4() == nil
 }
 
 // FormatIPForURL 格式化IP地址用于URL，IPv6地址会被方括号包围
 func FormatIPForURL(ip string) string {
-	// 如果已经是方括号格式，直接返回
-	if strings.HasPrefix(ip, "[") && strings.HasSuffix(ip, "]") {
-		return ip
-	}
 
-	// 检查是否包含端口号
-	colonIndex := strings.LastIndex(ip, ":")
-	if colonIndex != -1 {
-		// 尝试解析端口号
-		portPart := ip[colonIndex+1:]
-		if _, err := strconv.Atoi(portPart); err == nil {
-			// 有端口号，分离IP和端口
-			ipPart := ip[:colonIndex]
-			if IsIPv6(ipPart) {
-				return "[" + ipPart + "]:" + portPart
-			}
-			return ip // IPv4地址保持不变
-		}
-	}
-
-	// 没有端口号的情况
+	// 检查是否为IPv6地址，如果是则添加方括号
 	if IsIPv6(ip) {
 		return "[" + ip + "]"
 	}
