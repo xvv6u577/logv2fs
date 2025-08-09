@@ -4,6 +4,7 @@ import { alert, reset, success } from "../store/message";
 import axios from "axios";
 import Alert from "./alert";
 import AddUser from "./adduser";
+import websocketService from "../service/websocket";
 
 const User = () => {
 	const [users, setUsers] = useState([]);
@@ -34,6 +35,7 @@ const User = () => {
 		remark: ""
 	});
 	const [paymentFormLoading, setPaymentFormLoading] = useState(false);
+	const [wsStatus, setWsStatus] = useState('disconnected');
 
 	const dispatch = useDispatch();
 	const loginState = useSelector((state) => state.login);
@@ -623,6 +625,39 @@ const User = () => {
 		}
 	}, [message, dispatch]);
 
+	// WebSocket 实时数据更新
+	useEffect(() => {
+		// 连接 WebSocket
+		const userID = loginState.jwt?.Email;
+		const isAdmin = loginState.jwt?.Role === "admin";
+		
+		websocketService.connect(userID, isAdmin);
+		
+		// 监听连接状态变化
+		const checkStatus = () => {
+			setWsStatus(websocketService.getConnectionStatus());
+		};
+		
+		// 定期检查连接状态
+		const statusInterval = setInterval(checkStatus, 1000);
+		checkStatus(); // 立即检查一次
+		
+		// 注册消息处理器
+		const handleUserTrafficUpdate = (message) => {
+			console.log('收到用户更新:', message);
+		};
+
+		// 注册消息处理器
+		websocketService.on('user_traffic_update', handleUserTrafficUpdate);
+		
+		// 清理函数
+		return () => {
+			websocketService.off('user_traffic_update', handleUserTrafficUpdate);
+			clearInterval(statusInterval);
+		};
+	}, [loginState.jwt, modalUser]);
+	
+	// 初始加载用户数据
 	useEffect(() => {
 		setLoading(true);
 		axios
@@ -1252,6 +1287,26 @@ const User = () => {
 				<div>
 					<h1 className="text-3xl font-bold mb-2">用户管理</h1>
 					<p className="text-gray-400">管理和监控用户状态</p>
+					{/* WebSocket 连接状态指示器 */}
+					<div className="flex items-center space-x-2 mt-2">
+						<div className={`w-2 h-2 rounded-full ${
+							wsStatus === 'connected' ? 'bg-green-500' :
+							wsStatus === 'connecting' ? 'bg-yellow-500' :
+							wsStatus === 'reconnecting' ? 'bg-orange-500' :
+							'bg-red-500'
+						}`}></div>
+						<span className={`text-xs ${
+							wsStatus === 'connected' ? 'text-green-400' :
+							wsStatus === 'connecting' ? 'text-yellow-400' :
+							wsStatus === 'reconnecting' ? 'text-orange-400' :
+							'text-red-400'
+						}`}>
+							{wsStatus === 'connected' ? '实时连接已建立' :
+							 wsStatus === 'connecting' ? '正在连接...' :
+							 wsStatus === 'reconnecting' ? '正在重连...' :
+							 '连接已断开'}
+						</span>
+					</div>
 				</div>
 				{loginState.jwt.Role === "admin" && (
 					<div className="mt-4 md:mt-0">

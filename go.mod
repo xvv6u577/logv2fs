@@ -14,8 +14,10 @@ require (
 	github.com/gin-contrib/static v0.0.1
 	github.com/go-playground/validator/v10 v10.9.0
 	github.com/google/uuid v1.6.0
+	github.com/gorilla/websocket v1.5.3
 	github.com/joho/godotenv v1.4.0
 	github.com/lengzuo/supa v1.0.1
+	github.com/lib/pq v1.10.9
 	github.com/mrz1836/go-sanitize v1.1.5
 	github.com/robfig/cron v1.2.0
 	github.com/sagernet/sing v0.3.0

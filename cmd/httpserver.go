@@ -13,6 +13,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/xvv6u577/logv2fs/middleware"
 	routers "github.com/xvv6u577/logv2fs/routers"
+	"github.com/xvv6u577/logv2fs/websocket"
 )
 
 // httpserverCmd represents the httpserver command
@@ -39,6 +40,16 @@ var httpserverCmd = &cobra.Command{
 		router := gin.New()
 		router.Use(middleware.CORS())
 		router.Use(gin.Logger())
+
+		// 初始化数据库监听器
+		websocket.InitMongoDBListener()
+		websocket.InitSupabaseListener()
+
+		// 添加 WebSocket 路由
+		router.GET("/ws", func(c *gin.Context) {
+			websocket.HandleWebSocket(c.Writer, c.Request)
+		})
+
 		routers.PublicRoutes(router)
 		routers.AuthorizedRoutes(router)
 
