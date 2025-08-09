@@ -19,7 +19,7 @@ function Macos() {
 			</h1>
 
 			<p className="mb-6 text-red-600 dark:text-red-400 font-semibold">
-				注意： 只有 MAC OSX 13 以上的系统，才能使用 Sing-box 客户端; MAC OSX 13 的系统，只能使用 Clash Verge 客户端。
+				注意： 只有 MAC OSX 13 以上的系统，才能使用 Sing-box 客户端; MAC OSX 13 以下的系统，只能使用 Clash Verge 客户端。
 			</p>
 
 			<h2 className="text-2xl font-semibold mb-4 text-gray-700 dark:text-gray-300">
