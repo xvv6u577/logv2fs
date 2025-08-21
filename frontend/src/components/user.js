@@ -516,8 +516,13 @@ const User = () => {
 
 	// 用户卡片组件
 	const UserCard = ({ user, index }) => {
+		// 根据用户状态确定卡片背景色
+		const cardBgClass = user.status === "deleted" 
+			? "bg-red-900 bg-opacity-50 border border-red-800 rounded-lg shadow-lg hover:shadow-xl transition-shadow" 
+			: styles.card;
+
 		return (
-			<div className={`${styles.card} overflow-hidden`}>
+			<div className={`${cardBgClass} overflow-hidden`}>
 				{/* 用户基本信息 */}
 				<div className="p-4">
 					{/* 用户头像和基本信息 */}
@@ -558,9 +563,7 @@ const User = () => {
 							user.status === "deleted" ? styles.badgeDisabled : 
 							styles.badgeOffline
 						}`}>
-							{user.status === "plain" ? "在线" : 
-							 user.status === "deleted" ? "已禁用" : 
-							 "离线"}
+							{user.status === "plain" ? "在线" : user.status === "deleted" ? "已禁用" : "离线"}
 						</span>
 					</div>
 
