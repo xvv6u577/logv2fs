@@ -3,6 +3,7 @@ package websocket
 import (
 	"context"
 	"log"
+	"sync"
 	"time"
 
 	"github.com/xvv6u577/logv2fs/database"
@@ -11,21 +12,39 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
+// EventBatch 事件批次结构
+type EventBatch struct {
+	Messages []Message `json:"messages"`
+	Count    int       `json:"count"`
+}
+
 // MongoDBListener MongoDB 变更监听器
 type MongoDBListener struct {
-	client *mongo.Client
-	ctx    context.Context
-	cancel context.CancelFunc
+	client         *mongo.Client
+	ctx            context.Context
+	cancel         context.CancelFunc
+	eventQueue     []Message
+	eventMutex     sync.RWMutex
+	batchTicker    *time.Ticker
+	lastBatchTime  time.Time
 }
 
 // NewMongoDBListener 创建新的 MongoDB 监听器
 func NewMongoDBListener() *MongoDBListener {
 	ctx, cancel := context.WithCancel(context.Background())
-	return &MongoDBListener{
-		client: database.Client,
-		ctx:    ctx,
-		cancel: cancel,
+	listener := &MongoDBListener{
+		client:        database.Client,
+		ctx:           ctx,
+		cancel:        cancel,
+		eventQueue:    make([]Message, 0),
+		batchTicker:   time.NewTicker(5 * time.Second),
+		lastBatchTime: time.Now(),
 	}
+	
+	// 启动批量处理协程
+	go listener.processBatchEvents()
+	
+	return listener
 }
 
 // Start 启动 MongoDB 变更监听
@@ -48,6 +67,12 @@ func (l *MongoDBListener) Start() {
 // Stop 停止监听
 func (l *MongoDBListener) Stop() {
 	log.Println("停止 MongoDB Change Streams 监听器...")
+	if l.batchTicker != nil {
+		l.batchTicker.Stop()
+	}
+	
+	// 发送剩余的事件
+	l.flushPendingEvents()
 	l.cancel()
 }
 
@@ -57,7 +82,7 @@ func (l *MongoDBListener) watchCollection(collectionName, messageType string) {
 
 	// 创建 Change Stream 选项
 	pipeline := mongo.Pipeline{
-		{{"$match", bson.M{
+		{{Key: "$match", Value: bson.M{
 			"operationType": bson.M{
 				"$in": []string{"insert", "update", "delete", "replace"},
 			},
@@ -135,26 +160,65 @@ func (l *MongoDBListener) handleChangeEvent(changeEvent bson.M, messageType stri
 		Timestamp:  time.Now(),
 	}
 
-	// 根据消息类型决定广播范围
-	switch messageType {
-	case "user_traffic_update":
-		// 用户流量更新向所有客户端广播
-		GlobalHub.BroadcastMessage(msg)
-	case "node_traffic_update":
-		// 节点流量更新向所有客户端广播
-		GlobalHub.BroadcastMessage(msg)
-	case "subscription_node_update":
-		// 订阅节点更新向所有客户端广播
-		GlobalHub.BroadcastMessage(msg)
-	case "payment_update":
-		// 缴费记录更新向所有客户端广播
-		GlobalHub.BroadcastMessage(msg)
-	default:
-		// 默认向所有客户端广播
-		GlobalHub.BroadcastMessage(msg)
-	}
+	// 将事件添加到队列中，而不是立即广播
+	l.addEventToQueue(msg)
 
-	log.Printf("MongoDB 变更事件: %s - %s", messageType, operationType)
+	log.Printf("MongoDB 变更事件已加入队列: %s - %s", messageType, operationType)
+}
+
+// HandleChangeEvent 公开方法用于测试
+func (l *MongoDBListener) HandleChangeEvent(changeEvent bson.M, messageType string) {
+	l.handleChangeEvent(changeEvent, messageType)
+}
+
+// addEventToQueue 将事件添加到队列中
+func (l *MongoDBListener) addEventToQueue(msg Message) {
+	l.eventMutex.Lock()
+	defer l.eventMutex.Unlock()
+	
+	l.eventQueue = append(l.eventQueue, msg)
+}
+
+// processBatchEvents 批量处理事件
+func (l *MongoDBListener) processBatchEvents() {
+	for {
+		select {
+		case <-l.batchTicker.C:
+			l.flushPendingEvents()
+		case <-l.ctx.Done():
+			return
+		}
+	}
+}
+
+// flushPendingEvents 发送待处理的事件
+func (l *MongoDBListener) flushPendingEvents() {
+	l.eventMutex.Lock()
+	defer l.eventMutex.Unlock()
+	
+	if len(l.eventQueue) == 0 {
+		return
+	}
+	
+	// 创建批量消息
+	batchMsg := Message{
+		Type:      "batch_update",
+		Action:    "batch",
+		Data: EventBatch{
+			Messages: l.eventQueue,
+			Count:    len(l.eventQueue),
+		},
+		Timestamp: time.Now(),
+	}
+	
+	// 广播批量消息
+	GlobalHub.BroadcastMessage(batchMsg)
+	
+	log.Printf("批量发送 %d 个事件", len(l.eventQueue))
+	
+	// 清空队列
+	l.eventQueue = l.eventQueue[:0]
+	l.lastBatchTime = time.Now()
 }
 
 // 全局 MongoDB 监听器实例

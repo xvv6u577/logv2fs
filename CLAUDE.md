@@ -6,6 +6,24 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 logv2fs is a Go-based VPN/proxy server built on sing-box with a React frontend. It features hybrid MongoDB/PostgreSQL architecture, real-time WebSocket updates, and comprehensive user/node management.
 
+## Core Development Philosophy
+
+### KISS (Keep It Simple, Stupid)
+
+Simplicity should be a key goal in design. Choose straightforward solutions over complex ones whenever possible. Simple solutions are easier to understand, maintain, and debug.
+
+### YAGNI (You Aren't Gonna Need It)
+
+Avoid building functionality on speculation. Implement features only when they are needed, not when you anticipate they might be useful in the future.
+
+### Design Principles
+
+- **Dependency Inversion**: High-level modules should not depend on low-level modules. Both should depend on abstractions.
+- **Open/Closed Principle**: Software entities should be open for extension but closed for modification.
+- **Single Responsibility**: Each function, class, and module should have one clear purpose.
+- **Fail Fast**: Check for potential errors early and raise exceptions immediately when issues occur.
+
+
 ## Common Development Commands
 
 ### Backend Development
@@ -185,3 +203,11 @@ The application fully supports IPv6:
 - Automatic SSL certificate management
 - Password hashing with bcrypt
 - JWT token expiration and refresh handling
+
+## ⚠️ Important Notes
+
+- **NEVER ASSUME OR GUESS** - When in doubt, ask for clarification
+- **Always verify file paths and module names** before use
+- **Keep CLAUDE.md updated** when adding new patterns or dependencies
+- **Test your code** - No feature is complete without tests
+- **Document your decisions** - Future developers (including yourself) will thank you

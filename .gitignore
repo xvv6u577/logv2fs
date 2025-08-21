@@ -33,3 +33,5 @@ Dockerfile
 TODO.MD
 .cursorignore.temp
 payment_records.json
+.claude/
+CLAUDE.md

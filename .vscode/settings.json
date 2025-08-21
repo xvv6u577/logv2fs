@@ -7,5 +7,6 @@
         ],
         "https://www.schemastore.org/yamllint.json": "file:///Users/guestuser/go/src/github/logv2fs/cloudflare/template.yaml"
     },
-    "editor.fontSize": 13
+    "editor.fontSize": 13,
+    "makefile.configureOnOpen": false
 }

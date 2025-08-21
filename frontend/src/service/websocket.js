@@ -11,6 +11,11 @@ class WebSocketService {
 		this.connectionStatus = 'disconnected'; // disconnected, connecting, connected, reconnecting
 		this.userID = null;
 		this.isAdmin = false;
+		
+		// 防抖机制
+		this.debounceTimeout = null;
+		this.pendingRefresh = false;
+		this.debounceDelay = 3000; // 3秒防抖延迟
 	}
 
 	// 初始化连接
@@ -136,6 +141,13 @@ class WebSocketService {
 			return;
 		}
 
+		// 处理批量更新消息
+		if (message.type === 'batch_update' && message.action === 'batch') {
+			console.log(`收到批量更新消息，包含 ${message.data.count} 个事件`);
+			this.handleBatchUpdate(message.data.messages);
+			return;
+		}
+
 		// 调用注册的消息处理器
 		const handlers = this.messageHandlers.get(message.type) || [];
 		handlers.forEach(handler => {
@@ -145,6 +157,89 @@ class WebSocketService {
 				console.error(`处理消息类型 ${message.type} 时出错:`, error);
 			}
 		});
+
+		// 触发防抖刷新
+		this.debounceRefresh();
+	}
+
+	// 处理批量更新消息
+	handleBatchUpdate(messages) {
+		// 按消息类型分组处理
+		const messagesByType = new Map();
+		
+		messages.forEach(msg => {
+			if (!messagesByType.has(msg.type)) {
+				messagesByType.set(msg.type, []);
+			}
+			messagesByType.get(msg.type).push(msg);
+		});
+
+		// 为每种消息类型调用处理器
+		messagesByType.forEach((msgs, messageType) => {
+			const handlers = this.messageHandlers.get(messageType) || [];
+			handlers.forEach(handler => {
+				msgs.forEach(msg => {
+					try {
+						handler(msg);
+					} catch (error) {
+						console.error(`处理批量消息类型 ${messageType} 时出错:`, error);
+					}
+				});
+			});
+		});
+
+		// 触发防抖刷新
+		this.debounceRefresh();
+	}
+
+	// 防抖刷新机制
+	debounceRefresh() {
+		// 如果已有待执行的刷新，清除它
+		if (this.debounceTimeout) {
+			clearTimeout(this.debounceTimeout);
+		}
+
+		// 标记有待刷新的状态
+		this.pendingRefresh = true;
+
+		// 设置新的防抖定时器
+		this.debounceTimeout = setTimeout(() => {
+			if (this.pendingRefresh) {
+				console.log('执行防抖刷新');
+				this.executeRefresh();
+				this.pendingRefresh = false;
+			}
+			this.debounceTimeout = null;
+		}, this.debounceDelay);
+	}
+
+	// 执行刷新操作
+	executeRefresh() {
+		// 触发页面刷新事件
+		const refreshEvent = new CustomEvent('websocket-refresh', {
+			detail: { timestamp: new Date() }
+		});
+		window.dispatchEvent(refreshEvent);
+
+		// 通知所有注册的刷新处理器
+		const refreshHandlers = this.messageHandlers.get('refresh') || [];
+		refreshHandlers.forEach(handler => {
+			try {
+				handler({ type: 'refresh', timestamp: new Date() });
+			} catch (error) {
+				console.error('执行刷新处理器时出错:', error);
+			}
+		});
+	}
+
+	// 立即刷新（跳过防抖）
+	immediateRefresh() {
+		if (this.debounceTimeout) {
+			clearTimeout(this.debounceTimeout);
+			this.debounceTimeout = null;
+		}
+		this.pendingRefresh = false;
+		this.executeRefresh();
 	}
 
 	// 注册消息处理器
@@ -175,6 +270,13 @@ class WebSocketService {
 	disconnect() {
 		this.connectionStatus = 'disconnected';
 		this.reconnectAttempts = this.maxReconnectAttempts; // 阻止重连
+		
+		// 清除防抖定时器
+		if (this.debounceTimeout) {
+			clearTimeout(this.debounceTimeout);
+			this.debounceTimeout = null;
+		}
+		this.pendingRefresh = false;
 		
 		if (this.ws) {
 			this.ws.close(1000, '用户主动断开连接');

@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"log"
+	"sync"
 	"time"
 
 	"github.com/lib/pq"
@@ -13,9 +14,13 @@ import (
 
 // SupabaseListener PostgreSQL LISTEN/NOTIFY 监听器
 type SupabaseListener struct {
-	db     *sql.DB
-	ctx    context.Context
-	cancel context.CancelFunc
+	db            *sql.DB
+	ctx           context.Context
+	cancel        context.CancelFunc
+	eventQueue    []Message
+	eventMutex    sync.RWMutex
+	batchTicker   *time.Ticker
+	lastBatchTime time.Time
 }
 
 // NewSupabaseListener 创建新的 PostgreSQL 监听器
@@ -44,11 +49,19 @@ func NewSupabaseListener() *SupabaseListener {
 		}
 	}
 
-	return &SupabaseListener{
-		db:     sqlDB,
-		ctx:    ctx,
-		cancel: cancel,
+	listener := &SupabaseListener{
+		db:            sqlDB,
+		ctx:           ctx,
+		cancel:        cancel,
+		eventQueue:    make([]Message, 0),
+		batchTicker:   time.NewTicker(5 * time.Second),
+		lastBatchTime: time.Now(),
 	}
+	
+	// 启动批量处理协程
+	go listener.processBatchEvents()
+	
+	return listener
 }
 
 // Start 启动 PostgreSQL LISTEN/NOTIFY 监听
@@ -76,6 +89,12 @@ func (l *SupabaseListener) Start() {
 // Stop 停止监听
 func (l *SupabaseListener) Stop() {
 	log.Println("停止 PostgreSQL LISTEN/NOTIFY 监听器...")
+	if l.batchTicker != nil {
+		l.batchTicker.Stop()
+	}
+	
+	// 发送剩余的事件
+	l.flushPendingEvents()
 	l.cancel()
 }
 
@@ -141,26 +160,60 @@ func (l *SupabaseListener) handleNotification(notification *pq.Notification, mes
 		Timestamp:  time.Now(),
 	}
 
-	// 根据消息类型决定广播范围
-	switch messageType {
-	case "user_traffic_update":
-		// 用户流量更新向所有客户端广播
-		GlobalHub.BroadcastMessage(msg)
-	case "node_traffic_update":
-		// 节点流量更新向所有客户端广播
-		GlobalHub.BroadcastMessage(msg)
-	case "subscription_node_update":
-		// 订阅节点更新向所有客户端广播
-		GlobalHub.BroadcastMessage(msg)
-	case "payment_update":
-		// 缴费记录更新向所有客户端广播
-		GlobalHub.BroadcastMessage(msg)
-	default:
-		// 默认向所有客户端广播
-		GlobalHub.BroadcastMessage(msg)
-	}
+	// 将事件添加到队列中，而不是立即广播
+	l.addEventToQueue(msg)
 
-	log.Printf("PostgreSQL 通知事件: %s - %s", messageType, event)
+	log.Printf("PostgreSQL 通知事件已加入队列: %s - %s", messageType, event)
+}
+
+// addEventToQueue 将事件添加到队列中
+func (l *SupabaseListener) addEventToQueue(msg Message) {
+	l.eventMutex.Lock()
+	defer l.eventMutex.Unlock()
+	
+	l.eventQueue = append(l.eventQueue, msg)
+}
+
+// processBatchEvents 批量处理事件
+func (l *SupabaseListener) processBatchEvents() {
+	for {
+		select {
+		case <-l.batchTicker.C:
+			l.flushPendingEvents()
+		case <-l.ctx.Done():
+			return
+		}
+	}
+}
+
+// flushPendingEvents 发送待处理的事件
+func (l *SupabaseListener) flushPendingEvents() {
+	l.eventMutex.Lock()
+	defer l.eventMutex.Unlock()
+	
+	if len(l.eventQueue) == 0 {
+		return
+	}
+	
+	// 创建批量消息
+	batchMsg := Message{
+		Type:      "batch_update",
+		Action:    "batch",
+		Data: EventBatch{
+			Messages: l.eventQueue,
+			Count:    len(l.eventQueue),
+		},
+		Timestamp: time.Now(),
+	}
+	
+	// 广播批量消息
+	GlobalHub.BroadcastMessage(batchMsg)
+	
+	log.Printf("批量发送 %d 个事件", len(l.eventQueue))
+	
+	// 清空队列
+	l.eventQueue = l.eventQueue[:0]
+	l.lastBatchTime = time.Now()
 }
 
 // mapEventType 映射 PostgreSQL 事件类型到我们的操作类型
