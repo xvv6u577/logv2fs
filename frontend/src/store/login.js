@@ -1,6 +1,6 @@
 import { createSlice } from "@reduxjs/toolkit";
 
-const token = JSON.parse(localStorage.getItem("token"));
+const token = localStorage.getItem("token");
 
 function jwtVerify(token) {
 
@@ -15,15 +15,29 @@ function jwtVerify(token) {
 			return {isLogin: false, jwt: {}, token: ""}
 		}
 
-		// 确保 base64 字符串有正确的填充
+		// Ensure base64 string has correct padding
 		let payload = parts[1];
-		// 添加必要的填充字符
+		// Add necessary padding characters
 		while (payload.length % 4 !== 0) {
 			payload += '=';
 		}
 
-		const decodedJWT = JSON.parse(atob(payload))
-		if (decodedJWT.exp * 1000 < Date.now()){
+		// Replace URL-safe base64 characters with standard base64 characters
+		const base64Payload = payload.replace(/-/g, '+').replace(/_/g, '/');
+		let decodedJWT;
+		try {
+			decodedJWT = JSON.parse(atob(base64Payload));
+		} catch (decodeError) {
+			console.error('Base64 decode error:', decodeError);
+			localStorage.removeItem("token");
+			return {isLogin: false, jwt: {}, token: ""};
+		}
+
+		if (
+			typeof decodedJWT.exp !== "number" ||
+			isNaN(decodedJWT.exp) ||
+			decodedJWT.exp * 1000 < Date.now()
+		) {
 			return {isLogin: false, jwt: decodedJWT, token}
 		}
 
@@ -35,23 +49,24 @@ function jwtVerify(token) {
 	}
 }
 
-const initialState = jwtVerify(token)
+const initialState = jwtVerify(token);
 
-export const loginSlice = createSlice({
-	name: "login",
+const loginSlice = createSlice({
+	name: 'login',
 	initialState,
 	reducers: {
 		login: (state, action) => { 
-			return jwtVerify(action.payload.token)
-
+			const token = action.payload && action.payload.token ? action.payload.token : "";
+			localStorage.setItem("token", token);
+			return jwtVerify(token);
 		},
 		logout: (state, action) => {
-			
 			localStorage.removeItem("token");
 			return {
 				isLogin: false,
-				jwt: {}
-			}
+				jwt: {},
+				token: ""
+			};
 		}
 	}
 });
