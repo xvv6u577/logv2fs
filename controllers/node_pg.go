@@ -438,7 +438,95 @@ func GetSingboxNodesPG() gin.HandlerFunc {
 			return
 		}
 
-		c.JSON(http.StatusOK, pgNodeTrafficLogs)
+		// 转换为前端期望的MongoDB格式
+		var mongoFormatNodes []map[string]interface{}
+		for _, pgNode := range pgNodeTrafficLogs {
+			node := map[string]interface{}{
+				"domain_as_id": pgNode.DomainAsId,
+				"remark":       pgNode.Remark,
+				"status":       pgNode.Status,
+				"created_at":   pgNode.CreatedAt,
+				"updated_at":   pgNode.UpdatedAt,
+				"daily_logs":   pgNode.DailyLogs,
+				"monthly_logs": pgNode.MonthlyLogs,
+				"yearly_logs":  pgNode.YearlyLogs,
+				"hourly_logs":  pgNode.HourlyLogs,
+			}
+			mongoFormatNodes = append(mongoFormatNodes, node)
+		}
+
+		c.JSON(http.StatusOK, mongoFormatNodes)
+	}
+}
+
+// SaveCustomDatePG 保存节点自定义日期 - PostgreSQL版本
+func SaveCustomDatePG() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if err := helper.CheckUserType(c, "admin"); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		var request struct {
+			DomainAsId string `json:"domain_as_id" binding:"required"`
+			CustomDate string `json:"custom_date" binding:"required"`
+		}
+
+		if err := c.BindJSON(&request); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		db := database.GetPostgresDB()
+
+		// 更新或插入自定义日期
+		query := `
+			INSERT INTO "node_custom_dates" (domain_as_id, custom_date, created_at, updated_at)
+			VALUES (?, ?, NOW(), NOW())
+			ON CONFLICT (domain_as_id) 
+			DO UPDATE SET custom_date = EXCLUDED.custom_date, updated_at = NOW()
+		`
+
+		if err := db.Exec(query, request.DomainAsId, request.CustomDate).Error; err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			log.Printf("保存自定义日期失败: %v", err)
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{"message": "自定义日期保存成功"})
+	}
+}
+
+// GetCustomDatesPG 获取所有节点自定义日期 - PostgreSQL版本
+func GetCustomDatesPG() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if err := helper.CheckUserType(c, "admin"); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		db := database.GetPostgresDB()
+
+		// 查询所有自定义日期
+		rows, err := db.Raw(`SELECT domain_as_id, custom_date FROM "node_custom_dates"`).Rows()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			log.Printf("查询自定义日期失败: %v", err)
+			return
+		}
+		defer rows.Close()
+
+		customDates := make(map[string]string)
+		for rows.Next() {
+			var domainAsId, customDate string
+			if err := rows.Scan(&domainAsId, &customDate); err != nil {
+				log.Printf("扫描自定义日期失败: %v", err)
+				continue
+			}
+			customDates[domainAsId] = customDate
+		}
+
+		c.JSON(http.StatusOK, customDates)
 	}
 }
 

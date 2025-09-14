@@ -35,6 +35,7 @@ var (
 	expiryCheckDomainCol *mongo.Collection = database.GetCollection(model.ExpiryCheckDomainInfo{})
 	nodeTrafficLogsCol                     = database.GetCollection(model.NodeTrafficLogs{})
 	userTrafficLogsCol                     = database.GetCollection(model.UserTrafficLogs{})
+	customDatesCol                         = database.GetCollection(model.CustomDate{})
 	validate                               = validator.New()
 	CURRENT_DOMAIN                         = os.Getenv("CURRENT_DOMAIN")
 	CREDIT                                 = os.Getenv("CREDIT")

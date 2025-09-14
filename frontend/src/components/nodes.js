@@ -16,6 +16,7 @@ function Nodes() {
 	const [activeSection, setActiveSection] = useState("nodes"); // 'nodes' or 'domains' 
 	const [selectedNode, setSelectedNode] = useState(null); // 用于控制模态框显示的节点
 	const [wsStatus, setWsStatus] = useState('disconnected'); // WebSocket 连接状态
+	const [customDates, setCustomDates] = useState({}); // 存储每个节点的自定义日期
 
 	const dispatch = useDispatch();
 	const loginState = useSelector((state) => state.login);
@@ -96,9 +97,13 @@ function Nodes() {
 				headers: { token: loginState.token },
 			})
 		])
-		.then(([nodesResponse, domainsResponse]) => {
+		.then(async ([nodesResponse, domainsResponse]) => {
 			setSingboxNodes(nodesResponse.data || []);
 			setMonitoredDomains(domainsResponse.data || []);
+			
+			// 初始化自定义日期
+			await initializeCustomDates(nodesResponse.data || []);
+			
 			setLoading(false); // 加载完成
 		})
 		.catch((err) => {
@@ -144,6 +149,140 @@ function Nodes() {
 
 	const removeDomain = (domainToRemove) => {
 		setMonitoredDomains(monitoredDomains?.filter(item => item.domain !== domainToRemove) || []);
+	};
+
+	// 计算自定义日期流量
+	const calculateCustomDateTraffic = (node, customDate) => {
+		if (!customDate || !node?.daily_logs) return 0;
+		
+		const startDate = new Date(customDate);
+		const today = new Date();
+		let totalTraffic = 0;
+		
+		// 遍历所有日流量记录
+		node.daily_logs.forEach(log => {
+			const logDate = new Date(
+				log.date.substring(0, 4), // 年
+				log.date.substring(4, 6) - 1, // 月 (需要减1，因为Date的月份从0开始)
+				log.date.substring(6, 8) // 日
+			);
+			
+			// 如果日志日期在自定义日期之后且在今天之前或等于今天
+			if (logDate >= startDate && logDate <= today) {
+				totalTraffic += log.traffic || 0;
+			}
+		});
+		
+		return totalTraffic;
+	};
+
+	// 获取当月首日
+	const getFirstDayOfCurrentMonth = () => {
+		const today = new Date();
+		const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+		return firstDay.toISOString().split('T')[0];
+	};
+
+	// 处理自定义日期变化
+	const handleCustomDateChange = (nodeIndex, date) => {
+		const newCustomDates = {
+			...customDates,
+			[nodeIndex]: date
+		};
+		setCustomDates(newCustomDates);
+		
+		// 保存到数据库
+		saveCustomDateToDatabase(nodeIndex, date);
+	};
+
+	// 保存自定义日期到数据库
+	const saveCustomDateToDatabase = async (nodeIndex, date) => {
+		try {
+			const node = singboxNodes[nodeIndex];
+			if (!node) return;
+
+			await axios.put(
+				process.env.REACT_APP_API_HOST + "custom-date",
+				{
+					domain_as_id: node.domain_as_id,
+					custom_date: date
+				},
+				{
+					headers: { token: loginState.token }
+				}
+			);
+		} catch (error) {
+			console.error('保存自定义日期失败:', error);
+			dispatch(alert({ show: true, content: "保存自定义日期失败" }));
+		}
+	};
+
+	// 从数据库加载自定义日期
+	const loadCustomDatesFromDatabase = async () => {
+		try {
+			const response = await axios.get(
+				process.env.REACT_APP_API_HOST + "custom-dates",
+				{
+					headers: { token: loginState.token }
+				}
+			);
+			
+			if (response.data) {
+				setCustomDates(response.data);
+			}
+		} catch (error) {
+			console.error('加载自定义日期失败:', error);
+			// 如果加载失败，使用默认日期
+			const defaultDate = getFirstDayOfCurrentMonth();
+			const defaultDates = {};
+			singboxNodes.forEach((_, index) => {
+				defaultDates[index] = defaultDate;
+			});
+			setCustomDates(defaultDates);
+		}
+	};
+
+	// 初始化自定义日期
+	const initializeCustomDates = async (nodes) => {
+		try {
+			// 先尝试从数据库加载
+			const response = await axios.get(
+				process.env.REACT_APP_API_HOST + "custom-dates",
+				{
+					headers: { token: loginState.token }
+				}
+			);
+			
+			if (response.data && Object.keys(response.data).length > 0) {
+				// 将domain_as_id映射转换为索引映射
+				const indexMapping = {};
+				nodes.forEach((node, index) => {
+					if (response.data[node.domain_as_id]) {
+						indexMapping[index] = response.data[node.domain_as_id];
+					} else {
+						indexMapping[index] = getFirstDayOfCurrentMonth();
+					}
+				});
+				setCustomDates(indexMapping);
+			} else {
+				// 如果没有保存的日期，使用默认日期（当月首日）
+				const defaultDate = getFirstDayOfCurrentMonth();
+				const defaultDates = {};
+				nodes.forEach((_, index) => {
+					defaultDates[index] = defaultDate;
+				});
+				setCustomDates(defaultDates);
+			}
+		} catch (error) {
+			console.error('初始化自定义日期失败:', error);
+			// 如果加载失败，使用默认日期
+			const defaultDate = getFirstDayOfCurrentMonth();
+			const defaultDates = {};
+			nodes.forEach((_, index) => {
+				defaultDates[index] = defaultDate;
+			});
+			setCustomDates(defaultDates);
+		}
 	};
 
 	// 节点卡片组件
@@ -200,6 +339,15 @@ function Nodes() {
 							})()}
 						</h3>
 					</div>
+					{/* 自定义日期流量 - 只读显示 */}
+					<div className="text-center">
+						<p className="text-xs text-purple-200 mb-1">
+							{customDates[index] ? `自从 ${customDates[index]} 流量` : '自定义日期流量'}
+						</p>
+						<h3 className="font-extrabold text-purple-400 text-lg">
+							{formatBytes(calculateCustomDateTraffic(node, customDates[index]))}
+						</h3>
+					</div>
 				</div>
 			</div>
 		);
@@ -249,7 +397,7 @@ function Nodes() {
 						<p className="text-gray-400 mb-6">{node.remark}</p>
 
 						{/* 流量概览 */}
-						<div className="grid grid-cols-3 gap-6 mb-8">
+						<div className="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
 							<div className="text-center bg-gray-700 rounded-lg p-4">
 								<p className="text-base font-extrabold text-blue-200 mb-2">今日流量</p>
 								<p className="font-bold text-blue-400 text-2xl">
@@ -283,6 +431,24 @@ function Nodes() {
 										const yearLog = node?.yearly_logs?.find(log => log.year === currentYear);
 										return yearLog ? formatBytes(yearLog.traffic) : "0";
 									})()}
+								</p>
+							</div>
+							{/* 自定义日期流量 */}
+							<div className="text-center bg-gray-700 rounded-lg p-4">
+								<div className="mb-3">
+									<input
+										type="date"
+										value={customDates[index] || ''}
+										onChange={(e) => handleCustomDateChange(index, e.target.value)}
+										className="w-full px-3 py-2 text-sm bg-gray-600 border border-gray-500 rounded text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+										placeholder="选择起始日期"
+									/>
+								</div>
+								<p className="text-base font-extrabold text-orange-200 mb-2">
+									{customDates[index] ? `自从 ${customDates[index]} 流量` : '自定义日期流量'}
+								</p>
+								<p className="font-bold text-orange-400 text-2xl">
+									{formatBytes(calculateCustomDateTraffic(node, customDates[index]))}
 								</p>
 							</div>
 						</div>

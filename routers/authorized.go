@@ -36,6 +36,10 @@ func AuthorizedRoutes(incomingRoutes *gin.Engine) {
 		incomingRoutes.GET("/v1/c47kr8", controller.GetSingboxNodesPG())
 		incomingRoutes.GET("/v1/t7k033", controller.GetActiveGlobalNodesPG())
 
+		// 自定义日期管理相关路由 - PostgreSQL版本
+		incomingRoutes.PUT("/v1/custom-date", controller.SaveCustomDatePG())
+		incomingRoutes.GET("/v1/custom-dates", controller.GetCustomDatesPG())
+
 		// 费用管理相关路由 - PostgreSQL版本
 		incomingRoutes.POST("/v1/payment", controller.AddPaymentRecordPG())
 		incomingRoutes.GET("/v1/payment/user/:email", controller.GetUserPaymentsPG())
@@ -57,6 +61,10 @@ func AuthorizedRoutes(incomingRoutes *gin.Engine) {
 		incomingRoutes.PUT("/v1/g7302b", controller.UpdateExpiryCheckDomainsInfo())
 		incomingRoutes.GET("/v1/c47kr8", controller.GetSingboxNodes())
 		incomingRoutes.GET("/v1/t7k033", controller.GetActiveGlobalNodes())
+
+		// 自定义日期管理相关路由 - MongoDB版本
+		incomingRoutes.PUT("/v1/custom-date", controller.SaveCustomDate())
+		incomingRoutes.GET("/v1/custom-dates", controller.GetCustomDates())
 
 		// 费用管理相关路由 - MongoDB版本
 		incomingRoutes.POST("/v1/payment", controller.AddPaymentRecord())

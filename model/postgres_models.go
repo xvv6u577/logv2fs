@@ -178,6 +178,20 @@ type MigrationStats struct {
 	Errors                          []string  `json:"errors"`
 }
 
+// PostgreSQL版本的自定义日期模型
+type CustomDatePG struct {
+	ID         uuid.UUID `json:"id" gorm:"type:uuid;primary_key;default:gen_random_uuid()"`
+	DomainAsId string    `json:"domain_as_id" gorm:"uniqueIndex;not null"`
+	CustomDate string    `json:"custom_date" gorm:"not null"`
+	CreatedAt  time.Time `json:"created_at"`
+	UpdatedAt  time.Time `json:"updated_at"`
+}
+
+// 为PostgreSQL表设置表名
+func (CustomDatePG) TableName() string {
+	return "node_custom_dates"
+}
+
 // PostgreSQL版本的域名证书过期信息模型
 type ExpiryCheckDomainInfoPG struct {
 	ID           uuid.UUID `json:"id" gorm:"type:uuid;primary_key;default:gen_random_uuid()"`

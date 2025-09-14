@@ -372,3 +372,79 @@ func GetSingboxNodes() gin.HandlerFunc {
 		c.JSON(http.StatusOK, activeNodes)
 	}
 }
+
+// SaveCustomDate 保存节点自定义日期 - MongoDB版本
+func SaveCustomDate() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if err := helper.CheckUserType(c, "admin"); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		var request struct {
+			DomainAsId string `json:"domain_as_id" binding:"required"`
+			CustomDate string `json:"custom_date" binding:"required"`
+		}
+
+		if err := c.BindJSON(&request); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		// 使用upsert操作更新或插入自定义日期
+		filter := bson.M{"domain_as_id": request.DomainAsId}
+		update := bson.M{
+			"$set": bson.M{
+				"domain_as_id": request.DomainAsId,
+				"custom_date":  request.CustomDate,
+				"updated_at":   time.Now(),
+			},
+			"$setOnInsert": bson.M{
+				"created_at": time.Now(),
+			},
+		}
+		opts := options.Update().SetUpsert(true)
+
+		_, err := customDatesCol.UpdateOne(context.TODO(), filter, update, opts)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			log.Printf("保存自定义日期失败: %v", err)
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{"message": "自定义日期保存成功"})
+	}
+}
+
+// GetCustomDates 获取所有节点自定义日期 - MongoDB版本
+func GetCustomDates() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if err := helper.CheckUserType(c, "admin"); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		cur, err := customDatesCol.Find(context.TODO(), bson.M{})
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			log.Printf("查询自定义日期失败: %v", err)
+			return
+		}
+		defer cur.Close(context.Background())
+
+		customDates := make(map[string]string)
+		for cur.Next(context.TODO()) {
+			var doc struct {
+				DomainAsId string `bson:"domain_as_id"`
+				CustomDate string `bson:"custom_date"`
+			}
+			if err := cur.Decode(&doc); err != nil {
+				log.Printf("解码自定义日期失败: %v", err)
+				continue
+			}
+			customDates[doc.DomainAsId] = doc.CustomDate
+		}
+
+		c.JSON(http.StatusOK, customDates)
+	}
+}

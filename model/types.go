@@ -45,6 +45,20 @@ func (UserTrafficLogs) CollectionName() string {
 	return "USER_TRAFFIC_LOGS"
 }
 
+// CustomDate 自定义日期模型
+type CustomDate struct {
+	ID         primitive.ObjectID `json:"_id" bson:"_id"`
+	DomainAsId string             `json:"domain_as_id" bson:"domain_as_id"`
+	CustomDate string             `json:"custom_date" bson:"custom_date"`
+	CreatedAt  time.Time          `json:"created_at" bson:"created_at"`
+	UpdatedAt  time.Time          `json:"updated_at" bson:"updated_at"`
+}
+
+// CollectionName 返回MongoDB集合名称
+func (CustomDate) CollectionName() string {
+	return "CUSTOM_DATES"
+}
+
 type TrafficAtPeriod struct {
 	Period       string           `json:"period" bson:"period"`
 	Amount       int64            `json:"amount" bson:"amount"`
