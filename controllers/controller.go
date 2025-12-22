@@ -37,7 +37,6 @@ var (
 	userTrafficLogsCol                     = database.GetCollection(model.UserTrafficLogs{})
 	customDatesCol                         = database.GetCollection(model.CustomDate{})
 	validate                               = validator.New()
-	CURRENT_DOMAIN                         = os.Getenv("CURRENT_DOMAIN")
 	CREDIT                                 = os.Getenv("CREDIT")
 	PUBLIC_KEY                             = os.Getenv("PUBLIC_KEY")
 	SHORT_ID                               = os.Getenv("SHORT_ID")

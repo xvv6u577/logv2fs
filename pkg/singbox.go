@@ -26,7 +26,6 @@ type (
 )
 
 var (
-	CURRENT_DOMAIN     = os.Getenv("CURRENT_DOMAIN")
 	userTrafficLogsCol = database.GetCollection(model.UserTrafficLogs{})
 )
 

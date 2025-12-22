@@ -14,7 +14,6 @@ import (
 )
 
 var (
-	CURRENT_DOMAIN = os.Getenv("CURRENT_DOMAIN")
 	SERVER_ADDRESS = os.Getenv("SERVER_ADDRESS")
 	SERVER_PORT    = os.Getenv("SERVER_PORT")
 	GIN_MODE       = os.Getenv("GIN_MODE")
