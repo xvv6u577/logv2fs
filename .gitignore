@@ -5,16 +5,20 @@ frontend/node_modules
 frontend/build
 frontend/.env
 frontend/tool
-sing-box-full-platform/
 setup-rocket.chat/
-setup-script*
 config/geo/
-sing-box-docker/
+singbox-deploy/
 
 # include logs, but exclude everything else in the directory
 logs/*
 !logs/
-cloudflare/
+cloudflare-*/node_modules/
+cloudflare-*/package-lock.json
+cloudflare-*/wrangler.toml
+cloudflare-*/wrangler.jsonc 
+cloudflare-*/worker-configuration.d.ts  
+
+cloudflare-edgetunnel/
 
 development/
 CA
@@ -35,3 +39,5 @@ TODO.MD
 payment_records.json
 .claude/
 CLAUDE.md
+
+research/
