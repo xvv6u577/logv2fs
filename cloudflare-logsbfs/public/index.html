@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>待办事项应用</title>
+  <style>
+    body {
+      font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #f5f5f5;
+    }
+    h1 {
+      color: #333;
+      text-align: center;
+    }
+    .input-group {
+      display: flex;
+      margin-bottom: 20px;
+    }
+    .input-group input {
+      flex: 1;
+      padding: 10px;
+      font-size: 16px;
+      border: 1px solid #ddd;
+      border-radius: 4px 0 0 4px;
+    }
+    .input-group button {
+      padding: 10px 20px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 0 4px 4px 0;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    .input-group button:hover {
+      background-color: #45a049;
+    }
+    ul {
+      list-style-type: none;
+      padding: 0;
+    }
+    li {
+      background-color: white;
+      padding: 15px;
+      margin-bottom: 10px;
+      border-radius: 4px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .completed {
+      text-decoration: line-through;
+      color: #888;
+    }
+    .todo-text {
+      flex: 1;
+      margin-left: 10px;
+    }
+    .actions {
+      display: flex;
+    }
+    .actions button {
+      margin-left: 5px;
+      padding: 5px 10px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .edit-btn {
+      background-color: #2196F3;
+      color: white;
+    }
+    .delete-btn {
+      background-color: #f44336;
+      color: white;
+    }
+    .loading {
+      text-align: center;
+      padding: 20px;
+      font-style: italic;
+      color: #666;
+    }
+    .error {
+      color: red;
+      text-align: center;
+      padding: 10px;
+      background-color: #ffebee;
+      border-radius: 4px;
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+<body>
+  <h1>待办事项</h1>
+  
+  <div id="error" class="error" style="display: none;"></div>
+  
+  <div class="input-group">
+    <input type="text" id="new-todo" placeholder="添加新的待办事项...">
+    <button onclick="addTodo()">添加</button>
+  </div>
+  
+  <div id="loading" class="loading">加载中...</div>
+  <ul id="todo-list"></ul>
+  
+  <script>
+    // 配置API URL（根据你的Worker URL进行修改）
+    const API_URL = '/api/todos';
+    
+    // 获取所有待办事项
+    async function fetchTodos() {
+      document.getElementById('loading').style.display = 'block';
+      document.getElementById('error').style.display = 'none';
+      
+      try {
+        const response = await fetch(API_URL);
+        
+        if (!response.ok) {
+          throw new Error(`HTTP错误 ${response.status}`);
+        }
+        
+        const result = await response.json();
+        
+        if (!result.success) {
+          throw new Error(result.error || '获取待办事项失败');
+        }
+        
+        renderTodos(result.data);
+      } catch (error) {
+        showError(`获取待办事项失败: ${error.message}`);
+      } finally {
+        document.getElementById('loading').style.display = 'none';
+      }
+    }
+    
+    // 渲染待办事项列表
+    function renderTodos(todos) {
+      const todoList = document.getElementById('todo-list');
+      todoList.innerHTML = '';
+      
+      if (todos.length === 0) {
+        todoList.innerHTML = '<div class="loading">没有待办事项</div>';
+        return;
+      }
+      
+      todos.forEach(todo => {
+        const li = document.createElement('li');
+        
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.checked = todo.completed;
+        checkbox.onchange = () => toggleTodo(todo.id, !todo.completed);
+        
+        const span = document.createElement('span');
+        span.className = `todo-text ${todo.completed ? 'completed' : ''}`;
+        span.textContent = todo.title;
+        
+        const actionsDiv = document.createElement('div');
+        actionsDiv.className = 'actions';
+        
+        const editButton = document.createElement('button');
+        editButton.className = 'edit-btn';
+        editButton.textContent = '编辑';
+        editButton.onclick = () => {
+          const newTitle = prompt('编辑待办事项', todo.title);
+          if (newTitle && newTitle !== todo.title) {
+            updateTodo(todo.id, newTitle, todo.completed);
+          }
+        };
+        
+        const deleteButton = document.createElement('button');
+        deleteButton.className = 'delete-btn';
+        deleteButton.textContent = '删除';
+        deleteButton.onclick = () => deleteTodo(todo.id);
+        
+        actionsDiv.appendChild(editButton);
+        actionsDiv.appendChild(deleteButton);
+        
+        li.appendChild(checkbox);
+        li.appendChild(span);
+        li.appendChild(actionsDiv);
+        
+        todoList.appendChild(li);
+      });
+    }
+    
+    // 添加新的待办事项
+    async function addTodo() {
+      const input = document.getElementById('new-todo');
+      const title = input.value.trim();
+      
+      if (!title) {
+        showError('待办事项不能为空');
+        return;
+      }
+      
+      try {
+        const response = await fetch(API_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ title, completed: false })
+        });
+        
+        if (!response.ok) {
+          throw new Error(`HTTP错误 ${response.status}`);
+        }
+        
+        const result = await response.json();
+        
+        if (!result.success) {
+          throw new Error(result.error || '创建待办事项失败');
+        }
+        
+        input.value = '';
+        fetchTodos();
+      } catch (error) {
+        showError(`添加待办事项失败: ${error.message}`);
+      }
+    }
+    
+    // 切换待办事项状态
+    async function toggleTodo(id, completed) {
+      try {
+        const response = await fetch(`${API_URL}/${id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ completed })
+        });
+        
+        if (!response.ok) {
+          throw new Error(`HTTP错误 ${response.status}`);
+        }
+        
+        const result = await response.json();
+        
+        if (!result.success) {
+          throw new Error(result.error || '更新待办事项失败');
+        }
+        
+        fetchTodos();
+      } catch (error) {
+        showError(`更新待办事项失败: ${error.message}`);
+      }
+    }
+    
+    // 更新待办事项
+    async function updateTodo(id, title, completed) {
+      try {
+        const response = await fetch(`${API_URL}/${id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ title, completed })
+        });
+        
+        if (!response.ok) {
+          throw new Error(`HTTP错误 ${response.status}`);
+        }
+        
+        const result = await response.json();
+        
+        if (!result.success) {
+          throw new Error(result.error || '更新待办事项失败');
+        }
+        
+        fetchTodos();
+      } catch (error) {
+        showError(`更新待办事项失败: ${error.message}`);
+      }
+    }
+    
+    // 删除待办事项
+    async function deleteTodo(id) {
+      if (!confirm('确定要删除这个待办事项吗？')) {
+        return;
+      }
+      
+      try {
+        const response = await fetch(`${API_URL}/${id}`, {
+          method: 'DELETE'
+        });
+        
+        if (!response.ok) {
+          throw new Error(`HTTP错误 ${response.status}`);
+        }
+        
+        const result = await response.json();
+        
+        if (!result.success) {
+          throw new Error(result.error || '删除待办事项失败');
+        }
+        
+        fetchTodos();
+      } catch (error) {
+        showError(`删除待办事项失败: ${error.message}`);
+      }
+    }
+    
+    // 显示错误信息
+    function showError(message) {
+      const errorDiv = document.getElementById('error');
+      errorDiv.textContent = message;
+      errorDiv.style.display = 'block';
+      
+      // 5秒后自动隐藏错误信息
+      setTimeout(() => {
+        errorDiv.style.display = 'none';
+      }, 5000);
+    }
+    
+    // 页面加载时获取待办事项
+    document.addEventListener('DOMContentLoaded', fetchTodos);
+    
+    // 支持按Enter键添加待办事项
+    document.getElementById('new-todo').addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        addTodo();
+      }
+    });
+  </script>
+</body>
+</html> 
