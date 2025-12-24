@@ -1,4 +1,4 @@
-package controllers
+package mongodb
 
 import (
 	"context"
@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/xvv6u577/logv2fs/database/mongodb"
 	helper "github.com/xvv6u577/logv2fs/helpers"
 	"github.com/xvv6u577/logv2fs/model"
 	"go.mongodb.org/mongo-driver/bson"
@@ -88,7 +89,7 @@ func AddNode() gin.HandlerFunc {
 			filter := bson.M{"remark": domain.Remark}
 			update := bson.M{"$set": nodeFromWebForm[i]}
 			opts := options.Update().SetUpsert(true)
-			_, err := subNodesCol.UpdateOne(context.TODO(), filter, update, opts)
+			_, err := mongodb.GetCollection(model.SubscriptionNode{}).UpdateOne(context.TODO(), filter, update, opts)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 				log.Printf("UpdateOne error: %v", err)
@@ -102,7 +103,7 @@ func AddNode() gin.HandlerFunc {
 			remarks[i] = domain.Remark
 		}
 		filter := bson.M{"remark": bson.M{"$nin": remarks}}
-		_, err := subNodesCol.DeleteMany(context.TODO(), filter)
+		_, err := mongodb.GetCollection(model.SubscriptionNode{}).DeleteMany(context.TODO(), filter)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			log.Printf("DeleteMany error: %v", err)
@@ -142,7 +143,7 @@ func AddNode() gin.HandlerFunc {
 				},
 			}
 			opts := options.Update().SetUpsert(true)
-			_, err = nodeTrafficLogsCol.UpdateOne(context.TODO(), filter, update, opts)
+			_, err = mongodb.GetCollection(model.SubscriptionNode{}).UpdateOne(context.TODO(), filter, update, opts)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 				log.Printf("UpdateOne in nodeTrafficLogsCol error: %v", err)
@@ -158,7 +159,7 @@ func AddNode() gin.HandlerFunc {
 		}
 		inactiveFilter := bson.M{"domain_as_id": bson.M{"$nin": domainAsIds}}
 		inactiveUpdate := bson.M{"$set": bson.M{"status": "inactive"}}
-		_, err = nodeTrafficLogsCol.UpdateMany(context.TODO(), inactiveFilter, inactiveUpdate)
+		_, err = mongodb.GetCollection(model.SubscriptionNode{}).UpdateMany(context.TODO(), inactiveFilter, inactiveUpdate)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			log.Printf("UpdateMany in nodeTrafficLogsCol error: %v", err)
@@ -180,7 +181,7 @@ func GetActiveGlobalNodes() gin.HandlerFunc {
 		var activeNodes []Domain
 		// type is not "work"
 		var filter = bson.D{{Key: "type", Value: bson.D{{Key: "$ne", Value: "work"}}}}
-		cur, err := subNodesCol.Find(context.TODO(), filter)
+		cur, err := mongodb.GetCollection(model.SubscriptionNode{}).Find(context.TODO(), filter)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			log.Printf("Find error: %v", err)
@@ -209,7 +210,7 @@ func GetDomainsExpiryInfo() gin.HandlerFunc {
 
 		// 获取所有需要检查的域名
 		var expiryDomains []ExpiryCheckDomainInfo
-		cur, err := expiryCheckDomainCol.Find(ctx, bson.D{})
+		cur, err := mongodb.GetCollection(model.ExpiryCheckDomainInfo{}).Find(ctx, bson.D{})
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			log.Printf("Find error: %v", err)
@@ -319,7 +320,7 @@ func UpdateExpiryCheckDomainsInfo() gin.HandlerFunc {
 				"days_to_expire": domain.DaysToExpire,
 			}}
 			opts := options.Update().SetUpsert(true)
-			_, err := expiryCheckDomainCol.UpdateOne(context.TODO(), filter, update, opts)
+			_, err := mongodb.GetCollection(model.ExpiryCheckDomainInfo{}).UpdateOne(context.TODO(), filter, update, opts)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 				log.Printf("UpdateOne error: %v", err)
@@ -331,7 +332,7 @@ func UpdateExpiryCheckDomainsInfo() gin.HandlerFunc {
 
 		// Remove domains not in domainOfWebForm
 		filter := bson.M{"domain": bson.M{"$nin": domainsToKeep}}
-		_, err = expiryCheckDomainCol.DeleteMany(context.TODO(), filter)
+		_, err = mongodb.GetCollection(model.ExpiryCheckDomainInfo{}).DeleteMany(context.TODO(), filter)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			log.Printf("DeleteMany error: %v", err)
@@ -352,7 +353,7 @@ func GetSingboxNodes() gin.HandlerFunc {
 
 		var activeNodes []NodeTrafficLogs
 		var filter = bson.D{primitive.E{Key: "status", Value: "active"}}
-		cur, err := nodeTrafficLogsCol.Find(context.TODO(), filter)
+		cur, err := mongodb.GetCollection(model.SubscriptionNode{}).Find(context.TODO(), filter)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			log.Printf("Find error: %v", err)
@@ -405,7 +406,7 @@ func SaveCustomDate() gin.HandlerFunc {
 		}
 		opts := options.Update().SetUpsert(true)
 
-		_, err := customDatesCol.UpdateOne(context.TODO(), filter, update, opts)
+		_, err := mongodb.GetCollection(model.CustomDate{}).UpdateOne(context.TODO(), filter, update, opts)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			log.Printf("保存自定义日期失败: %v", err)
@@ -424,7 +425,7 @@ func GetCustomDates() gin.HandlerFunc {
 			return
 		}
 
-		cur, err := customDatesCol.Find(context.TODO(), bson.M{})
+		cur, err := mongodb.GetCollection(model.CustomDate{}).Find(context.TODO(), bson.M{})
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			log.Printf("查询自定义日期失败: %v", err)

@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/lib/pq"
-	"github.com/xvv6u577/logv2fs/database"
+	"github.com/xvv6u577/logv2fs/database/postgres"
 )
 
 // SupabaseListener PostgreSQL LISTEN/NOTIFY 监听器
@@ -28,7 +28,7 @@ func NewSupabaseListener() *SupabaseListener {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	// 获取 PostgreSQL 数据库连接
-	pgDB := database.GetPostgresDB()
+	pgDB := postgres.GetPostgresDB()
 	if pgDB == nil {
 		log.Println("PostgreSQL 数据库连接不可用")
 		return &SupabaseListener{
@@ -57,10 +57,10 @@ func NewSupabaseListener() *SupabaseListener {
 		batchTicker:   time.NewTicker(5 * time.Second),
 		lastBatchTime: time.Now(),
 	}
-	
+
 	// 启动批量处理协程
 	go listener.processBatchEvents()
-	
+
 	return listener
 }
 
@@ -92,7 +92,7 @@ func (l *SupabaseListener) Stop() {
 	if l.batchTicker != nil {
 		l.batchTicker.Stop()
 	}
-	
+
 	// 发送剩余的事件
 	l.flushPendingEvents()
 	l.cancel()
@@ -170,7 +170,7 @@ func (l *SupabaseListener) handleNotification(notification *pq.Notification, mes
 func (l *SupabaseListener) addEventToQueue(msg Message) {
 	l.eventMutex.Lock()
 	defer l.eventMutex.Unlock()
-	
+
 	l.eventQueue = append(l.eventQueue, msg)
 }
 
@@ -190,27 +190,27 @@ func (l *SupabaseListener) processBatchEvents() {
 func (l *SupabaseListener) flushPendingEvents() {
 	l.eventMutex.Lock()
 	defer l.eventMutex.Unlock()
-	
+
 	if len(l.eventQueue) == 0 {
 		return
 	}
-	
+
 	// 创建批量消息
 	batchMsg := Message{
-		Type:      "batch_update",
-		Action:    "batch",
+		Type:   "batch_update",
+		Action: "batch",
 		Data: EventBatch{
 			Messages: l.eventQueue,
 			Count:    len(l.eventQueue),
 		},
 		Timestamp: time.Now(),
 	}
-	
+
 	// 广播批量消息
 	GlobalHub.BroadcastMessage(batchMsg)
-	
+
 	log.Printf("批量发送 %d 个事件", len(l.eventQueue))
-	
+
 	// 清空队列
 	l.eventQueue = l.eventQueue[:0]
 	l.lastBatchTime = time.Now()

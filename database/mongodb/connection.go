@@ -1,4 +1,4 @@
-package database
+package mongodb
 
 import (
 	"context"
@@ -16,6 +16,8 @@ import (
 type CollectionNamer interface {
 	CollectionName() string
 }
+
+var Client *mongo.Client
 
 // DBinstance func
 func DBinstance() *mongo.Client {
@@ -42,19 +44,26 @@ func DBinstance() *mongo.Client {
 		log.Panic(err)
 	}
 
-	// fmt.Println("MongoDB successfully connected and pinged.")
 	log.Println("MongoDB successfully connected and pinged.")
 
 	return client
 }
 
+// function to get the MongoDB client
+func GetMongoDBClient() *mongo.Client {
+	if Client == nil {
+		Client = DBinstance()
+	}
+	return Client
+}
+
 // Client Database instance
-var Client *mongo.Client = DBinstance()
+// var Client *mongo.Client = DBinstance()
 
 // OpenCollection is a  function makes a connection with a collection in the database
 func OpenCollection(client *mongo.Client, collectionName string) *mongo.Collection {
 
-	var collection *mongo.Collection = client.Database("logV2rayTrafficDB").Collection(collectionName)
+	var collection *mongo.Collection = GetMongoDBClient().Database("logV2rayTrafficDB").Collection(collectionName)
 
 	return collection
 }
@@ -62,29 +71,10 @@ func OpenCollection(client *mongo.Client, collectionName string) *mongo.Collecti
 // OpenCollectionByModel 通过模型获取MongoDB集合，使用模型的CollectionName方法
 func OpenCollectionByModel(client *mongo.Client, model CollectionNamer) *mongo.Collection {
 	collectionName := model.CollectionName()
-	return client.Database("logV2rayTrafficDB").Collection(collectionName)
+	return GetMongoDBClient().Database("logV2rayTrafficDB").Collection(collectionName)
 }
 
 // GetCollection 获取指定模型的MongoDB集合的便捷方法
 func GetCollection(model CollectionNamer) *mongo.Collection {
-	return OpenCollectionByModel(Client, model)
-}
-
-// GetDB 获取数据库连接，优先返回PostgreSQL连接，如果不可用则返回MongoDB连接
-func GetDB() interface{} {
-	// 尝试获取PostgreSQL连接
-	pgDB := GetPostgresDB()
-	if pgDB != nil {
-		return pgDB
-	}
-
-	// 如果PostgreSQL不可用，返回MongoDB连接
-	return Client
-}
-
-// IsUsingPostgres 检查是否使用PostgreSQL
-func IsUsingPostgres() bool {
-	// 从环境变量中读取配置
-	usePostgres := os.Getenv("USE_POSTGRES")
-	return usePostgres == "true" || usePostgres == "1" || usePostgres == "yes"
+	return OpenCollectionByModel(GetMongoDBClient(), model)
 }

@@ -1,4 +1,4 @@
-package controllers
+package mongodb
 
 import (
 	"context"
@@ -9,18 +9,13 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/xvv6u577/logv2fs/database"
+	"github.com/xvv6u577/logv2fs/database/mongodb"
 	helper "github.com/xvv6u577/logv2fs/helpers"
 	"github.com/xvv6u577/logv2fs/model"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
-)
-
-var (
-	// 使用新的集合管理方法，从模型中获取集合名称
-	paymentRecordsCol *mongo.Collection = database.GetCollection(model.PaymentRecord{})
 )
 
 // AddPaymentRecord 添加缴费记录
@@ -105,7 +100,7 @@ func AddPaymentRecord() gin.HandlerFunc {
 		}
 
 		// 插入缴费记录
-		_, err = paymentRecordsCol.InsertOne(context.Background(), paymentRecord)
+		_, err = mongodb.GetCollection(model.PaymentRecord{}).InsertOne(context.Background(), paymentRecord)
 		if err != nil {
 			log.Printf("添加缴费记录失败: %v", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "添加缴费记录失败"})
@@ -147,7 +142,7 @@ func GetUserPayments() gin.HandlerFunc {
 		defer cancel()
 
 		// 查询该用户的所有缴费记录
-		cursor, err := paymentRecordsCol.Find(ctx, bson.M{"user_email_as_id": userEmail}, options.Find().SetSort(bson.D{{"payment_date", -1}}))
+		cursor, err := mongodb.GetCollection(model.PaymentRecord{}).Find(ctx, bson.M{"user_email_as_id": userEmail}, options.Find().SetSort(bson.D{{"payment_date", -1}}))
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "查询缴费记录失败"})
 			log.Printf("Query payment records error: %v", err)
@@ -229,7 +224,7 @@ func GetPaymentStatistics() gin.HandlerFunc {
 		}
 
 		// 基于每日分摊记录进行统计
-		collection := database.GetCollection(model.DailyPaymentAllocation{})
+		collection := mongodb.GetCollection(model.DailyPaymentAllocation{})
 
 		switch statType {
 		case "daily":
@@ -502,7 +497,7 @@ func GetPaymentRecords() gin.HandlerFunc {
 			limit = 10
 		}
 
-		collection := database.GetCollection(model.PaymentRecord{})
+		collection := mongodb.GetCollection(model.PaymentRecord{})
 
 		// 构建查询条件
 		filter := bson.M{}
@@ -572,21 +567,21 @@ func DeletePaymentRecord() gin.HandlerFunc {
 
 		// 先查询记录是否存在
 		var payment model.PaymentRecord
-		err = paymentRecordsCol.FindOne(ctx, bson.M{"_id": objID}).Decode(&payment)
+		err = mongodb.GetCollection(model.PaymentRecord{}).FindOne(ctx, bson.M{"_id": objID}).Decode(&payment)
 		if err != nil {
 			c.JSON(http.StatusNotFound, gin.H{"error": "缴费记录不存在"})
 			return
 		}
 
 		// 删除每日分摊记录
-		allocationCollection := database.GetCollection(model.DailyPaymentAllocation{})
+		allocationCollection := mongodb.GetCollection(model.DailyPaymentAllocation{})
 		_, err = allocationCollection.DeleteMany(ctx, bson.M{"payment_record_id": objID})
 		if err != nil {
 			log.Printf("删除每日分摊记录失败: %v", err)
 		}
 
 		// 删除缴费记录
-		result, err := paymentRecordsCol.DeleteOne(ctx, bson.M{"_id": objID})
+		result, err := mongodb.GetCollection(model.PaymentRecord{}).DeleteOne(ctx, bson.M{"_id": objID})
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "删除缴费记录失败"})
 			log.Printf("Delete payment record error: %v", err)
@@ -631,7 +626,7 @@ func UpdatePaymentRecord() gin.HandlerFunc {
 
 		// 查找原记录
 		var existingRecord model.PaymentRecord
-		err = paymentRecordsCol.FindOne(ctx, bson.M{"_id": objectId}).Decode(&existingRecord)
+		err = mongodb.GetCollection(model.PaymentRecord{}).FindOne(ctx, bson.M{"_id": objectId}).Decode(&existingRecord)
 		if err != nil {
 			c.JSON(http.StatusNotFound, gin.H{"error": "缴费记录不存在"})
 			return
@@ -682,7 +677,7 @@ func UpdatePaymentRecord() gin.HandlerFunc {
 		}
 
 		// 更新记录
-		result, err := paymentRecordsCol.UpdateOne(
+		result, err := mongodb.GetCollection(model.PaymentRecord{}).UpdateOne(
 			ctx,
 			bson.M{"_id": objectId},
 			bson.M{"$set": update},
@@ -705,44 +700,10 @@ func UpdatePaymentRecord() gin.HandlerFunc {
 	}
 }
 
-// 辅助函数：安全获取float64值
-func getFloat64(v interface{}) float64 {
-	switch val := v.(type) {
-	case float64:
-		return val
-	case float32:
-		return float64(val)
-	case int:
-		return float64(val)
-	case int32:
-		return float64(val)
-	case int64:
-		return float64(val)
-	default:
-		return 0
-	}
-}
-
-// 辅助函数：安全获取int64值
-func getInt64(v interface{}) int64 {
-	switch val := v.(type) {
-	case int64:
-		return val
-	case int32:
-		return int64(val)
-	case int:
-		return int64(val)
-	case float64:
-		return int64(val)
-	default:
-		return 0
-	}
-}
-
 // 获取用户名
 func getUserNameByEmail(email string) string {
 	// 从users集合查询用户名
-	userCollection := database.GetCollection(model.UserTrafficLogs{})
+	userCollection := mongodb.GetCollection(model.UserTrafficLogs{})
 	var user struct {
 		Name string `bson:"name"`
 	}
@@ -757,7 +718,7 @@ func getUserNameByEmail(email string) string {
 
 // 创建每日分摊记录
 func createDailyAllocations(paymentRecordID primitive.ObjectID, payment model.PaymentRecord) error {
-	collection := database.GetCollection(model.DailyPaymentAllocation{})
+	collection := mongodb.GetCollection(model.DailyPaymentAllocation{})
 
 	// 生成从开始日期到结束日期的每日分摊记录
 	current := payment.StartDate

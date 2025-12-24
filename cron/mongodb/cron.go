@@ -1,4 +1,4 @@
-package cron
+package mongodb
 
 import (
 	"context"
@@ -9,9 +9,9 @@ import (
 
 	"github.com/robfig/cron"
 	box "github.com/sagernet/sing-box"
-	"github.com/xvv6u577/logv2fs/database"
+	"github.com/xvv6u577/logv2fs/database/mongodb"
 	"github.com/xvv6u577/logv2fs/model"
-	thirdparty "github.com/xvv6u577/logv2fs/pkg"
+	mongodb_pkg "github.com/xvv6u577/logv2fs/pkg/mongodb"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -43,84 +43,16 @@ type NodeTrafficRequest struct {
 
 var (
 	currentDomain = os.Getenv("CURRENT_DOMAIN")
-	// MongoDB 集合
-	nodeTrafficLogs = database.GetCollection(model.NodeTrafficLogs{})
-	userTrafficLogs = database.GetCollection(model.UserTrafficLogs{})
 )
 
-// 检查是否使用PostgreSQL
-func isUsingPostgreSQL() bool {
-	return database.IsUsingPostgres()
-}
-
-// PostgreSQL版本的用户流量记录函数
-// 优化版本：使用 Supabase RPC 调用方式执行流量记录
+// PostgreSQL版本的用户流量记录函数（MongoDB包中不实现）
 func LogUserTrafficPG(email string, timestamp time.Time, traffic int64) error {
-	// 获取 Supabase 客户端
-	supaClient := database.GetSupabaseClient()
-	if supaClient == nil {
-		log.Printf("Supabase 客户端初始化失败")
-		return fmt.Errorf("Supabase 客户端初始化失败")
-	}
-
-	// 创建上下文
-	ctx := context.Background()
-
-	// 准备请求参数
-	userRequest := UserTrafficRequest{
-		Email:     email,
-		Timestamp: timestamp,
-		Traffic:   traffic,
-	}
-
-	// 使用 Supabase RPC 方法调用 upsert_user_traffic_log 函数
-	rpcBuilder := supaClient.DB.RPC("upsert_user_traffic_log", userRequest)
-
-	// 执行 RPC 调用
-	err := rpcBuilder.Execute(ctx, nil)
-	if err != nil {
-		log.Printf("用户流量记录 RPC 调用失败: %v", err)
-		return err
-	}
-
-	log.Printf("用户流量记录成功 - 用户: %s, 流量: %d, 时间: %s",
-		email, traffic, timestamp.Format("2006-01-02 15:04:05"))
-	return nil
+	return fmt.Errorf("MongoDB包中不应该调用PostgreSQL函数")
 }
 
-// PostgreSQL版本的节点流量记录函数
-// 优化版本：使用 Supabase RPC 调用方式执行流量记录
+// LogNodeTrafficPG PostgreSQL版本的节点流量记录函数（MongoDB包中不实现）
 func LogNodeTrafficPG(domain string, timestamp time.Time, traffic int64) error {
-	// 获取 Supabase 客户端
-	supaClient := database.GetSupabaseClient()
-	if supaClient == nil {
-		log.Printf("Supabase 客户端初始化失败")
-		return fmt.Errorf("Supabase 客户端初始化失败")
-	}
-
-	// 创建上下文
-	ctx := context.Background()
-
-	// 准备请求参数
-	nodeRequest := NodeTrafficRequest{
-		Domain:    domain,
-		Timestamp: timestamp,
-		Traffic:   traffic,
-	}
-
-	// 使用 Supabase RPC 方法调用 upsert_node_traffic_log 函数
-	rpcBuilder := supaClient.DB.RPC("upsert_node_traffic_log", nodeRequest)
-
-	// 执行 RPC 调用
-	err := rpcBuilder.Execute(ctx, nil)
-	if err != nil {
-		log.Printf("节点流量记录 RPC 调用失败: %v", err)
-		return err
-	}
-
-	log.Printf("节点流量记录成功 - 节点: %s, 流量: %d, 时间: %s",
-		domain, traffic, timestamp.Format("2006-01-02 15:04:05"))
-	return nil
+	return fmt.Errorf("MongoDB 版本不应该调用 LogNodeTrafficPG 函数")
 }
 
 // traffic: {Name: "tom", Total: 100}
@@ -313,16 +245,14 @@ func LogNodeTraffic(collection *mongo.Collection, domain string, timestamp time.
 
 }
 
+// Cron_loggingJobs MongoDB版本的定时任务
 func Cron_loggingJobs(c *cron.Cron, instance *box.Box) {
 
-	// cron job by 12 hours - 支持MongoDB和PostgreSQL两种数据库
-	// c.AddFunc("0 0 */12 * * *", func() {
-
+	// cron job by 15 mins - MongoDB版本
 	c.AddFunc("0 */15 * * * *", func() {
-		// 15 mins - 支持MongoDB和PostgreSQL两种数据库
 
 		timesteamp := time.Now().Local()
-		usageData, err := thirdparty.UsageDataOfAll(instance)
+		usageData, err := mongodb_pkg.UsageDataOfAll(instance)
 		if err != nil {
 			log.Printf("获取使用数据时出错: %v\n", err)
 			return
@@ -333,41 +263,20 @@ func Cron_loggingJobs(c *cron.Cron, instance *box.Box) {
 			return
 		}
 
-		// 根据环境变量决定使用哪种数据库
-		usePostgreSQL := isUsingPostgreSQL()
+		log.Printf("使用MongoDB记录流量数据...")
+		// 使用原有的MongoDB逻辑
+		for _, perUser := range usageData {
 
-		if usePostgreSQL {
-			log.Printf("使用PostgreSQL记录流量数据...")
-			// 使用 Supabase RPC 调用方式记录流量
-			for _, perUser := range usageData {
-
-				// 记录用户流量
-				if err := LogUserTrafficPG(perUser.Name, timesteamp, perUser.Total); err != nil {
-					log.Printf("PostgreSQL用户流量记录失败: %v\n", err)
-				}
-
-				// 记录节点流量
-				if err := LogNodeTrafficPG(currentDomain, timesteamp, perUser.Total); err != nil {
-					log.Printf("PostgreSQL节点流量记录失败: %v\n", err)
-				}
+			// perUser = traffic: {Name: "tom", Total: 100}
+			if err := LogUserTraffic(mongodb.GetCollection(model.UserTrafficLogs{}), perUser.Name, timesteamp, perUser.Total); err != nil {
+				log.Printf("MongoDB用户流量记录失败: %v\n", err)
 			}
-			log.Printf("PostgreSQL流量记录完成: %v 用户=%d", timesteamp.Format("20060102 15:04:05"), len(usageData))
-		} else {
-			log.Printf("使用MongoDB记录流量数据...")
-			// 使用原有的MongoDB逻辑
-			for _, perUser := range usageData {
 
-				// perUser = traffic: {Name: "tom", Total: 100}
-				if err := LogUserTraffic(userTrafficLogs, perUser.Name, timesteamp, perUser.Total); err != nil {
-					log.Printf("MongoDB用户流量记录失败: %v\n", err)
-				}
-
-				if err := LogNodeTraffic(nodeTrafficLogs, currentDomain, timesteamp, perUser.Total); err != nil {
-					log.Printf("MongoDB节点流量记录失败: %v\n", err)
-				}
+			if err := LogNodeTraffic(mongodb.GetCollection(model.NodeTrafficLogs{}), currentDomain, timesteamp, perUser.Total); err != nil {
+				log.Printf("MongoDB节点流量记录失败: %v\n", err)
 			}
-			log.Printf("MongoDB流量记录完成: %v 用户=%d", timesteamp.Format("20060102 15:04:05"), len(usageData))
 		}
+		log.Printf("MongoDB流量记录完成: %v 用户=%d", timesteamp.Format("20060102 15:04:05"), len(usageData))
 
 	})
 

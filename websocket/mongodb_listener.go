@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/xvv6u577/logv2fs/database"
+	"github.com/xvv6u577/logv2fs/database/mongodb"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -20,30 +20,31 @@ type EventBatch struct {
 
 // MongoDBListener MongoDB 变更监听器
 type MongoDBListener struct {
-	client         *mongo.Client
-	ctx            context.Context
-	cancel         context.CancelFunc
-	eventQueue     []Message
-	eventMutex     sync.RWMutex
-	batchTicker    *time.Ticker
-	lastBatchTime  time.Time
+	client        *mongo.Client
+	ctx           context.Context
+	cancel        context.CancelFunc
+	eventQueue    []Message
+	eventMutex    sync.RWMutex
+	batchTicker   *time.Ticker
+	lastBatchTime time.Time
 }
 
 // NewMongoDBListener 创建新的 MongoDB 监听器
 func NewMongoDBListener() *MongoDBListener {
 	ctx, cancel := context.WithCancel(context.Background())
+	// 使用 GetMongoDBClient() 确保客户端已初始化，而不是直接使用可能为 nil 的 mongodb.Client
 	listener := &MongoDBListener{
-		client:        database.Client,
+		client:        mongodb.GetMongoDBClient(),
 		ctx:           ctx,
 		cancel:        cancel,
 		eventQueue:    make([]Message, 0),
 		batchTicker:   time.NewTicker(5 * time.Second),
 		lastBatchTime: time.Now(),
 	}
-	
+
 	// 启动批量处理协程
 	go listener.processBatchEvents()
-	
+
 	return listener
 }
 
@@ -70,7 +71,7 @@ func (l *MongoDBListener) Stop() {
 	if l.batchTicker != nil {
 		l.batchTicker.Stop()
 	}
-	
+
 	// 发送剩余的事件
 	l.flushPendingEvents()
 	l.cancel()
@@ -175,7 +176,7 @@ func (l *MongoDBListener) HandleChangeEvent(changeEvent bson.M, messageType stri
 func (l *MongoDBListener) addEventToQueue(msg Message) {
 	l.eventMutex.Lock()
 	defer l.eventMutex.Unlock()
-	
+
 	l.eventQueue = append(l.eventQueue, msg)
 }
 
@@ -195,27 +196,27 @@ func (l *MongoDBListener) processBatchEvents() {
 func (l *MongoDBListener) flushPendingEvents() {
 	l.eventMutex.Lock()
 	defer l.eventMutex.Unlock()
-	
+
 	if len(l.eventQueue) == 0 {
 		return
 	}
-	
+
 	// 创建批量消息
 	batchMsg := Message{
-		Type:      "batch_update",
-		Action:    "batch",
+		Type:   "batch_update",
+		Action: "batch",
 		Data: EventBatch{
 			Messages: l.eventQueue,
 			Count:    len(l.eventQueue),
 		},
 		Timestamp: time.Now(),
 	}
-	
+
 	// 广播批量消息
 	GlobalHub.BroadcastMessage(batchMsg)
-	
+
 	log.Printf("批量发送 %d 个事件", len(l.eventQueue))
-	
+
 	// 清空队列
 	l.eventQueue = l.eventQueue[:0]
 	l.lastBatchTime = time.Now()

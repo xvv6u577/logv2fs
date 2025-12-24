@@ -4,24 +4,16 @@ Copyright © 2023 NAME HERE <EMAIL ADDRESS>
 package cmd
 
 import (
+	"log"
 	"os"
 
-	"github.com/robfig/cron"
+	"github.com/joho/godotenv"
 	"github.com/spf13/cobra"
-	"github.com/xvv6u577/logv2fs/database"
+	httpserver "github.com/xvv6u577/logv2fs/cmd/httpserver"
+	httpserverpg "github.com/xvv6u577/logv2fs/cmd/httpserverpg"
+	singbox "github.com/xvv6u577/logv2fs/cmd/singbox"
+	singboxpg "github.com/xvv6u577/logv2fs/cmd/singboxpg"
 	"github.com/xvv6u577/logv2fs/model"
-	"gorm.io/gorm"
-)
-
-var (
-	SERVER_ADDRESS = os.Getenv("SERVER_ADDRESS")
-	SERVER_PORT    = os.Getenv("SERVER_PORT")
-	GIN_MODE       = os.Getenv("GIN_MODE")
-
-	// PostgreSQL数据库
-	PostgresDB *gorm.DB
-
-	cronInstance *cron.Cron
 )
 
 type (
@@ -60,11 +52,22 @@ func Execute() {
 }
 
 func init() {
-	// 根据环境变量决定使用哪个数据库
-	if database.IsUsingPostgres() {
-		// 使用PostgreSQL
-		PostgresDB = database.GetPostgresDB()
+	// 在任何子命令执行之前，先加载 .env 文件
+	// 这样确保所有环境变量都能被正确读取
+	pwd, err := os.Getwd()
+	if err != nil {
+		log.Printf("警告: 无法获取当前工作目录: %v", err)
 	} else {
-		// 使用MongoDB
+		// 尝试加载 .env 文件，如果文件不存在也不会报错
+		if err := godotenv.Load(pwd + "/.env"); err != nil {
+			log.Printf("提示: 未找到 .env 文件或加载失败: %v", err)
+		}
 	}
+
+	// 添加子命令
+	rootCmd.AddCommand(singbox.NewSingboxCmd())
+	rootCmd.AddCommand(singboxpg.NewSingboxPGCmd())
+	rootCmd.AddCommand(httpserver.NewHTTPServerCmd())
+	rootCmd.AddCommand(httpserverpg.NewHTTPServerPGCmd())
+
 }

@@ -1,4 +1,4 @@
-package controllers
+package postgres
 
 import (
 	"fmt"
@@ -9,7 +9,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/xvv6u577/logv2fs/database"
+	"github.com/xvv6u577/logv2fs/database/postgres"
 	helper "github.com/xvv6u577/logv2fs/helpers"
 	"github.com/xvv6u577/logv2fs/model"
 	"gorm.io/gorm"
@@ -96,7 +96,7 @@ func AddPaymentRecordPG() gin.HandlerFunc {
 		}
 
 		// 开始事务
-		tx := database.GetPostgresDB().Begin()
+		tx := postgres.GetPostgresDB().Begin()
 		defer func() {
 			if r := recover(); r != nil {
 				tx.Rollback()
@@ -173,7 +173,7 @@ func getUserNameByEmailPG(email string) string {
 		Name string `gorm:"column:name"`
 	}
 
-	err := database.GetPostgresDB().Table("user_traffic_logs").Select("name").Where("email_as_id = ?", email).First(&user).Error
+	err := postgres.GetPostgresDB().Table("user_traffic_logs").Select("name").Where("email_as_id = ?", email).First(&user).Error
 	if err != nil {
 		return email // 如果找不到用户名，返回邮箱
 	}
@@ -309,7 +309,7 @@ func getDailyStatsPG(startDate, endDate time.Time) ([]model.DailyPaymentStats, e
 		ORDER BY date_string
 	`
 
-	rows, err := database.GetPostgresDB().Raw(query, startDate, endDate).Rows()
+	rows, err := postgres.GetPostgresDB().Raw(query, startDate, endDate).Rows()
 	if err != nil {
 		return nil, err
 	}
@@ -342,7 +342,7 @@ func getMonthlyStatsPG(startDate, endDate time.Time) ([]model.MonthlyPaymentStat
 		ORDER BY month
 	`
 
-	rows, err := database.GetPostgresDB().Raw(query, startDate, endDate).Rows()
+	rows, err := postgres.GetPostgresDB().Raw(query, startDate, endDate).Rows()
 	if err != nil {
 		return nil, err
 	}
@@ -375,7 +375,7 @@ func getYearlyStatsPG(startDate, endDate time.Time) ([]model.YearlyPaymentStats,
 		ORDER BY year
 	`
 
-	rows, err := database.GetPostgresDB().Raw(query, startDate, endDate).Rows()
+	rows, err := postgres.GetPostgresDB().Raw(query, startDate, endDate).Rows()
 	if err != nil {
 		return nil, err
 	}
@@ -409,7 +409,7 @@ func GetUserPaymentsPG() gin.HandlerFunc {
 
 		// 查询该用户的所有缴费记录
 		var payments []model.PaymentRecordPG
-		if err := database.GetPostgresDB().Where("user_email_as_id = ?", userEmail).Order("start_date DESC").Find(&payments).Error; err != nil {
+		if err := postgres.GetPostgresDB().Where("user_email_as_id = ?", userEmail).Order("start_date DESC").Find(&payments).Error; err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "查询缴费记录失败"})
 			log.Printf("Query payment records error: %v", err)
 			return
@@ -444,7 +444,7 @@ func GetPaymentRecordsPG() gin.HandlerFunc {
 		}
 
 		// 构建查询
-		query := database.GetPostgresDB().Model(&model.PaymentRecordPG{})
+		query := postgres.GetPostgresDB().Model(&model.PaymentRecordPG{})
 		if userEmail != "" {
 			query = query.Where("user_email_as_id = ?", userEmail)
 		}
@@ -489,7 +489,7 @@ func DeletePaymentRecordPG() gin.HandlerFunc {
 		}
 
 		// 开始事务
-		tx := database.GetPostgresDB().Begin()
+		tx := postgres.GetPostgresDB().Begin()
 		defer func() {
 			if r := recover(); r != nil {
 				tx.Rollback()
@@ -580,7 +580,7 @@ func UpdatePaymentRecordPG() gin.HandlerFunc {
 		dailyAmount := req.Amount / float64(serviceDays)
 
 		// 开始事务
-		tx := database.GetPostgresDB().Begin()
+		tx := postgres.GetPostgresDB().Begin()
 		defer func() {
 			if r := recover(); r != nil {
 				tx.Rollback()

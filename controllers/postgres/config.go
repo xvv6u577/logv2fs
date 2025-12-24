@@ -1,4 +1,4 @@
-package controllers
+package postgres
 
 import (
 	"encoding/base64"
@@ -10,7 +10,7 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"github.com/xvv6u577/logv2fs/database"
+	"github.com/xvv6u577/logv2fs/database/postgres"
 	helper "github.com/xvv6u577/logv2fs/helpers"
 	"github.com/xvv6u577/logv2fs/model"
 	"gopkg.in/yaml.v2"
@@ -24,7 +24,7 @@ func GetSubscripionURLPG() gin.HandlerFunc {
 		var subscription []byte
 		var err error
 		name := helper.SanitizeStr(c.Param("name"))
-		db := database.GetPostgresDB()
+		db := postgres.GetPostgresDB()
 
 		var activeGlobalNodes []model.SubscriptionNodePG
 
@@ -92,7 +92,7 @@ func GetSubscripionURLPG() gin.HandlerFunc {
 func ReturnSingboxJsonPG() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		name := helper.SanitizeStr(c.Param("name"))
-		db := database.GetPostgresDB()
+		db := postgres.GetPostgresDB()
 
 		var err error
 		var jsonFile []byte
@@ -324,7 +324,7 @@ func ReturnSingboxJsonPG() gin.HandlerFunc {
 func ReturnVergeYAMLPG() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		name := helper.SanitizeStr(c.Param("name"))
-		db := database.GetPostgresDB()
+		db := postgres.GetPostgresDB()
 
 		var err error
 		var yamlFile []byte

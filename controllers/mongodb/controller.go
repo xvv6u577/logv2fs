@@ -1,4 +1,4 @@
-package controllers
+package mongodb
 
 import (
 	"context"
@@ -16,7 +16,7 @@ import (
 	uuid "github.com/nu7hatch/gouuid"
 	"gopkg.in/yaml.v2"
 
-	"github.com/xvv6u577/logv2fs/database"
+	"github.com/xvv6u577/logv2fs/database/mongodb"
 
 	helper "github.com/xvv6u577/logv2fs/helpers"
 
@@ -30,16 +30,10 @@ import (
 )
 
 var (
-	// 使用新的集合管理方法，从模型中获取集合名称
-	subNodesCol          *mongo.Collection = database.GetCollection(model.SubscriptionNode{})
-	expiryCheckDomainCol *mongo.Collection = database.GetCollection(model.ExpiryCheckDomainInfo{})
-	nodeTrafficLogsCol                     = database.GetCollection(model.NodeTrafficLogs{})
-	userTrafficLogsCol                     = database.GetCollection(model.UserTrafficLogs{})
-	customDatesCol                         = database.GetCollection(model.CustomDate{})
-	validate                               = validator.New()
-	CREDIT                                 = os.Getenv("CREDIT")
-	PUBLIC_KEY                             = os.Getenv("PUBLIC_KEY")
-	SHORT_ID                               = os.Getenv("SHORT_ID")
+	validate   = validator.New()
+	CREDIT     = os.Getenv("CREDIT")
+	PUBLIC_KEY = os.Getenv("PUBLIC_KEY")
+	SHORT_ID   = os.Getenv("SHORT_ID")
 )
 
 type (
@@ -98,7 +92,7 @@ func UpdateAllTokens(signedToken string, signedRefreshToken string, userId strin
 	opt := options.UpdateOptions{
 		Upsert: &upsert,
 	}
-	_, err := userTrafficLogsCol.UpdateOne(
+	_, err := mongodb.GetCollection(model.UserTrafficLogs{}).UpdateOne(
 		ctx,
 		filter,
 		bson.D{{Key: "$set", Value: updateObj}},
@@ -148,7 +142,7 @@ func SignUp() gin.HandlerFunc {
 		}
 
 		user_email := helper.SanitizeStr(user.Email_As_Id)
-		count, err := userTrafficLogsCol.CountDocuments(context.TODO(), bson.M{"email_as_id": user_email})
+		count, err := mongodb.GetCollection(model.UserTrafficLogs{}).CountDocuments(context.TODO(), bson.M{"email_as_id": user_email})
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "error occured while checking for the email"})
 			log.Printf("Checking email error: %s", err.Error())
@@ -205,7 +199,7 @@ func SignUp() gin.HandlerFunc {
 			Traffic int64  `json:"traffic" bson:"traffic"`
 		}{}
 
-		_, err = userTrafficLogsCol.InsertOne(context.Background(), user)
+		_, err = mongodb.GetCollection(model.UserTrafficLogs{}).InsertOne(context.Background(), user)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			log.Printf("error occured while inserting user traffic logs: %v", err)
@@ -230,7 +224,7 @@ func Login() gin.HandlerFunc {
 		}
 
 		sanitized_email := helper.SanitizeStr(boundUser.Email_As_Id)
-		err := userTrafficLogsCol.FindOne(ctx, bson.M{"email_as_id": sanitized_email}).Decode(&foundUser)
+		err := mongodb.GetCollection(model.UserTrafficLogs{}).FindOne(ctx, bson.M{"email_as_id": sanitized_email}).Decode(&foundUser)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			log.Printf("error: %v", err)
@@ -251,7 +245,7 @@ func Login() gin.HandlerFunc {
 			{Key: "token", Value: 1},
 		}
 
-		err = userTrafficLogsCol.FindOne(ctx, bson.M{"email_as_id": sanitized_email}, options.FindOne().SetProjection(projections)).Decode(&finalUser)
+		err = mongodb.GetCollection(model.UserTrafficLogs{}).FindOne(ctx, bson.M{"email_as_id": sanitized_email}, options.FindOne().SetProjection(projections)).Decode(&finalUser)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			log.Printf("error: %v", err)
@@ -290,7 +284,7 @@ func EditUser() gin.HandlerFunc {
 
 		// 不需要验证整个结构体，因为我们只是部分更新
 
-		err := userTrafficLogsCol.FindOne(ctx, bson.M{"email_as_id": helper.SanitizeStr(name)}).Decode(&foundUser)
+		err := mongodb.GetCollection(model.UserTrafficLogs{}).FindOne(ctx, bson.M{"email_as_id": helper.SanitizeStr(name)}).Decode(&foundUser)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "user not found"})
 			log.Printf("user not found: %s", name)
@@ -333,7 +327,7 @@ func EditUser() gin.HandlerFunc {
 		newFoundUser["updated_at"] = time.Now()
 
 		var updatedUser UserTrafficLogs
-		err = userTrafficLogsCol.FindOneAndUpdate(
+		err = mongodb.GetCollection(model.UserTrafficLogs{}).FindOneAndUpdate(
 			ctx,
 			bson.M{"email_as_id": helper.SanitizeStr(name)},
 			bson.M{"$set": newFoundUser},
@@ -372,7 +366,7 @@ func DeleteUserByUserName() gin.HandlerFunc {
 			{Key: "email_as_id", Value: 1},
 			{Key: "name", Value: 1},
 		}
-		err := userTrafficLogsCol.FindOne(context.TODO(), filter, options.FindOne().SetProjection(projections)).Decode(&user)
+		err := mongodb.GetCollection(model.UserTrafficLogs{}).FindOne(context.TODO(), filter, options.FindOne().SetProjection(projections)).Decode(&user)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "user not found"})
 			log.Printf("DeleteUserByUserName - user not found: %s, error: %s", name, err.Error())
@@ -380,7 +374,7 @@ func DeleteUserByUserName() gin.HandlerFunc {
 		}
 
 		// delete user from userTrafficLogsCol
-		result, err := userTrafficLogsCol.DeleteOne(context.TODO(), filter)
+		result, err := mongodb.GetCollection(model.UserTrafficLogs{}).DeleteOne(context.TODO(), filter)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			log.Printf("DeleteUserByUserName - delete failed: %s", err.Error())
@@ -455,7 +449,7 @@ func GetAllUsers() gin.HandlerFunc {
 			}}},
 		}
 
-		cursor, err := userTrafficLogsCol.Aggregate(ctx, pipeline)
+		cursor, err := mongodb.GetCollection(model.UserTrafficLogs{}).Aggregate(ctx, pipeline)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			log.Printf("GetAllUsers: %s", err.Error())
@@ -503,7 +497,7 @@ func GetUserByName() gin.HandlerFunc {
 		}
 
 		var user UserTrafficLogs
-		err := userTrafficLogsCol.FindOne(context.Background(), bson.M{"email_as_id": name}, options.FindOne().SetProjection(projections)).Decode(&user)
+		err := mongodb.GetCollection(model.UserTrafficLogs{}).FindOne(context.Background(), bson.M{"email_as_id": name}, options.FindOne().SetProjection(projections)).Decode(&user)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			log.Printf("GetUserByName: %s", err.Error())
@@ -523,7 +517,7 @@ func GetSubscripionURL() gin.HandlerFunc {
 
 		var activeGlobalNodes []Domain
 
-		cur, err := subNodesCol.Find(context.TODO(), bson.D{})
+		cur, err := mongodb.GetCollection(model.SubscriptionNode{}).Find(context.TODO(), bson.D{})
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "error occured while getting active global nodes"})
 			log.Printf("Getting active global nodes error: %s", err.Error())
@@ -540,7 +534,7 @@ func GetSubscripionURL() gin.HandlerFunc {
 			{Key: "uuid", Value: 1},
 		}
 		var user UserTrafficLogs
-		err = userTrafficLogsCol.FindOne(context.TODO(), bson.M{"email_as_id": name}, options.FindOne().SetProjection(projections)).Decode(&user)
+		err = mongodb.GetCollection(model.UserTrafficLogs{}).FindOne(context.TODO(), bson.M{"email_as_id": name}, options.FindOne().SetProjection(projections)).Decode(&user)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			log.Printf("GetSubscripionURL error: %v", err)
@@ -609,7 +603,7 @@ func ReturnSingboxJson() gin.HandlerFunc {
 			{Key: "user_id", Value: 1},
 			{Key: "uuid", Value: 1},
 		}
-		err = userTrafficLogsCol.FindOne(context.TODO(), bson.M{"email_as_id": name}, options.FindOne().SetProjection(projections)).Decode(&user)
+		err = mongodb.GetCollection(model.UserTrafficLogs{}).FindOne(context.TODO(), bson.M{"email_as_id": name}, options.FindOne().SetProjection(projections)).Decode(&user)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			log.Printf("ReturnSingboxJson failed: %s", err.Error())
@@ -618,7 +612,7 @@ func ReturnSingboxJson() gin.HandlerFunc {
 
 		var activeGlobalNodes []Domain
 
-		cur, err := subNodesCol.Find(context.TODO(), bson.D{})
+		cur, err := mongodb.GetCollection(model.SubscriptionNode{}).Find(context.TODO(), bson.D{})
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "error occured while getting active global nodes"})
 			log.Printf("Getting active global nodes error: %s", err.Error())
@@ -856,7 +850,7 @@ func ReturnVergeYAML() gin.HandlerFunc {
 			{Key: "uuid", Value: 1},
 		}
 		var user UserTrafficLogs
-		err = userTrafficLogsCol.FindOne(context.TODO(), bson.M{"email_as_id": name}, options.FindOne().SetProjection(projections)).Decode(&user)
+		err = mongodb.GetCollection(model.UserTrafficLogs{}).FindOne(context.TODO(), bson.M{"email_as_id": name}, options.FindOne().SetProjection(projections)).Decode(&user)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			log.Printf("ReturnVergeYAML failed: %s", err.Error())
@@ -864,7 +858,7 @@ func ReturnVergeYAML() gin.HandlerFunc {
 		}
 
 		var activeGlobalNodes []Domain
-		cur, err := subNodesCol.Find(context.TODO(), bson.D{})
+		cur, err := mongodb.GetCollection(model.SubscriptionNode{}).Find(context.TODO(), bson.D{})
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "error occured while getting active global nodes"})
 			log.Printf("Getting active global nodes error: %s", err.Error())
@@ -1029,7 +1023,7 @@ func DisableUser() gin.HandlerFunc {
 		}
 
 		var foundUser UserTrafficLogs
-		err := userTrafficLogsCol.FindOne(ctx, bson.M{"email_as_id": helper.SanitizeStr(name)}).Decode(&foundUser)
+		err := mongodb.GetCollection(model.UserTrafficLogs{}).FindOne(ctx, bson.M{"email_as_id": helper.SanitizeStr(name)}).Decode(&foundUser)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "user not found"})
 			log.Printf("user not found: %s", name)
@@ -1050,7 +1044,7 @@ func DisableUser() gin.HandlerFunc {
 		}
 
 		var updatedUser UserTrafficLogs
-		err = userTrafficLogsCol.FindOneAndUpdate(
+		err = mongodb.GetCollection(model.UserTrafficLogs{}).FindOneAndUpdate(
 			ctx,
 			bson.M{"email_as_id": helper.SanitizeStr(name)},
 			bson.M{"$set": updateData},
@@ -1085,7 +1079,7 @@ func EnableUser() gin.HandlerFunc {
 		}
 
 		var foundUser UserTrafficLogs
-		err := userTrafficLogsCol.FindOne(ctx, bson.M{"email_as_id": helper.SanitizeStr(name)}).Decode(&foundUser)
+		err := mongodb.GetCollection(model.UserTrafficLogs{}).FindOne(ctx, bson.M{"email_as_id": helper.SanitizeStr(name)}).Decode(&foundUser)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "user not found"})
 			log.Printf("user not found: %s", name)
@@ -1099,7 +1093,7 @@ func EnableUser() gin.HandlerFunc {
 		}
 
 		var updatedUser UserTrafficLogs
-		err = userTrafficLogsCol.FindOneAndUpdate(
+		err = mongodb.GetCollection(model.UserTrafficLogs{}).FindOneAndUpdate(
 			ctx,
 			bson.M{"email_as_id": helper.SanitizeStr(name)},
 			bson.M{"$set": updateData},

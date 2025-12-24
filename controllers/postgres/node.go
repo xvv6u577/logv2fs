@@ -1,4 +1,4 @@
-package controllers
+package postgres
 
 import (
 	"crypto/tls"
@@ -13,11 +13,31 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/xvv6u577/logv2fs/database"
+	"github.com/xvv6u577/logv2fs/database/postgres"
 	helper "github.com/xvv6u577/logv2fs/helpers"
 	"github.com/xvv6u577/logv2fs/model"
 	"gorm.io/gorm"
 )
+
+type (
+	ExpiryCheckDomainInfo = model.ExpiryCheckDomainInfoPG
+)
+
+// removeDuplicateDomains 移除重复的域名
+func removeDuplicateDomains(domains []Domain) []Domain {
+	seen := make(map[string]bool)
+	var result []Domain
+	for _, domain := range domains {
+		if domain.Type == "vlessCDN" {
+			continue
+		}
+		if _, exists := seen[domain.Domain]; !exists {
+			seen[domain.Domain] = true
+			result = append(result, domain)
+		}
+	}
+	return result
+}
 
 // PostgreSQL版本的节点操作函数
 
@@ -32,7 +52,7 @@ func AddNodePG() gin.HandlerFunc {
 		var current = time.Now().Local()
 		var nodeFromWebForm []Domain
 		var dataCollectableNodes []Domain
-		db := database.GetPostgresDB()
+		db := postgres.GetPostgresDB()
 
 		if err := c.BindJSON(&nodeFromWebForm); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -57,8 +77,8 @@ func AddNodePG() gin.HandlerFunc {
 		for i, domain := range nodeFromWebForm {
 			// 如果是reality类型，重新分配public_key和short_id
 			if domain.Type == "reality" {
-				domain.PUBLIC_KEY = PUBLIC_KEY
-				domain.SHORT_ID = SHORT_ID
+				domain.PublicKey = PUBLIC_KEY
+				domain.ShortID = SHORT_ID
 			}
 
 			// 转换为PostgreSQL模型并生成新的UUID
@@ -70,11 +90,11 @@ func AddNodePG() gin.HandlerFunc {
 				IP:           domain.IP,
 				SNI:          domain.SNI,
 				UUID:         domain.UUID,
-				Path:         domain.PATH,
-				ServerPort:   domain.SERVER_PORT,
-				Password:     domain.PASSWORD,
-				PublicKey:    domain.PUBLIC_KEY,
-				ShortID:      domain.SHORT_ID,
+				Path:         domain.Path,
+				ServerPort:   domain.ServerPort,
+				Password:     domain.Password,
+				PublicKey:    domain.PublicKey,
+				ShortID:      domain.ShortID,
 				EnableOpenai: domain.EnableOpenai,
 				CreatedAt:    current,
 				UpdatedAt:    current,
@@ -200,7 +220,7 @@ func GetActiveGlobalNodesPG() gin.HandlerFunc {
 			return
 		}
 
-		db := database.GetPostgresDB()
+		db := postgres.GetPostgresDB()
 		var pgDomains []model.SubscriptionNodePG
 
 		query := `SELECT * FROM "subscription_nodes" WHERE type != 'work'`
@@ -220,11 +240,11 @@ func GetActiveGlobalNodesPG() gin.HandlerFunc {
 				IP:           pgDomain.IP,
 				SNI:          pgDomain.SNI,
 				UUID:         pgDomain.UUID,
-				PATH:         pgDomain.Path,
-				SERVER_PORT:  pgDomain.ServerPort,
-				PASSWORD:     pgDomain.Password,
-				PUBLIC_KEY:   pgDomain.PublicKey,
-				SHORT_ID:     pgDomain.ShortID,
+				Path:         pgDomain.Path,
+				ServerPort:   pgDomain.ServerPort,
+				Password:     pgDomain.Password,
+				PublicKey:    pgDomain.PublicKey,
+				ShortID:      pgDomain.ShortID,
 				EnableOpenai: pgDomain.EnableOpenai,
 			})
 		}
@@ -241,7 +261,7 @@ func GetWorkDomainInfoPG() gin.HandlerFunc {
 			return
 		}
 
-		db := database.GetPostgresDB()
+		db := postgres.GetPostgresDB()
 		var pgDomains []model.SubscriptionNodePG
 
 		query := `SELECT * FROM "subscription_nodes" WHERE type = 'work'`
@@ -328,7 +348,7 @@ func UpdateExpiryCheckDomainsInfoPG() gin.HandlerFunc {
 			return
 		}
 
-		db := database.GetPostgresDB()
+		db := postgres.GetPostgresDB()
 		var domainOfWebForm []ExpiryCheckDomainInfo
 
 		if err := c.BindJSON(&domainOfWebForm); err != nil {
@@ -428,7 +448,7 @@ func GetSingboxNodesPG() gin.HandlerFunc {
 			return
 		}
 
-		db := database.GetPostgresDB()
+		db := postgres.GetPostgresDB()
 		var pgNodeTrafficLogs []model.NodeTrafficLogsPG
 
 		query := `SELECT * FROM "node_traffic_logs" WHERE status = 'active'`
@@ -477,7 +497,7 @@ func SaveCustomDatePG() gin.HandlerFunc {
 			return
 		}
 
-		db := database.GetPostgresDB()
+		db := postgres.GetPostgresDB()
 
 		// 更新或插入自定义日期
 		query := `
@@ -505,7 +525,7 @@ func GetCustomDatesPG() gin.HandlerFunc {
 			return
 		}
 
-		db := database.GetPostgresDB()
+		db := postgres.GetPostgresDB()
 
 		// 查询所有自定义日期
 		rows, err := db.Raw(`SELECT domain_as_id, custom_date FROM "node_custom_dates"`).Rows()
@@ -538,7 +558,7 @@ func GetDomainsExpiryInfoPG() gin.HandlerFunc {
 			return
 		}
 
-		db := database.GetPostgresDB()
+		db := postgres.GetPostgresDB()
 		var expiryDomains []model.ExpiryCheckDomainInfoPG
 
 		query := `SELECT * FROM "expiry_check_domains"`

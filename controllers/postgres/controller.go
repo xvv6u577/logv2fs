@@ -1,4 +1,4 @@
-package controllers
+package postgres
 
 import (
 	"encoding/json"
@@ -11,7 +11,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
-	"github.com/xvv6u577/logv2fs/database"
+	"github.com/xvv6u577/logv2fs/database/postgres"
 	helper "github.com/xvv6u577/logv2fs/helpers"
 	"github.com/xvv6u577/logv2fs/model"
 	"golang.org/x/crypto/bcrypt"
@@ -21,7 +21,37 @@ import (
 
 var (
 	validatePG = validator.New()
+	CREDIT     = os.Getenv("CREDIT")
+	PUBLIC_KEY = os.Getenv("PUBLIC_KEY")
+	SHORT_ID   = os.Getenv("SHORT_ID")
 )
+
+// PostgreSQL 版本的类型别名
+type (
+	TrafficAtPeriod = model.TrafficAtPeriod
+	Node            = model.Node
+	Domain          = model.SubscriptionNodePG
+	SingboxYAML     = model.SingboxYAML
+	SingboxJSON     = model.SingboxJSON
+	RealityJSON     = model.RealityJSON
+	Hysteria2JSON   = model.Hysteria2JSON
+	RealityYAML     = model.RealityYAML
+	Hysteria2YAML   = model.Hysteria2YAML
+	CFVlessJSON     = model.CFVlessJSON
+	CFVlessYAML     = model.CFVlessYAML
+	UserTrafficLogs = model.UserTrafficLogsPG
+	NodeTrafficLogs = model.NodeTrafficLogsPG
+)
+
+// Contains 检查字符串是否在切片中
+func Contains(s []string, e string) bool {
+	for _, a := range s {
+		if a == e {
+			return true
+		}
+	}
+	return false
+}
 
 // HashPasswordPG is used to encrypt the password before it is stored in the DB (PostgreSQL version)
 func HashPasswordPG(password string) string {
@@ -56,7 +86,7 @@ func SignUpPG() gin.HandlerFunc {
 			return
 		}
 
-		db := database.GetPostgresDB()
+		db := postgres.GetPostgresDB()
 		var user UserTrafficLogs
 		var current = time.Now()
 
@@ -73,7 +103,7 @@ func SignUpPG() gin.HandlerFunc {
 			return
 		}
 
-		user_email := helper.SanitizeStr(user.Email_As_Id)
+		user_email := helper.SanitizeStr(user.EmailAsId)
 
 		// 检查用户是否已存在
 		var count int64
@@ -141,7 +171,7 @@ func SignUpPG() gin.HandlerFunc {
 // LoginPG 用户登录 - PostgreSQL版本
 func LoginPG() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		db := database.GetPostgresDB()
+		db := postgres.GetPostgresDB()
 		var boundUser UserTrafficLogs
 		var pgUser model.UserTrafficLogsPG
 
@@ -151,7 +181,7 @@ func LoginPG() gin.HandlerFunc {
 			return
 		}
 
-		sanitized_email := helper.SanitizeStr(boundUser.Email_As_Id)
+		sanitized_email := helper.SanitizeStr(boundUser.EmailAsId)
 
 		// 查找用户
 		if err := db.Where("email_as_id = ?", sanitized_email).First(&pgUser).Error; err != nil {
@@ -191,7 +221,7 @@ func EditUserPG() gin.HandlerFunc {
 			return
 		}
 
-		db := database.GetPostgresDB()
+		db := postgres.GetPostgresDB()
 		name := c.Param("name")
 		if name == "" {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "user name is required"})
@@ -274,7 +304,7 @@ func DeleteUserByUserNamePG() gin.HandlerFunc {
 			return
 		}
 
-		db := database.GetPostgresDB()
+		db := postgres.GetPostgresDB()
 		name := c.Param("name")
 		log.Printf("Attempting to delete user: %s", name)
 
@@ -319,7 +349,7 @@ func GetAllUsersPG() gin.HandlerFunc {
 			return
 		}
 
-		db := database.GetPostgresDB()
+		db := postgres.GetPostgresDB()
 		var users []model.UserTrafficLogsPG
 
 		// 查询所有用户，只选择需要的字段
@@ -384,7 +414,7 @@ func GetUserByNamePG() gin.HandlerFunc {
 			return
 		}
 
-		db := database.GetPostgresDB()
+		db := postgres.GetPostgresDB()
 		var user model.UserTrafficLogsPG
 
 		query := `SELECT email_as_id, used, uuid, name, status, role, remark, credit, daily_logs, monthly_logs, yearly_logs, created_at, updated_at
@@ -438,7 +468,7 @@ func DisableUserPG() gin.HandlerFunc {
 			return
 		}
 
-		db := database.GetPostgresDB()
+		db := postgres.GetPostgresDB()
 		name := c.Param("name")
 		log.Printf("Attempting to disable user: %s", name)
 
@@ -491,7 +521,7 @@ func EnableUserPG() gin.HandlerFunc {
 			return
 		}
 
-		db := database.GetPostgresDB()
+		db := postgres.GetPostgresDB()
 		name := c.Param("name")
 		log.Printf("Attempting to enable user: %s", name)
 

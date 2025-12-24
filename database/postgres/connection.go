@@ -1,4 +1,4 @@
-package database
+package postgres
 
 import (
 	"fmt"
@@ -94,7 +94,6 @@ func InitPostgreSQL() *gorm.DB {
 		Logger:                                   logger.Default.LogMode(getLogLevel()),
 		DisableForeignKeyConstraintWhenMigrating: false,
 	})
-
 	if err != nil {
 		log.Fatalf("连接PostgreSQL失败: %v", err)
 	}
@@ -145,45 +144,4 @@ func ClosePostgreSQL() {
 			log.Println("PostgreSQL连接已关闭")
 		}
 	}
-}
-
-// CreateDatabaseIfNotExists 创建数据库（如果不存在）
-func CreateDatabaseIfNotExists() error {
-	// 获取连接参数
-	postgresDSN, targetDBName, err := getConnectionParamsFromURI(true)
-	if err != nil {
-		return err
-	}
-
-	// 连接到 postgres 数据库
-	db, err := gorm.Open(postgres.Open(postgresDSN), &gorm.Config{
-		Logger: logger.Default.LogMode(logger.Silent),
-	})
-	if err != nil {
-		return fmt.Errorf("连接到postgres数据库失败: %v", err)
-	}
-
-	// 检查目标数据库是否存在，如果不存在则创建
-	var count int64
-	err = db.Raw("SELECT COUNT(*) FROM pg_database WHERE datname = ?", targetDBName).Scan(&count).Error
-	if err != nil {
-		return fmt.Errorf("检查数据库是否存在失败: %v", err)
-	}
-
-	if count == 0 {
-		// 创建数据库
-		err = db.Exec(fmt.Sprintf("CREATE DATABASE %s", targetDBName)).Error
-		if err != nil {
-			return fmt.Errorf("创建数据库失败: %v", err)
-		}
-		log.Printf("数据库 %s 创建成功", targetDBName)
-	} else {
-		log.Printf("数据库 %s 已存在", targetDBName)
-	}
-
-	// 关闭连接
-	sqlDB, _ := db.DB()
-	sqlDB.Close()
-
-	return nil
 }
