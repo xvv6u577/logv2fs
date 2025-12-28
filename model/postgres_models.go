@@ -223,6 +223,7 @@ type SubscriptionNodePG struct {
 	PublicKey    string    `json:"public_key"`
 	ShortID      string    `json:"short_id"`
 	EnableOpenai bool      `json:"enable_openai" gorm:"default:false"`
+	Weight       int       `json:"weight" gorm:"default:0;index"` // 权重字段，用于节点排序，数值越小越靠前
 	CreatedAt    time.Time `json:"created_at"`
 	UpdatedAt    time.Time `json:"updated_at"`
 }

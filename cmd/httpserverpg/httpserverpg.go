@@ -41,17 +41,14 @@ func NewHTTPServerPGCmd() *cobra.Command {
 				gin.SetMode(gin.ReleaseMode)
 			}
 
-			router := gin.New()
-			router.Use(middleware.CORS())
-			router.Use(gin.Logger())
+		router := gin.New()
+		router.Use(middleware.CORS())
+		router.Use(gin.Logger())
 
-			// 初始化数据库监听器（PostgreSQL版本使用Supabase监听器）
-			websocket.InitSupabaseListener()
-
-			// 添加 WebSocket 路由
-			router.GET("/ws", func(c *gin.Context) {
-				websocket.HandleWebSocket(c.Writer, c.Request)
-			})
+		// 添加 WebSocket 路由
+		router.GET("/ws", func(c *gin.Context) {
+			websocket.HandleWebSocket(c.Writer, c.Request)
+		})
 
 			// 使用PostgreSQL版本的路由
 			routersPG.PublicRoutesPG(router)

@@ -18,10 +18,11 @@ const AddNode = () => {
 		path: "",
 		sni: "",
 		server_port: "",
+		weight: 0, // 权重字段，默认为0
 	};
 	
 	const [formData, setFormData] = useState(initialState);
-	const { type, remark, domain, uuid, path, sni, ip, server_port } = formData;
+	const { type, remark, domain, uuid, path, sni, ip, server_port, weight } = formData;
 
 	const dispatch = useDispatch();
 	const loginState = useSelector((state) => state.login);
@@ -52,7 +53,17 @@ const AddNode = () => {
 
 	const onChange = (e) => {
 		const name = e.target.name;
-		const value = e.target.value.replace(/\s/g, "");
+		let value = e.target.value.replace(/\s/g, "");
+		
+		// 对于 weight 字段，转换为整数
+		if (name === 'weight') {
+			value = value === '' ? 0 : parseInt(value, 10);
+			// 如果转换失败，使用 0
+			if (isNaN(value)) {
+				value = 0;
+			}
+		}
+		
 		setFormData((prevState) => ({ ...prevState, [name]: value }));
 	};
 
@@ -118,7 +129,8 @@ const AddNode = () => {
 					enable_openai: enableOpenai,
 					uuid,
 					path,
-					sni
+					sni,
+					weight: parseInt(weight) || 0, // 确保 weight 是整数
 				}
 			]));
 			clearState();
@@ -195,6 +207,10 @@ const AddNode = () => {
 				<div>
 					<span className="text-gray-400">Port: </span>
 					<span className="text-white font-mono">{node.server_port || "None"}</span>
+				</div>
+				<div>
+					<span className="text-gray-400">Weight: </span>
+					<span className="text-white font-mono">{node.weight !== undefined ? node.weight : 0}</span>
 				</div>
 				<div>
 					<span className="text-gray-400">OpenAI: </span>
@@ -357,6 +373,19 @@ const AddNode = () => {
 						</div>
 
 						<div>
+							<label className={styles.label}>权重 (Weight)</label>
+							<input
+								type="number"
+								name="weight"
+								onChange={onChange}
+								value={weight}
+								className={styles.input}
+								placeholder="0"
+							/>
+							<p className="text-xs text-gray-500 mt-1">数值越小，节点越靠前（可为负数）</p>
+						</div>
+
+						<div>
 							<label className="flex items-center space-x-3 cursor-pointer">
 								<input
 									type="checkbox"
@@ -408,9 +437,16 @@ const AddNode = () => {
 							<p className="text-gray-400">添加节点开始管理</p>
 						</div>
 					) : (
-						nodes.map((node, index) => (
-							<NodeCard key={index} node={node} index={index} />
-						))
+						// 按 weight 排序，值越小越靠前
+						[...nodes]
+							.sort((a, b) => {
+								const weightA = a.weight !== undefined ? a.weight : 0;
+								const weightB = b.weight !== undefined ? b.weight : 0;
+								return weightA - weightB;
+							})
+							.map((node, index) => (
+								<NodeCard key={index} node={node} index={index} />
+							))
 					)}
 				</div>
 			</div>

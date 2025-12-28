@@ -21,9 +21,6 @@ import (
 
 var (
 	validatePG = validator.New()
-	CREDIT     = os.Getenv("CREDIT")
-	PUBLIC_KEY = os.Getenv("PUBLIC_KEY")
-	SHORT_ID   = os.Getenv("SHORT_ID")
 )
 
 // PostgreSQL 版本的类型别名
@@ -42,6 +39,19 @@ type (
 	UserTrafficLogs = model.UserTrafficLogsPG
 	NodeTrafficLogs = model.NodeTrafficLogsPG
 )
+
+func getPublicKey() string {
+	return os.Getenv("PUBLIC_KEY")
+}
+
+func getShortID() string {
+	return os.Getenv("SHORT_ID")
+}
+
+func getCredit() int64 {
+	credit, _ := strconv.ParseInt(os.Getenv("CREDIT"), 10, 64)
+	return credit
+}
 
 // Contains 检查字符串是否在切片中
 func Contains(s []string, e string) bool {
@@ -136,8 +146,7 @@ func SignUpPG() gin.HandlerFunc {
 
 		user_role := "plain"
 		if user.Credit == 0 {
-			credit, _ := strconv.ParseInt(os.Getenv("CREDIT"), 10, 64)
-			pgUser.Credit = credit
+			pgUser.Credit = getCredit()
 		} else {
 			pgUser.Credit = user.Credit
 		}

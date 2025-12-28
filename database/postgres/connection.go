@@ -16,9 +16,17 @@ import (
 
 var PostgresDB *gorm.DB
 
+func getPostgresURI() string {
+	return os.Getenv("postgresURI")
+}
+
+func getGINMode() string {
+	return os.Getenv("GIN_MODE")
+}
+
 // getLogLevel 根据 GIN_MODE 环境变量返回对应的日志级别
 func getLogLevel() logger.LogLevel {
-	ginMode := os.Getenv("GIN_MODE")
+	ginMode := getGINMode()
 
 	switch ginMode {
 	case "debug":
@@ -46,7 +54,7 @@ func getConnectionParamsFromURI(connectToSystemDB bool) (string, string, error) 
 	}
 
 	// 从环境变量获取PostgreSQL连接URI
-	postgresURI := os.Getenv("postgresURI")
+	postgresURI := getPostgresURI()
 	if postgresURI == "" {
 		return "", "", fmt.Errorf("环境变量 postgresURI 未设置")
 	}

@@ -41,9 +41,9 @@ type NodeTrafficRequest struct {
 	Traffic   int64     `json:"p_traffic"`
 }
 
-var (
-	currentDomain = os.Getenv("CURRENT_DOMAIN")
-)
+func getCurrentDomain() string {
+	return os.Getenv("CURRENT_DOMAIN")
+}
 
 // PostgreSQL版本的用户流量记录函数（MongoDB包中不实现）
 func LogUserTrafficPG(email string, timestamp time.Time, traffic int64) error {
@@ -272,7 +272,7 @@ func Cron_loggingJobs(c *cron.Cron, instance *box.Box) {
 				log.Printf("MongoDB用户流量记录失败: %v\n", err)
 			}
 
-			if err := LogNodeTraffic(mongodb.GetCollection(model.NodeTrafficLogs{}), currentDomain, timesteamp, perUser.Total); err != nil {
+			if err := LogNodeTraffic(mongodb.GetCollection(model.NodeTrafficLogs{}), getCurrentDomain(), timesteamp, perUser.Total); err != nil {
 				log.Printf("MongoDB节点流量记录失败: %v\n", err)
 			}
 		}

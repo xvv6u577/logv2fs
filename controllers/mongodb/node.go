@@ -81,8 +81,8 @@ func AddNode() gin.HandlerFunc {
 		// types: reality, hysteria2, vlessCDN! if type is reality, reassgin public_key and short_id.
 		for i, domain := range nodeFromWebForm {
 			if domain.Type == "reality" {
-				nodeFromWebForm[i].PUBLIC_KEY = PUBLIC_KEY
-				nodeFromWebForm[i].SHORT_ID = SHORT_ID
+				nodeFromWebForm[i].PUBLIC_KEY = getPublicKey()
+				nodeFromWebForm[i].SHORT_ID = getShortID()
 			}
 
 			// set remark as filter, check if node is in subNodesCol. if no, insert it. if yes, update it.
@@ -353,7 +353,7 @@ func GetSingboxNodes() gin.HandlerFunc {
 
 		var activeNodes []NodeTrafficLogs
 		var filter = bson.D{primitive.E{Key: "status", Value: "active"}}
-		cur, err := mongodb.GetCollection(model.SubscriptionNode{}).Find(context.TODO(), filter)
+		cur, err := mongodb.GetCollection(model.NodeTrafficLogs{}).Find(context.TODO(), filter)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			log.Printf("Find error: %v", err)

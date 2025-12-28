@@ -77,8 +77,8 @@ func AddNodePG() gin.HandlerFunc {
 		for i, domain := range nodeFromWebForm {
 			// 如果是reality类型，重新分配public_key和short_id
 			if domain.Type == "reality" {
-				domain.PublicKey = PUBLIC_KEY
-				domain.ShortID = SHORT_ID
+				domain.PublicKey = getPublicKey()
+				domain.ShortID = getShortID()
 			}
 
 			// 转换为PostgreSQL模型并生成新的UUID
@@ -223,7 +223,8 @@ func GetActiveGlobalNodesPG() gin.HandlerFunc {
 		db := postgres.GetPostgresDB()
 		var pgDomains []model.SubscriptionNodePG
 
-		query := `SELECT * FROM "subscription_nodes" WHERE type != 'work'`
+		// 按权重升序排序查询
+		query := `SELECT * FROM "subscription_nodes" WHERE type != 'work' ORDER BY weight ASC`
 		if err := db.Raw(query).Scan(&pgDomains).Error; err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			log.Printf("Find domains error: %v", err)
@@ -246,6 +247,7 @@ func GetActiveGlobalNodesPG() gin.HandlerFunc {
 				PublicKey:    pgDomain.PublicKey,
 				ShortID:      pgDomain.ShortID,
 				EnableOpenai: pgDomain.EnableOpenai,
+				Weight:       pgDomain.Weight, // 添加权重字段
 			})
 		}
 

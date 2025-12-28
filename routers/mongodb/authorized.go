@@ -9,14 +9,14 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-var (
-	GIN_MODE = os.Getenv("GIN_MODE")
-)
+func getGINMode() string {
+	return os.Getenv("GIN_MODE")
+}
 
 // AuthorizedRoutes MongoDB版本的授权路由
 func AuthorizedRoutes(incomingRoutes *gin.Engine) {
 
-	if GIN_MODE != "test" {
+	if getGINMode() != "test" {
 		incomingRoutes.Use(middleware.Authentication())
 	}
 

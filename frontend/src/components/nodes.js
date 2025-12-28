@@ -46,7 +46,7 @@ function Nodes() {
 		}
 	}, [message, dispatch]);
 
-	// WebSocket 实时数据更新
+	// WebSocket 连接管理
 	useEffect(() => {
 		// 连接 WebSocket
 		const userID = loginState.jwt?.Email;
@@ -63,23 +63,8 @@ function Nodes() {
 		const statusInterval = setInterval(checkStatus, 1000);
 		checkStatus(); // 立即检查一次
 		
-		// 注册消息处理器
-		const handleNodeTrafficUpdate = (message) => {
-			console.log('收到节点流量更新:', message);
-			
-			// 更新节点的流量数据
-			if (message.data && message.data.domain_as_id) {
-				
-				console.log('收到节点流量更新:', message);
-			}
-		};
-		
-		// 注册消息处理器
-		websocketService.on('node_traffic_update', handleNodeTrafficUpdate);
-		
 		// 清理函数
 		return () => {
-			websocketService.off('node_traffic_update', handleNodeTrafficUpdate);
 			clearInterval(statusInterval);
 		};
 	}, [loginState.jwt]);

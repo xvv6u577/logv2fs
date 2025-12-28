@@ -12,11 +12,10 @@ import (
 
 // Message 定义 WebSocket 消息格式
 type Message struct {
-	Type       string      `json:"type"`       // 消息类型：user_update, traffic_update, payment_update
-	Action     string      `json:"action"`     // 操作类型：insert, update, delete
-	Collection string      `json:"collection"` // 集合/表名
-	Data       interface{} `json:"data"`       // 变更数据
-	Timestamp  time.Time   `json:"timestamp"`  // 时间戳
+	Type      string      `json:"type"`      // 消息类型
+	Action    string      `json:"action"`    // 操作类型
+	Data      interface{} `json:"data"`      // 消息数据
+	Timestamp time.Time   `json:"timestamp"` // 时间戳
 }
 
 // Client 表示一个 WebSocket 客户端连接

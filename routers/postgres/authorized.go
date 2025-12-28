@@ -9,14 +9,14 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-var (
-	GIN_MODE_PG = os.Getenv("GIN_MODE")
-)
+func getGINMode() string {
+	return os.Getenv("GIN_MODE")
+}
 
 // AuthorizedRoutesPG PostgreSQL版本的授权路由
 func AuthorizedRoutesPG(incomingRoutes *gin.Engine) {
 
-	if GIN_MODE_PG != "test" {
+	if getGINMode() != "test" {
 		incomingRoutes.Use(middleware.Authentication())
 	}
 

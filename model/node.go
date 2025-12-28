@@ -56,6 +56,7 @@ type SubscriptionNode struct {
 	PUBLIC_KEY   string `json:"public_key" bson:"public_key"`
 	SHORT_ID     string `json:"short_id" bson:"short_id"`
 	EnableOpenai bool   `json:"enable_openai" bson:"enable_openai"`
+	Weight       int    `json:"weight" bson:"weight"` // 权重字段，用于节点排序，数值越小越靠前
 }
 
 // CollectionName 返回MongoDB集合名称

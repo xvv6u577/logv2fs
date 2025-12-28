@@ -13,9 +13,9 @@ import (
 	postgres_pkg "github.com/xvv6u577/logv2fs/pkg/postgres"
 )
 
-var (
-	currentDomainPG = os.Getenv("CURRENT_DOMAIN")
-)
+func getCurrentDomain() string {
+	return os.Getenv("CURRENT_DOMAIN")
+}
 
 // UserTrafficRequest 定义调用 upsert_user_traffic_log 函数的请求参数
 type UserTrafficRequest struct {
@@ -113,7 +113,7 @@ func Cron_loggingJobsPG(c *cron.Cron, instance *box.Box) {
 			}
 
 			// 记录节点流量
-			if err := LogNodeTrafficPG(currentDomainPG, timesteamp, perUser.Total); err != nil {
+			if err := LogNodeTrafficPG(getCurrentDomain(), timesteamp, perUser.Total); err != nil {
 				log.Printf("PostgreSQL节点流量记录失败: %v\n", err)
 			}
 		}

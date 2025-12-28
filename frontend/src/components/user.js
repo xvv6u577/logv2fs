@@ -628,7 +628,7 @@ const User = () => {
 		}
 	}, [message, dispatch]);
 
-	// WebSocket 实时数据更新
+	// WebSocket 连接管理
 	useEffect(() => {
 		// 连接 WebSocket
 		const userID = loginState.jwt?.Email;
@@ -645,17 +645,8 @@ const User = () => {
 		const statusInterval = setInterval(checkStatus, 1000);
 		checkStatus(); // 立即检查一次
 		
-		// 注册消息处理器
-		const handleUserTrafficUpdate = (message) => {
-			console.log('收到用户更新:', message);
-		};
-
-		// 注册消息处理器
-		websocketService.on('user_traffic_update', handleUserTrafficUpdate);
-		
 		// 清理函数
 		return () => {
-			websocketService.off('user_traffic_update', handleUserTrafficUpdate);
 			clearInterval(statusInterval);
 		};
 	}, [loginState.jwt, modalUser]);

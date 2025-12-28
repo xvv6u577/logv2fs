@@ -11,6 +11,14 @@ import (
 
 var SupabaseClient *supabase.Client
 
+func getSupabaseURL() string {
+	return os.Getenv("SUPABASE_URL")
+}
+
+func getSupabaseKey() string {
+	return os.Getenv("SUPABASE_KEY")
+}
+
 // InitSupabase 初始化 Supabase 客户端
 func InitSupabase() (*supabase.Client, error) {
 	// 加载环境变量
@@ -24,8 +32,8 @@ func InitSupabase() (*supabase.Client, error) {
 	}
 
 	// 从环境变量获取 Supabase 配置
-	supabaseURL := os.Getenv("SUPABASE_URL")
-	supabaseKey := os.Getenv("SUPABASE_KEY")
+	supabaseURL := getSupabaseURL()
+	supabaseKey := getSupabaseKey()
 
 	if supabaseURL == "" || supabaseKey == "" {
 		return nil, fmt.Errorf("环境变量 SUPABASE_URL 或 SUPABASE_KEY 未设置")

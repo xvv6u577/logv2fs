@@ -19,6 +19,10 @@ type CollectionNamer interface {
 
 var Client *mongo.Client
 
+func getMongoDBURI() string {
+	return os.Getenv("mongoURI")
+}
+
 // DBinstance func
 func DBinstance() *mongo.Client {
 
@@ -33,7 +37,7 @@ func DBinstance() *mongo.Client {
 	if err := godotenv.Load(pwd + "/.env"); err != nil {
 		log.Panicf("Error loading .env file: %v", err)
 	}
-	MongoDB := os.Getenv("mongoURI")
+	MongoDB := getMongoDBURI()
 
 	client, err := mongo.Connect(ctx, options.Client().ApplyURI(MongoDB))
 	if err != nil {

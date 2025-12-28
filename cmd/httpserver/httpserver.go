@@ -41,17 +41,14 @@ func NewHTTPServerCmd() *cobra.Command {
 				gin.SetMode(gin.ReleaseMode)
 			}
 
-			router := gin.New()
-			router.Use(middleware.CORS())
-			router.Use(gin.Logger())
+		router := gin.New()
+		router.Use(middleware.CORS())
+		router.Use(gin.Logger())
 
-			// 初始化数据库监听器（MongoDB版本）
-			websocket.InitMongoDBListener()
-
-			// 添加 WebSocket 路由
-			router.GET("/ws", func(c *gin.Context) {
-				websocket.HandleWebSocket(c.Writer, c.Request)
-			})
+		// 添加 WebSocket 路由
+		router.GET("/ws", func(c *gin.Context) {
+			websocket.HandleWebSocket(c.Writer, c.Request)
+		})
 
 			routersMongodb.PublicRoutes(router)
 			routersMongodb.AuthorizedRoutes(router)

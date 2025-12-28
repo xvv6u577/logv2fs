@@ -30,10 +30,7 @@ import (
 )
 
 var (
-	validate   = validator.New()
-	CREDIT     = os.Getenv("CREDIT")
-	PUBLIC_KEY = os.Getenv("PUBLIC_KEY")
-	SHORT_ID   = os.Getenv("SHORT_ID")
+	validate = validator.New()
 )
 
 type (
@@ -51,6 +48,19 @@ type (
 	UserTrafficLogs = model.UserTrafficLogs
 	NodeTrafficLogs = model.NodeTrafficLogs
 )
+
+func getPublicKey() string {
+	return os.Getenv("PUBLIC_KEY")
+}
+
+func getShortID() string {
+	return os.Getenv("SHORT_ID")
+}
+
+func getCredit() int64 {
+	credit, _ := strconv.ParseInt(os.Getenv("CREDIT"), 10, 64)
+	return credit
+}
 
 // HashPassword is used to encrypt the password before it is stored in the DB
 func HashPassword(password string) string {
@@ -172,8 +182,7 @@ func SignUp() gin.HandlerFunc {
 		user.Used = 0
 
 		if user.Credit == 0 {
-			credit, _ := strconv.ParseInt(CREDIT, 10, 64)
-			user.Credit = credit
+			user.Credit = getCredit()
 		}
 
 		user.ID = primitive.NewObjectID()
@@ -517,7 +526,12 @@ func GetSubscripionURL() gin.HandlerFunc {
 
 		var activeGlobalNodes []Domain
 
-		cur, err := mongodb.GetCollection(model.SubscriptionNode{}).Find(context.TODO(), bson.D{})
+		// 查询所有节点并按权重升序排序
+		cur, err := mongodb.GetCollection(model.SubscriptionNode{}).Find(
+			context.TODO(),
+			bson.D{},
+			options.Find().SetSort(bson.D{{Key: "weight", Value: 1}}), // 按权重升序排序
+		)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "error occured while getting active global nodes"})
 			log.Printf("Getting active global nodes error: %s", err.Error())
@@ -550,9 +564,9 @@ func GetSubscripionURL() gin.HandlerFunc {
 
 				if node.Type == "reality" {
 					if len(sub) == 0 {
-						sub = "vless://" + user.UUID + "@" + formattedIP + ":" + node.SERVER_PORT + "?encryption=none&flow=xtls-rprx-vision&security=reality&sni=itunes.apple.com&fp=chrome&pbk=" + node.PUBLIC_KEY + "&sid=" + node.SHORT_ID + "&type=tcp&headerType=none#" + node.Remark
+						sub = "vless://" + user.UUID + "@" + formattedIP + ":" + node.SERVER_PORT + "?encryption=none&flow=xtls-rprx-vision&security=reality&sni=itunes.apple.com&fp=chrome&pbk=" + getPublicKey() + "&sid=" + getShortID() + "&type=tcp&headerType=none#" + node.Remark
 					} else {
-						sub = sub + "\n" + "vless://" + user.UUID + "@" + formattedIP + ":" + node.SERVER_PORT + "?encryption=none&flow=xtls-rprx-vision&security=reality&sni=itunes.apple.com&fp=chrome&pbk=" + node.PUBLIC_KEY + "&sid=" + node.SHORT_ID + "&type=tcp&headerType=none#" + node.Remark
+						sub = sub + "\n" + "vless://" + user.UUID + "@" + formattedIP + ":" + node.SERVER_PORT + "?encryption=none&flow=xtls-rprx-vision&security=reality&sni=itunes.apple.com&fp=chrome&pbk=" + getPublicKey() + "&sid=" + getShortID() + "&type=tcp&headerType=none#" + node.Remark
 					}
 				}
 
@@ -612,7 +626,12 @@ func ReturnSingboxJson() gin.HandlerFunc {
 
 		var activeGlobalNodes []Domain
 
-		cur, err := mongodb.GetCollection(model.SubscriptionNode{}).Find(context.TODO(), bson.D{})
+		// 查询所有节点并按权重升序排序
+		cur, err := mongodb.GetCollection(model.SubscriptionNode{}).Find(
+			context.TODO(),
+			bson.D{},
+			options.Find().SetSort(bson.D{{Key: "weight", Value: 1}}), // 按权重升序排序
+		)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "error occured while getting active global nodes"})
 			log.Printf("Getting active global nodes error: %s", err.Error())
@@ -700,8 +719,8 @@ func ReturnSingboxJson() gin.HandlerFunc {
 								ShortID   string `json:"short_id"`
 							}{
 								Enabled:   true,
-								PublicKey: node.PUBLIC_KEY,
-								ShortID:   node.SHORT_ID,
+								PublicKey: getPublicKey(),
+								ShortID:   getShortID(),
 							},
 						},
 					})
@@ -858,7 +877,12 @@ func ReturnVergeYAML() gin.HandlerFunc {
 		}
 
 		var activeGlobalNodes []Domain
-		cur, err := mongodb.GetCollection(model.SubscriptionNode{}).Find(context.TODO(), bson.D{})
+		// 查询所有节点并按权重升序排序
+		cur, err := mongodb.GetCollection(model.SubscriptionNode{}).Find(
+			context.TODO(),
+			bson.D{},
+			options.Find().SetSort(bson.D{{Key: "weight", Value: 1}}), // 按权重升序排序
+		)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "error occured while getting active global nodes"})
 			log.Printf("Getting active global nodes error: %s", err.Error())
@@ -911,8 +935,8 @@ func ReturnVergeYAML() gin.HandlerFunc {
 							PublicKey string `yaml:"public-key"`
 							ShortID   string `yaml:"short-id"`
 						}{
-							PublicKey: node.PUBLIC_KEY,
-							ShortID:   node.SHORT_ID,
+							PublicKey: getPublicKey(),
+							ShortID:   getShortID(),
 						},
 					})
 				}

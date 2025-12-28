@@ -28,8 +28,8 @@ func GetSubscripionURLPG() gin.HandlerFunc {
 
 		var activeGlobalNodes []model.SubscriptionNodePG
 
-		// 查询活跃的全局节点
-		if err := db.Where("type != ?", "work").Find(&activeGlobalNodes).Error; err != nil {
+		// 查询活跃的全局节点，按权重升序排序
+		if err := db.Where("type != ?", "work").Order("weight ASC").Find(&activeGlobalNodes).Error; err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "error occurred while getting active global nodes"})
 			log.Printf("Getting active global nodes error: %s", err.Error())
 			return
@@ -106,17 +106,17 @@ func ReturnSingboxJsonPG() gin.HandlerFunc {
 			return
 		}
 
-		var activeGlobalNodes []model.SubscriptionNodePG
+	var activeGlobalNodes []model.SubscriptionNodePG
 
-		// 查询活跃的全局节点
-		if err := db.Where("type != ?", "work").Find(&activeGlobalNodes).Error; err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "error occurred while getting active global nodes"})
-			log.Printf("Getting active global nodes error: %s", err.Error())
-			return
-		}
+	// 查询活跃的全局节点，按权重升序排序
+	if err := db.Where("type != ?", "work").Order("weight ASC").Find(&activeGlobalNodes).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "error occurred while getting active global nodes"})
+		log.Printf("Getting active global nodes error: %s", err.Error())
+		return
+	}
 
-		if pgUser.Status == "plain" {
-			jsonFile, err = os.ReadFile(helper.CurrentPath() + "/config/template_singbox.json")
+	if pgUser.Status == "plain" {
+		jsonFile, err = os.ReadFile(helper.CurrentPath() + "/config/template_singbox.json")
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 				log.Printf("error: %v", err)
@@ -338,17 +338,17 @@ func ReturnVergeYAMLPG() gin.HandlerFunc {
 			return
 		}
 
-		var activeGlobalNodes []model.SubscriptionNodePG
+	var activeGlobalNodes []model.SubscriptionNodePG
 
-		// 查询活跃的全局节点
-		if err := db.Where("type != ?", "work").Find(&activeGlobalNodes).Error; err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "error occurred while getting active global nodes"})
-			log.Printf("Getting active global nodes error: %s", err.Error())
-			return
-		}
+	// 查询活跃的全局节点，按权重升序排序
+	if err := db.Where("type != ?", "work").Order("weight ASC").Find(&activeGlobalNodes).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "error occurred while getting active global nodes"})
+		log.Printf("Getting active global nodes error: %s", err.Error())
+		return
+	}
 
-		if pgUser.Status == "plain" {
-			yamlFile, err = os.ReadFile(helper.CurrentPath() + "/config/template_verge.yaml")
+	if pgUser.Status == "plain" {
+		yamlFile, err = os.ReadFile(helper.CurrentPath() + "/config/template_verge.yaml")
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 				log.Printf("error: %v", err)
