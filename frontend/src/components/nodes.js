@@ -4,21 +4,12 @@ import { alert, reset, success } from "../store/message";
 import axios from "axios";
 import Alert from "./alert";
 import { formatBytes } from "../service/service";
-import { useNodes, useMonitoredDomainsList	, useUpdateMonitoredDomains } from "../hooks/useQueries";
+import { useNodes } from "../hooks/useQueries";
 import { useWebSocket } from "../hooks/useWebSocket";
 
 function Nodes() {
 	// 使用 React Query 获取数据
-	const { data: singboxNodes = [], isLoading: nodesLoading, error: nodesError } = useNodes();
-	const { data: monitoredDomains = [], isLoading: domainsLoading, error: domainsError, refetch: refetchDomains } = useMonitoredDomainsList	();
-	const loading = nodesLoading || domainsLoading;
-	
-	// 使用 mutation hook
-	const updateDomainsMutation = useUpdateMonitoredDomains();
-	
-	const [newDomain, setNewDomain] = useState("");
-	const [newRemark, setNewRemark] = useState("");
-	const [activeSection, setActiveSection] = useState("nodes"); // 'nodes' or 'domains' 
+	const { data: singboxNodes = [], isLoading: loading, error: nodesError } = useNodes();
 	const [selectedNode, setSelectedNode] = useState(null); // 用于控制模态框显示的节点
 	const [customDates, setCustomDates] = useState({}); // 存储每个节点的自定义日期
 	
@@ -58,10 +49,7 @@ function Nodes() {
 		if (nodesError) {
 			dispatch(alert({ show: true, content: nodesError.toString() }));
 		}
-		if (domainsError) {
-			dispatch(alert({ show: true, content: domainsError.toString() }));
-		}
-	}, [nodesError, domainsError, dispatch]);
+	}, [nodesError, dispatch]);
 
 	// 初始化自定义日期（当节点数据加载完成后）
 	useEffect(() => {
@@ -69,62 +57,6 @@ function Nodes() {
 			initializeCustomDates(singboxNodes);
 		}
 	}, [singboxNodes]);
-
-	const handleAddDomain = (e) => {
-		e.preventDefault();
-		updateDomainsMutation.mutate(monitoredDomains, {
-			onSuccess: (data) => {
-				dispatch(success({ show: true, content: data.message }));
-				refetchDomains(); // 刷新域名列表
-			},
-			onError: (err) => {
-				dispatch(alert({ show: true, content: err.toString() }));
-			}
-		});
-	};
-
-	const addNewDomain = () => {
-		if (newDomain.length > 0 && newRemark.length > 0) {
-			const tempDomains = monitoredDomains?.filter(item => item.domain === newDomain) || [];
-			if (tempDomains.length === 0) {
-				// 添加域名到列表中，通过 mutation 更新
-				const updatedDomains = [...(monitoredDomains || []), { 
-					domain: newDomain, 
-					remark: newRemark, 
-					days_to_expire: -1, 
-					expired_date: "" 
-				}];
-				// 这里应该调用 mutation 来更新域名列表
-				updateDomainsMutation.mutate(updatedDomains, {
-					onSuccess: (data) => {
-						dispatch(success({ show: true, content: "域名添加成功" }));
-						refetchDomains();
-					},
-					onError: (err) => {
-						dispatch(alert({ show: true, content: err.toString() }));
-					}
-				});
-			}
-			setNewDomain("");
-			setNewRemark("");
-		} else {
-			dispatch(alert({ show: true, content: "域名和备注不能为空" }));
-		}
-	};
-
-	const removeDomain = (domainToRemove) => {
-		// 删除域名，通过 mutation 更新
-		const updatedDomains = monitoredDomains?.filter(item => item.domain !== domainToRemove) || [];
-		updateDomainsMutation.mutate(updatedDomains, {
-			onSuccess: (data) => {
-				dispatch(success({ show: true, content: "域名删除成功" }));
-				refetchDomains();
-			},
-			onError: (err) => {
-				dispatch(alert({ show: true, content: err.toString() }));
-			}
-		});
-	};
 
 	// 计算自定义日期流量
 	const calculateCustomDateTraffic = (node, customDate) => {
@@ -504,34 +436,6 @@ function Nodes() {
 		);
 	};
 
-	// 域名卡片组件
-	const DomainCard = ({ domain, index }) => (
-		<div className={`${styles.card} p-6 relative`}>
-			<button 
-				className="absolute top-4 right-4 text-gray-400 hover:text-red-400 transition-colors"
-				onClick={() => removeDomain(domain.domain)}
-			>
-				<svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-					<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-				</svg>
-			</button>
-
-			<div className="mb-4">
-				<h2 className="text-xl font-bold text-blue-300 mb-2">{domain.remark}</h2>
-				<h3 className="text-lg font-semibold text-white mb-1">{domain.domain}</h3>
-			</div>
-
-			<div className="text-center">
-				<div className="text-3xl font-bold text-white mb-2">
-					{domain.days_to_expire}天
-				</div>
-				<p className="text-gray-400 text-sm">
-					到期时间: {domain.expired_date}
-				</p>
-			</div>
-		</div>
-	);
-
 	return (
 		<div className="min-h-screen bg-gray-900 text-white p-6">
 			<Alert 
@@ -549,8 +453,8 @@ function Nodes() {
 
 			{/* 页面标题 */}
 			<div className="mb-8">
-				<h1 className="text-3xl font-bold mb-2">节点管理</h1>
-				<p className="text-gray-400">管理节点状态和域名监控</p>
+				<h1 className="text-3xl font-bold mb-2">节点监控</h1>
+				<p className="text-gray-400">管理和监控节点状态</p>
 				{/* WebSocket 连接状态指示器 */}
 				<div className="flex items-center space-x-2 mt-2">
 					<div className={`w-2 h-2 rounded-full ${
@@ -573,33 +477,8 @@ function Nodes() {
 				</div>
 			</div>
 
-			{/* 导航标签 */}
-			<div className="flex space-x-4 mb-8">
-				<button
-					onClick={() => setActiveSection("nodes")}
-					className={`px-6 py-2 rounded-lg font-medium transition-colors ${
-						activeSection === "nodes" 
-							? "bg-blue-600 text-white" 
-							: "bg-gray-700 text-gray-300 hover:bg-gray-600"
-					}`}
-				>
-					节点监控 ({singboxNodes?.length || 0})
-				</button>
-				<button
-					onClick={() => setActiveSection("domains")}
-					className={`px-6 py-2 rounded-lg font-medium transition-colors ${
-						activeSection === "domains" 
-							? "bg-blue-600 text-white" 
-							: "bg-gray-700 text-gray-300 hover:bg-gray-600"
-					}`}
-				>
-					域名监控 ({monitoredDomains?.length || 0})
-				</button>
-			</div>
-
 			{/* 节点管理部分 */}
-			{activeSection === "nodes" && (
-				<div>
+			<div>
 					{/* 节点列表 */}
 					{loading ? (
 						// 加载中状态
@@ -628,74 +507,6 @@ function Nodes() {
 						</div>
 					)}
 				</div>
-			)}
-
-			{/* 域名监控部分 */}
-			{activeSection === "domains" && (
-				<div>
-					{/* 添加域名表单 */}
-					<div className={`${styles.card} p-6 mb-8`}>
-						<h3 className="text-lg font-semibold text-white mb-4">添加域名监控</h3>
-						<form onSubmit={handleAddDomain}>
-							<div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-								<input
-									type="text"
-									placeholder="域名"
-									value={newDomain}
-									onChange={(e) => setNewDomain(e.target.value.replace(/\s/g, ""))}
-									className={styles.input}
-								/>
-								<input
-									type="text"
-									placeholder="备注"
-									value={newRemark}
-									onChange={(e) => setNewRemark(e.target.value.replace(/\s/g, ""))}
-									className={styles.input}
-								/>
-								<button
-									type="button"
-									onClick={addNewDomain}
-									className={`${styles.button} ${styles.buttonPrimary}`}
-								>
-									添加域名
-								</button>
-							</div>
-							<button
-								type="submit"
-								className={`${styles.button} ${styles.buttonSecondary}`}
-							>
-								更新域名监控
-							</button>
-						</form>
-					</div>
-
-					{/* 域名列表 */}
-					{loading ? (
-						// 加载中状态
-						<div className={`${styles.card} p-8 text-center`}>
-							<div className="flex flex-col items-center">
-								<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mb-4"></div>
-								<h3 className="text-lg font-medium text-gray-300 mb-2">加载中...</h3>
-								<p className="text-gray-400">正在获取域名监控数据</p>
-							</div>
-						</div>
-					) : (monitoredDomains?.length || 0) > 0 ? (
-						<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-							{monitoredDomains?.map((domain, index) => (
-								<DomainCard key={index} domain={domain} index={index} />
-							)) || []}
-						</div>
-					) : (
-						<div className={`${styles.card} p-8 text-center`}>
-							<svg className="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-								<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9v-9m0-9v9" />
-							</svg>
-							<h3 className="text-lg font-medium text-gray-300 mb-2">暂无域名监控</h3>
-							<p className="text-gray-400">添加域名开始监控到期时间</p>
-						</div>
-					)}
-				</div>
-			)}
 		</div>
 	);
 }

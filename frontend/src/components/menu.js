@@ -7,11 +7,17 @@ const Menu = () => {
 	const dispatch = useDispatch();
 	
 	// 移动端折叠菜单状态管理
+	const [isNodesOpen, setIsNodesOpen] = useState(false);
 	const [isPaymentOpen, setIsPaymentOpen] = useState(false);
 	const [isClientsOpen, setIsClientsOpen] = useState(false);
 
 	const handleLogout = (e) => {
 		dispatch(logout());
+	};
+
+	// 切换Nodes菜单展开状态
+	const toggleNodesMenu = () => {
+		setIsNodesOpen(!isNodesOpen);
 	};
 
 	// 切换Payment菜单展开状态
@@ -47,8 +53,59 @@ const Menu = () => {
 					{loginState.jwt.Role === "admin" && (
 						<>
 							<a className="mr-5 hover:text-white" href="/user">User</a>
-							<a className="mr-5 hover:text-white" href="/nodes">Nodes</a>
-							<a className="mr-5 hover:text-white" href="/addnode">Add Node</a>
+							
+							{/* Nodes 二级菜单 - 桌面端悬停，移动端点击 */}
+							<div className="relative mr-5 group">
+								{/* 桌面端悬停触发 */}
+								<button 
+									className="hidden md:flex items-center hover:text-white"
+									onClick={toggleNodesMenu}
+								>
+									Nodes
+									<ChevronIcon isOpen={false} />
+								</button>
+								
+								{/* 移动端点击触发 */}
+								<button 
+									className="flex md:hidden items-center hover:text-white"
+									onClick={toggleNodesMenu}
+								>
+									Nodes
+									<ChevronIcon isOpen={isNodesOpen} />
+								</button>
+								
+								{/* 桌面端下拉菜单 - 悬停显示 */}
+								<div className="hidden md:block absolute left-0 mt-2 w-48 bg-gray-800 rounded-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+									<div className="py-1">
+										<a href="/nodes" className="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white">
+											节点监控
+										</a>
+										<a href="/addnode" className="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white">
+											添加节点
+										</a>
+										<a href="/domain-monitor" className="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white">
+											域名监控
+										</a>
+									</div>
+								</div>
+							</div>
+							
+							{/* 移动端 Nodes 折叠菜单 */}
+							<div className="block md:hidden w-full">
+								{isNodesOpen && (
+									<div className="ml-4 mt-2 space-y-1">
+										<a href="/nodes" className="block text-sm text-gray-300 hover:text-white py-1">
+											节点监控
+										</a>
+										<a href="/addnode" className="block text-sm text-gray-300 hover:text-white py-1">
+											添加节点
+										</a>
+										<a href="/domain-monitor" className="block text-sm text-gray-300 hover:text-white py-1">
+											域名监控
+										</a>
+									</div>
+								)}
+							</div>
 							
 							{/* Payment 二级菜单 - 桌面端悬停，移动端点击 */}
 							<div className="relative mr-5 group">
