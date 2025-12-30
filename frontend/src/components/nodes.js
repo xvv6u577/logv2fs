@@ -3,7 +3,7 @@ import { useSelector, useDispatch } from "react-redux";
 import { alert, reset, success } from "../store/message";
 import axios from "axios";
 import Alert from "./alert";
-import { formatBytes } from "../service/service";
+import { formatBytes, getCurrentMonthTraffic, getCurrentYearTraffic, getTrafficOfTodayFromArray } from "../service/service";
 import { useNodes } from "../hooks/useQueries";
 import { useWebSocket } from "../hooks/useWebSocket";
 
@@ -224,26 +224,13 @@ function Nodes() {
 					<div className="text-center">
 						<p className="text-xs text-blue-200 mb-1">今日流量</p>
 						<h3 className="font-extrabold text-blue-400 text-lg">
-							{(() => {
-								const today = new Date();
-								const todayStr = today.getFullYear().toString() + 
-												(today.getMonth() + 1).toString().padStart(2, '0') + 
-												today.getDate().toString().padStart(2, '0');
-								const todayLog = node?.daily_logs?.find(log => log.date === todayStr);
-								return todayLog ? formatBytes(todayLog.traffic) : "0";
-							})()}
+							{getTrafficOfTodayFromArray(node?.daily_logs)}
 						</h3>
 					</div>
 					<div className="text-center">
 						<p className="text-xs text-green-200 mb-1">本月流量</p>
 						<h3 className="font-extrabold text-green-400 text-lg">
-							{(() => {
-								const today = new Date();
-								const currentMonth = today.getFullYear().toString() + 
-													(today.getMonth() + 1).toString().padStart(2, '0');
-								const monthLog = node?.monthly_logs?.find(log => log.month === currentMonth);
-								return monthLog ? formatBytes(monthLog.traffic) : "0";
-							})()}
+							{getCurrentMonthTraffic(node?.monthly_logs)}
 						</h3>
 					</div>
 					{/* 自定义日期流量 - 只读显示 */}
@@ -308,36 +295,19 @@ function Nodes() {
 							<div className="text-center bg-gray-700 rounded-lg p-4">
 								<p className="text-base font-extrabold text-blue-200 mb-2">今日流量</p>
 								<p className="font-bold text-blue-400 text-2xl">
-									{(() => {
-										const today = new Date();
-										const todayStr = today.getFullYear().toString() + 
-														(today.getMonth() + 1).toString().padStart(2, '0') + 
-														today.getDate().toString().padStart(2, '0');
-										const todayLog = node?.daily_logs?.find(log => log.date === todayStr);
-										return todayLog ? formatBytes(todayLog.traffic) : "0";
-									})()}
+									{getTrafficOfTodayFromArray(node?.daily_logs)}
 								</p>
 							</div>
 							<div className="text-center bg-gray-700 rounded-lg p-4">
 								<p className="text-base font-extrabold text-green-200 mb-2">本月流量</p>
 								<p className="font-bold text-green-400 text-2xl">
-									{(() => {
-										const today = new Date();
-										const currentMonth = today.getFullYear().toString() + 
-															(today.getMonth() + 1).toString().padStart(2, '0');
-										const monthLog = node?.monthly_logs?.find(log => log.month === currentMonth);
-										return monthLog ? formatBytes(monthLog.traffic) : "0";
-									})()}
+									{getCurrentMonthTraffic(node?.monthly_logs)}
 								</p>
 							</div>
 							<div className="text-center bg-gray-700 rounded-lg p-4">
 								<p className="text-base font-extrabold text-purple-200 mb-2">本年流量</p>
 								<p className="font-bold text-purple-400 text-2xl">
-									{(() => {
-										const currentYear = new Date().getFullYear().toString();
-										const yearLog = node?.yearly_logs?.find(log => log.year === currentYear);
-										return yearLog ? formatBytes(yearLog.traffic) : "0";
-									})()}
+									{getCurrentYearTraffic(node?.yearly_logs)}
 								</p>
 							</div>
 							{/* 自定义日期流量 */}

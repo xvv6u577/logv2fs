@@ -4,6 +4,7 @@ import { alert, reset, success } from "../store/message";
 import axios from "axios";
 import Alert from "./alert";
 import AddUser from "./adduser";
+import { formatBytes, formatDate, getCurrentMonthTraffic, getCurrentYearTraffic, getTrafficOfTodayFromArray } from "../service/service";
 import { useUsers, useUpdateUser, useDeleteUser } from "../hooks/useQueries";
 import { useWebSocket } from "../hooks/useWebSocket";
 
@@ -146,32 +147,6 @@ const User = () => {
 		// 排序
 		return sortUsers([...filtered], sortBy);
 	}, [users, searchTerm, sortBy, filterStatus]);
-
-	// 格式化字节数
-	const formatBytes = (bytes) => {
-		if (bytes === 0) return '0 B';
-		const k = 1024;
-		const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
-		const i = Math.floor(Math.log(bytes) / Math.log(k));
-		return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-	};
-
-	// 格式化时间
-	const formatDate = (dateString) => {
-		if (!dateString) return "未知";
-		try {
-			const date = new Date(dateString);
-			return date.toLocaleString('zh-CN', {
-				year: 'numeric',
-				month: '2-digit',
-				day: '2-digit',
-				hour: '2-digit',
-				minute: '2-digit'
-			});
-		} catch (error) {
-			return "无效日期";
-		}
-	};
 
 	// 复制到剪贴板
 	const copyToClipboard = (text) => {
@@ -571,13 +546,13 @@ const User = () => {
 						<div className="flex justify-between items-center">
 							<span className="text-sm font-bold text-blue-200">今日</span>
 							<span className="text-sm text-blue-400 font-bold">
-								{user.daily_logs?.[0]?.traffic ? formatBytes(user.daily_logs[0].traffic) : "0 B"}
+								{getTrafficOfTodayFromArray(user.daily_logs)}
 							</span>
 						</div>
 						<div className="flex justify-between items-center">
 							<span className="text-sm font-bold text-green-200">本月</span>
 							<span className="text-sm text-green-400 font-bold">
-								{user.monthly_logs?.[0]?.traffic ? formatBytes(user.monthly_logs[0].traffic) : "0 B"}
+								{getCurrentMonthTraffic(user.monthly_logs)}
 							</span>
 						</div>
 					</div>

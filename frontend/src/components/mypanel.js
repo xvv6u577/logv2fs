@@ -4,6 +4,7 @@ import { useSelector, useDispatch } from "react-redux";
 import Alert from "./alert";
 import { useCurrentUser } from "../hooks/useQueries";
 import { useWebSocket } from "../hooks/useWebSocket";
+import { formatBytes, formatDate, getCurrentMonthTraffic, getCurrentYearTraffic, getTrafficOfTodayFromArray } from "../service/service";
 
 function Mypanel() {
 	const dispatch = useDispatch();
@@ -26,33 +27,7 @@ function Mypanel() {
 		badgeOnline: "bg-green-900 text-green-300",
 		badgeOffline: "bg-red-900 text-red-300",
 	};
-
-	// 格式化字节数
-	const formatBytes = (bytes) => {
-		if (bytes === 0) return '0 B';
-		const k = 1024;
-		const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
-		const i = Math.floor(Math.log(bytes) / Math.log(k));
-		return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-	};
-
-	// 格式化时间
-	const formatDate = (dateString) => {
-		if (!dateString) return "未知";
-		try {
-			const date = new Date(dateString);
-			return date.toLocaleString('zh-CN', {
-				year: 'numeric',
-				month: '2-digit',
-				day: '2-digit',
-				hour: '2-digit',
-				minute: '2-digit'
-			});
-		} catch (error) {
-			return "无效日期";
-		}
-	};
-
+	
 	// 复制到剪贴板
 	const copyToClipboard = (text) => {
 		navigator.clipboard.writeText(text).then(() => {
@@ -139,8 +114,7 @@ function Mypanel() {
 						</div>
 					</div>
 					<div className="text-3xl font-bold text-blue-400 mb-2">
-						{user?.daily_logs?.length > 0 ? formatBytes(user?.daily_logs?.slice(-1)[0].traffic) : "0 B"}
-						{console.log(formatBytes(user?.daily_logs?.slice(-1)[0].traffic))}
+						{getTrafficOfTodayFromArray(user?.daily_logs)}
 					</div>
 					<p className="text-gray-400 text-sm">今日已使用流量</p>
 				</div>
@@ -156,8 +130,7 @@ function Mypanel() {
 						</div>
 					</div>
 					<div className="text-3xl font-bold text-green-400 mb-2">
-						{user?.monthly_logs?.length > 0 ? formatBytes(user?.monthly_logs?.slice(-1)[0].traffic) : "0 B"}
-						{console.log(formatBytes(user?.monthly_logs?.slice(-1)[0].traffic))}
+						{getCurrentMonthTraffic(user?.monthly_logs)}
 					</div>	
 					<p className="text-gray-400 text-sm">本月已使用流量</p>
 				</div>
@@ -173,7 +146,7 @@ function Mypanel() {
 						</div>
 					</div>
 					<div className="text-3xl font-bold text-purple-400 mb-2">
-						{user?.yearly_logs?.length > 0 ? formatBytes(user?.yearly_logs?.slice(-1)[0].traffic) : "0 B"}
+						{getCurrentYearTraffic(user?.yearly_logs)}
 					</div>
 					<p className="text-gray-400 text-sm">本年已使用流量</p>
 				</div>
