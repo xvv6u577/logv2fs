@@ -1,16 +1,20 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { alert, reset, success } from "../store/message";
 import { useSelector, useDispatch } from "react-redux";
-import axios from "axios";
 import Alert from "./alert";
+import { useCurrentUser } from "../hooks/useQueries";
+import { useWebSocket } from "../hooks/useWebSocket";
 
 function Mypanel() {
-	const [user, setUser] = useState({});
-
 	const dispatch = useDispatch();
-	const loginState = useSelector((state) => state.login);
 	const message = useSelector((state) => state.message);
-	const rerenderSignal = useSelector((state) => state.rerender);
+	const loginState = useSelector((state) => state.login);
+	
+	// 使用 React Query 获取用户数据
+	const { data: user = {}, isLoading, error } = useCurrentUser();
+	
+	// 使用 WebSocket 实时更新
+	const { status: wsStatus, isConnected } = useWebSocket();
 
 	// 通用样式类
 	const styles = {
@@ -58,26 +62,33 @@ function Mypanel() {
 		});
 	};
 
+	// 消息自动隐藏
 	useEffect(() => {
 		if (message.show === true) {
 			setTimeout(() => {
 				dispatch(reset({}));
 			}, 5000);
 		}
-	}, [message, dispatch]);
+	}, [message]);
 
+	// 错误处理
 	useEffect(() => {
-		axios
-			.get(process.env.REACT_APP_API_HOST + "user/" + loginState.jwt.Email, {
-				headers: { token: loginState.token },
-			})
-			.then((response) => {
-				setUser(response.data);
-			})
-			.catch((err) => {
-				dispatch(alert({ show: true, content: err.toString() }));
-			});
-	}, [loginState, dispatch, rerenderSignal]);
+		if (error) {
+			dispatch(alert({ show: true, content: error.toString() }));
+		}
+	}, [error]);
+
+	// 加载中状态
+	if (isLoading) {
+		return (
+			<div className="min-h-screen bg-gray-900 text-white p-6 flex items-center justify-center">
+				<div className="text-center">
+					<div className="inline-block animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mb-4"></div>
+					<p className="text-gray-400">加载中...</p>
+				</div>
+			</div>
+		);
+	}
 
 	return (
 		<div className="min-h-screen bg-gray-900 text-white p-6">
@@ -92,6 +103,27 @@ function Mypanel() {
 			<div className="mb-8">
 				<h1 className="text-3xl font-bold mb-2">我的面板</h1>
 				<p className="text-gray-400">查看您的使用情况和订阅信息</p>
+				
+				{/* WebSocket 连接状态指示器 */}
+				<div className="flex items-center space-x-2 mt-2">
+					<div className={`w-2 h-2 rounded-full ${
+						wsStatus === 'connected' ? 'bg-green-500' :
+						wsStatus === 'connecting' ? 'bg-yellow-500' :
+						wsStatus === 'reconnecting' ? 'bg-orange-500' :
+						'bg-red-500'
+					}`}></div>
+					<span className={`text-xs ${
+						wsStatus === 'connected' ? 'text-green-400' :
+						wsStatus === 'connecting' ? 'text-yellow-400' :
+						wsStatus === 'reconnecting' ? 'text-orange-400' :
+						'text-red-400'
+					}`}>
+						{wsStatus === 'connected' ? '实时流量监控已连接' :
+						 wsStatus === 'connecting' ? '正在连接...' :
+						 wsStatus === 'reconnecting' ? '正在重连...' :
+						 '连接已断开'}
+					</span>
+				</div>
 			</div>
 
 			{/* 流量统计卡片 */}
@@ -108,6 +140,7 @@ function Mypanel() {
 					</div>
 					<div className="text-3xl font-bold text-blue-400 mb-2">
 						{user?.daily_logs?.length > 0 ? formatBytes(user?.daily_logs?.slice(-1)[0].traffic) : "0 B"}
+						{console.log(formatBytes(user?.daily_logs?.slice(-1)[0].traffic))}
 					</div>
 					<p className="text-gray-400 text-sm">今日已使用流量</p>
 				</div>
@@ -124,7 +157,8 @@ function Mypanel() {
 					</div>
 					<div className="text-3xl font-bold text-green-400 mb-2">
 						{user?.monthly_logs?.length > 0 ? formatBytes(user?.monthly_logs?.slice(-1)[0].traffic) : "0 B"}
-					</div>
+						{console.log(formatBytes(user?.monthly_logs?.slice(-1)[0].traffic))}
+					</div>	
 					<p className="text-gray-400 text-sm">本月已使用流量</p>
 				</div>
 

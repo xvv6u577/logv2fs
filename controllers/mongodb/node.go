@@ -23,7 +23,7 @@ type (
 )
 
 // check if a domain is in a domain object list
-func IsDomainInDomainList(domain string, domainList []Domain) bool {
+func IsDomainInDomainList(domain string, domainList []SubscriptionNode) bool {
 	for _, domainObj := range domainList {
 		if domainObj.Domain == domain {
 			return true
@@ -33,7 +33,7 @@ func IsDomainInDomainList(domain string, domainList []Domain) bool {
 }
 
 // check if domain's remark is in a domain object list
-func IsRemarkInDomainList(remark string, domainList []Domain) bool {
+func IsRemarkInDomainList(remark string, domainList []SubscriptionNode) bool {
 	for _, domainObj := range domainList {
 		if domainObj.Remark == remark {
 			return true
@@ -42,10 +42,10 @@ func IsRemarkInDomainList(remark string, domainList []Domain) bool {
 	return false
 }
 
-// Function to remove duplicate Domain.Domain in a Domain slice
-func removeDuplicateDomains(domains []Domain) []Domain {
+// Function to remove duplicated domains, also remove vlessCDN nodes.
+func sanitizeNodes(domains []SubscriptionNode) []SubscriptionNode {
 	seen := make(map[string]bool)
-	var result []Domain
+	var result []SubscriptionNode
 	for _, domain := range domains {
 		if domain.Type == "vlessCDN" {
 			continue
@@ -58,7 +58,7 @@ func removeDuplicateDomains(domains []Domain) []Domain {
 	return result
 }
 
-func AddNode() gin.HandlerFunc {
+func UpsertNodes() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
 		if err := helper.CheckUserType(c, "admin"); err != nil {
@@ -67,52 +67,30 @@ func AddNode() gin.HandlerFunc {
 		}
 
 		var current = time.Now().Local()
-		var nodeFromWebForm, dataCollectableNodes []Domain
+		var rawFormData, dataCollectableNodes []SubscriptionNode
 
-		if err := c.BindJSON(&nodeFromWebForm); err != nil {
+		if err := c.BindJSON(&rawFormData); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			log.Printf("BindJSON error: %v", err)
 			return
 		}
 
-		// remove duplicated domains in nodeFromWebForm
-		dataCollectableNodes = removeDuplicateDomains(nodeFromWebForm)
+		// remove duplicated domains, also remove vlessCDN nodes.
+		dataCollectableNodes = sanitizeNodes(rawFormData)
 
 		// types: reality, hysteria2, vlessCDN! if type is reality, reassgin public_key and short_id.
-		for i, domain := range nodeFromWebForm {
+		// then, empty subscription_nodes collection, and insert rawFormData into it.
+		mongodb.GetCollection(model.SubscriptionNode{}).DeleteMany(context.TODO(), bson.M{})
+		for i, domain := range rawFormData {
 			if domain.Type == "reality" {
-				nodeFromWebForm[i].PUBLIC_KEY = getPublicKey()
-				nodeFromWebForm[i].SHORT_ID = getShortID()
+				rawFormData[i].PUBLIC_KEY = getPublicKey()
+				rawFormData[i].SHORT_ID = getShortID()
 			}
-
-			// set remark as filter, check if node is in subNodesCol. if no, insert it. if yes, update it.
-			filter := bson.M{"remark": domain.Remark}
-			update := bson.M{"$set": nodeFromWebForm[i]}
-			opts := options.Update().SetUpsert(true)
-			_, err := mongodb.GetCollection(model.SubscriptionNode{}).UpdateOne(context.TODO(), filter, update, opts)
-			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-				log.Printf("UpdateOne error: %v", err)
-				return
-			}
-
+			mongodb.GetCollection(model.SubscriptionNode{}).InsertOne(context.TODO(), domain)
 		}
 
-		remarks := make([]string, len(nodeFromWebForm))
-		for i, domain := range nodeFromWebForm {
-			remarks[i] = domain.Remark
-		}
-		filter := bson.M{"remark": bson.M{"$nin": remarks}}
-		_, err := mongodb.GetCollection(model.SubscriptionNode{}).DeleteMany(context.TODO(), filter)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			log.Printf("DeleteMany error: %v", err)
-			return
-		}
-
+		// check if domain is in nodeTrafficLogsCol. if no, insert it. if yes, update it.
 		for _, domain := range dataCollectableNodes {
-
-			// check if domain is in nodeTrafficLogsCol. if no, insert it. if yes, update it.
 			filter := bson.M{"domain_as_id": domain.Domain}
 			update := bson.M{
 				"$set": bson.M{
@@ -143,7 +121,7 @@ func AddNode() gin.HandlerFunc {
 				},
 			}
 			opts := options.Update().SetUpsert(true)
-			_, err = mongodb.GetCollection(model.SubscriptionNode{}).UpdateOne(context.TODO(), filter, update, opts)
+			_, err := mongodb.GetCollection(model.NodeTrafficLogs{}).UpdateOne(context.TODO(), filter, update, opts)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 				log.Printf("UpdateOne in nodeTrafficLogsCol error: %v", err)
@@ -159,7 +137,7 @@ func AddNode() gin.HandlerFunc {
 		}
 		inactiveFilter := bson.M{"domain_as_id": bson.M{"$nin": domainAsIds}}
 		inactiveUpdate := bson.M{"$set": bson.M{"status": "inactive"}}
-		_, err = mongodb.GetCollection(model.SubscriptionNode{}).UpdateMany(context.TODO(), inactiveFilter, inactiveUpdate)
+		_, err := mongodb.GetCollection(model.NodeTrafficLogs{}).UpdateMany(context.TODO(), inactiveFilter, inactiveUpdate)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			log.Printf("UpdateMany in nodeTrafficLogsCol error: %v", err)
@@ -170,7 +148,7 @@ func AddNode() gin.HandlerFunc {
 	}
 }
 
-func GetActiveGlobalNodes() gin.HandlerFunc {
+func GetSubscriptionNodes() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
 		if err := helper.CheckUserType(c, "admin"); err != nil {
@@ -178,7 +156,7 @@ func GetActiveGlobalNodes() gin.HandlerFunc {
 			return
 		}
 
-		var activeNodes []Domain
+		var activeNodes []SubscriptionNode
 		// type is not "work"
 		var filter = bson.D{{Key: "type", Value: bson.D{{Key: "$ne", Value: "work"}}}}
 		cur, err := mongodb.GetCollection(model.SubscriptionNode{}).Find(context.TODO(), filter)
@@ -198,7 +176,7 @@ func GetActiveGlobalNodes() gin.HandlerFunc {
 	}
 }
 
-func GetDomainsExpiryInfo() gin.HandlerFunc {
+func GetMonitoredDomains() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if err := helper.CheckUserType(c, "admin"); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -292,7 +270,7 @@ func GetDomainsExpiryInfo() gin.HandlerFunc {
 	}
 }
 
-func UpdateExpiryCheckDomainsInfo() gin.HandlerFunc {
+func UpdateMonitoredDomains() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
 		if err := helper.CheckUserType(c, "admin"); err != nil {

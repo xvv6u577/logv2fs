@@ -17,7 +17,6 @@ require (
 	github.com/gorilla/websocket v1.5.3
 	github.com/joho/godotenv v1.4.0
 	github.com/lengzuo/supa v1.0.1
-	github.com/lib/pq v1.10.9
 	github.com/mrz1836/go-sanitize v1.1.5
 	github.com/robfig/cron v1.2.0
 	github.com/sagernet/sing v0.3.0

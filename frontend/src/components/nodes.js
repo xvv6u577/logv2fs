@@ -1,27 +1,33 @@
 import { useEffect, useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
-import axios from "axios";
 import { alert, reset, success } from "../store/message";
+import axios from "axios";
 import Alert from "./alert";
-import { doRerender } from "../store/rerender";
 import { formatBytes } from "../service/service";
-import websocketService from "../service/websocket";
+import { useNodes, useMonitoredDomainsList	, useUpdateMonitoredDomains } from "../hooks/useQueries";
+import { useWebSocket } from "../hooks/useWebSocket";
 
 function Nodes() {
-	const [singboxNodes, setSingboxNodes] = useState([]);
-	const [monitoredDomains, setMonitoredDomains] = useState([]);
-	const [loading, setLoading] = useState(true); // 添加加载状态
+	// 使用 React Query 获取数据
+	const { data: singboxNodes = [], isLoading: nodesLoading, error: nodesError } = useNodes();
+	const { data: monitoredDomains = [], isLoading: domainsLoading, error: domainsError, refetch: refetchDomains } = useMonitoredDomainsList	();
+	const loading = nodesLoading || domainsLoading;
+	
+	// 使用 mutation hook
+	const updateDomainsMutation = useUpdateMonitoredDomains();
+	
 	const [newDomain, setNewDomain] = useState("");
 	const [newRemark, setNewRemark] = useState("");
 	const [activeSection, setActiveSection] = useState("nodes"); // 'nodes' or 'domains' 
 	const [selectedNode, setSelectedNode] = useState(null); // 用于控制模态框显示的节点
-	const [wsStatus, setWsStatus] = useState('disconnected'); // WebSocket 连接状态
 	const [customDates, setCustomDates] = useState({}); // 存储每个节点的自定义日期
+	
+	// 使用 WebSocket hook
+	const { status: wsStatus, isConnected } = useWebSocket();
 
 	const dispatch = useDispatch();
 	const loginState = useSelector((state) => state.login);
 	const message = useSelector((state) => state.message);
-	const rerenderSignal = useSelector((state) => state.rerender);
 
 	// 通用样式类
 	const styles = {
@@ -38,6 +44,7 @@ function Nodes() {
 		badgeBlue: "bg-blue-900 text-blue-300",
 	};
 
+	// 消息自动隐藏
 	useEffect(() => {
 		if (message.show === true) {
 			setTimeout(() => {
@@ -45,85 +52,58 @@ function Nodes() {
 			}, 5000);
 		}
 	}, [message, dispatch]);
-
-	// WebSocket 连接管理
-	useEffect(() => {
-		// 连接 WebSocket
-		const userID = loginState.jwt?.Email;
-		const isAdmin = loginState.jwt?.Role === "admin";
-		
-		websocketService.connect(userID, isAdmin);
-		
-		// 监听连接状态变化
-		const checkStatus = () => {
-			setWsStatus(websocketService.getConnectionStatus());
-		};
-		
-		// 定期检查连接状态
-		const statusInterval = setInterval(checkStatus, 1000);
-		checkStatus(); // 立即检查一次
-		
-		// 清理函数
-		return () => {
-			clearInterval(statusInterval);
-		};
-	}, [loginState.jwt]);
 	
-	// 初始加载数据
+	// 错误处理
 	useEffect(() => {
-		setLoading(true); // 开始加载
-		
-		// 使用Promise.all同时获取节点数据和域名监控数据
-		Promise.all([
-			axios.get(process.env.REACT_APP_API_HOST + "c47kr8", {
-				headers: { token: loginState.token },
-			}),
-			axios.get(process.env.REACT_APP_API_HOST + "681p32", {
-				headers: { token: loginState.token },
-			})
-		])
-		.then(async ([nodesResponse, domainsResponse]) => {
-			setSingboxNodes(nodesResponse.data || []);
-			setMonitoredDomains(domainsResponse.data || []);
-			
-			// 初始化自定义日期
-			await initializeCustomDates(nodesResponse.data || []);
-			
-			setLoading(false); // 加载完成
-		})
-		.catch((err) => {
-			setLoading(false); // 加载完成（即使出错）
-			dispatch(alert({ show: true, content: err.toString() }));
-		});
-	}, [loginState, dispatch, rerenderSignal]);
+		if (nodesError) {
+			dispatch(alert({ show: true, content: nodesError.toString() }));
+		}
+		if (domainsError) {
+			dispatch(alert({ show: true, content: domainsError.toString() }));
+		}
+	}, [nodesError, domainsError, dispatch]);
+
+	// 初始化自定义日期（当节点数据加载完成后）
+	useEffect(() => {
+		if (singboxNodes.length > 0) {
+			initializeCustomDates(singboxNodes);
+		}
+	}, [singboxNodes]);
 
 	const handleAddDomain = (e) => {
 		e.preventDefault();
-		axios({
-			method: "put",
-			url: process.env.REACT_APP_API_HOST + "g7302b",
-			headers: { token: loginState.token },
-			data: monitoredDomains,
-		})
-			.then((response) => {
-				dispatch(success({ show: true, content: response.data.message }));
-				dispatch(doRerender({ rerender: !rerenderSignal.rerender }));
-			})
-			.catch((err) => {
+		updateDomainsMutation.mutate(monitoredDomains, {
+			onSuccess: (data) => {
+				dispatch(success({ show: true, content: data.message }));
+				refetchDomains(); // 刷新域名列表
+			},
+			onError: (err) => {
 				dispatch(alert({ show: true, content: err.toString() }));
-			});
+			}
+		});
 	};
 
 	const addNewDomain = () => {
 		if (newDomain.length > 0 && newRemark.length > 0) {
 			const tempDomains = monitoredDomains?.filter(item => item.domain === newDomain) || [];
 			if (tempDomains.length === 0) {
-				setMonitoredDomains([...(monitoredDomains || []), { 
+				// 添加域名到列表中，通过 mutation 更新
+				const updatedDomains = [...(monitoredDomains || []), { 
 					domain: newDomain, 
 					remark: newRemark, 
 					days_to_expire: -1, 
 					expired_date: "" 
-				}]);
+				}];
+				// 这里应该调用 mutation 来更新域名列表
+				updateDomainsMutation.mutate(updatedDomains, {
+					onSuccess: (data) => {
+						dispatch(success({ show: true, content: "域名添加成功" }));
+						refetchDomains();
+					},
+					onError: (err) => {
+						dispatch(alert({ show: true, content: err.toString() }));
+					}
+				});
 			}
 			setNewDomain("");
 			setNewRemark("");
@@ -133,7 +113,17 @@ function Nodes() {
 	};
 
 	const removeDomain = (domainToRemove) => {
-		setMonitoredDomains(monitoredDomains?.filter(item => item.domain !== domainToRemove) || []);
+		// 删除域名，通过 mutation 更新
+		const updatedDomains = monitoredDomains?.filter(item => item.domain !== domainToRemove) || [];
+		updateDomainsMutation.mutate(updatedDomains, {
+			onSuccess: (data) => {
+				dispatch(success({ show: true, content: "域名删除成功" }));
+				refetchDomains();
+			},
+			onError: (err) => {
+				dispatch(alert({ show: true, content: err.toString() }));
+			}
+		});
 	};
 
 	// 计算自定义日期流量

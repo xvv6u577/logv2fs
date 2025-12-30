@@ -4,11 +4,13 @@ import { alert, reset, success } from "../store/message";
 import axios from "axios";
 import Alert from "./alert";
 import AddUser from "./adduser";
-import websocketService from "../service/websocket";
+import { useUsers, useUpdateUser, useDeleteUser } from "../hooks/useQueries";
+import { useWebSocket } from "../hooks/useWebSocket";
 
 const User = () => {
-	const [users, setUsers] = useState([]);
-	const [loading, setLoading] = useState(true);
+	// 使用 React Query 获取用户数据
+	const { data: users = [], isLoading: loading, error: usersError } = useUsers();
+	
 	const [searchTerm, setSearchTerm] = useState("");
 	const [sortBy, setSortBy] = useState("role");
 	const [filterStatus, setFilterStatus] = useState("all");
@@ -35,12 +37,17 @@ const User = () => {
 		remark: ""
 	});
 	const [paymentFormLoading, setPaymentFormLoading] = useState(false);
-	const [wsStatus, setWsStatus] = useState('disconnected');
+
+	// 使用 WebSocket hook
+	const { status: wsStatus, isConnected } = useWebSocket();
+	
+	// 使用 mutation hooks
+	const updateUserMutation = useUpdateUser();
+	const deleteUserMutation = useDeleteUser();
 
 	const dispatch = useDispatch();
 	const loginState = useSelector((state) => state.login);
 	const message = useSelector((state) => state.message);
-	const rerenderSignal = useSelector((state) => state.rerender);
 
 	// 通用样式类
 	const styles = {
@@ -272,8 +279,8 @@ const User = () => {
 				})
 				.then((response) => {
 					dispatch(success({ show: true, content: response.data.message || "用户删除成功" }));
-					// 重新获取用户列表
-					setUsers(users.filter(u => u.email_as_id !== user.email_as_id));
+					// 重新加载页面以刷新用户列表
+					window.location.reload();
 				})
 				.catch((err) => {
 					if (err.response) {
@@ -297,12 +304,8 @@ const User = () => {
 				})
 				.then((response) => {
 					dispatch(success({ show: true, content: response.data.message || "用户已禁用" }));
-					// 更新用户列表中的状态
-					setUsers(users.map(u => 
-						u.email_as_id === user.email_as_id 
-							? { ...u, status: "deleted" }
-							: u
-					));
+					// 重新加载页面以刷新用户列表
+					window.location.reload();
 				})
 				.catch((err) => {
 					if (err.response) {
@@ -326,12 +329,8 @@ const User = () => {
 				})
 				.then((response) => {
 					dispatch(success({ show: true, content: response.data.message || "用户已启用" }));
-					// 更新用户列表中的状态
-					setUsers(users.map(u => 
-						u.email_as_id === user.email_as_id 
-							? { ...u, status: "plain" }
-							: u
-					));
+					// 重新加载页面以刷新用户列表
+					window.location.reload();
 				})
 				.catch((err) => {
 					if (err.response) {
@@ -620,6 +619,7 @@ const User = () => {
 		);
 	};
 
+	// 消息自动隐藏
 	useEffect(() => {
 		if (message.show === true) {
 			setTimeout(() => {
@@ -628,49 +628,12 @@ const User = () => {
 		}
 	}, [message, dispatch]);
 
-	// WebSocket 连接管理
+	// 错误处理
 	useEffect(() => {
-		// 连接 WebSocket
-		const userID = loginState.jwt?.Email;
-		const isAdmin = loginState.jwt?.Role === "admin";
-		
-		websocketService.connect(userID, isAdmin);
-		
-		// 监听连接状态变化
-		const checkStatus = () => {
-			setWsStatus(websocketService.getConnectionStatus());
-		};
-		
-		// 定期检查连接状态
-		const statusInterval = setInterval(checkStatus, 1000);
-		checkStatus(); // 立即检查一次
-		
-		// 清理函数
-		return () => {
-			clearInterval(statusInterval);
-		};
-	}, [loginState.jwt, modalUser]);
-	
-	// 初始加载用户数据
-	useEffect(() => {
-		setLoading(true);
-		axios
-			.get(process.env.REACT_APP_API_HOST + "n778cf", {
-				headers: { token: loginState.token },
-			})
-			.then((response) => {
-				setUsers(response.data);
-				setLoading(false);
-			})
-			.catch((err) => {
-				setLoading(false);
-				if (err.response) {
-					dispatch(alert({ show: true, content: err.response.data.error || "加载用户失败" }));
-				} else {
-					dispatch(alert({ show: true, content: "网络错误: " + err.toString() }));
-				}
-			});
-	}, [rerenderSignal, loginState.jwt.Email, loginState.token, dispatch]);
+		if (usersError) {
+			dispatch(alert({ show: true, content: usersError.toString() }));
+		}
+	}, [usersError, dispatch]);
 
 	return (
 		<div className="min-h-screen bg-gray-900 text-white p-6" onKeyDown={handleKeyDown} tabIndex={0}>

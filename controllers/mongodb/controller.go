@@ -34,19 +34,19 @@ var (
 )
 
 type (
-	TrafficAtPeriod = model.TrafficAtPeriod
-	Node            = model.Node
-	Domain          = model.SubscriptionNode
-	SingboxYAML     = model.SingboxYAML
-	SingboxJSON     = model.SingboxJSON
-	RealityJSON     = model.RealityJSON
-	Hysteria2JSON   = model.Hysteria2JSON
-	RealityYAML     = model.RealityYAML
-	Hysteria2YAML   = model.Hysteria2YAML
-	CFVlessJSON     = model.CFVlessJSON
-	CFVlessYAML     = model.CFVlessYAML
-	UserTrafficLogs = model.UserTrafficLogs
-	NodeTrafficLogs = model.NodeTrafficLogs
+	TrafficAtPeriod  = model.TrafficAtPeriod
+	Node             = model.Node
+	SubscriptionNode = model.SubscriptionNode
+	SingboxYAML      = model.SingboxYAML
+	SingboxJSON      = model.SingboxJSON
+	RealityJSON      = model.RealityJSON
+	Hysteria2JSON    = model.Hysteria2JSON
+	RealityYAML      = model.RealityYAML
+	Hysteria2YAML    = model.Hysteria2YAML
+	CFVlessJSON      = model.CFVlessJSON
+	CFVlessYAML      = model.CFVlessYAML
+	UserTrafficLogs  = model.UserTrafficLogs
+	NodeTrafficLogs  = model.NodeTrafficLogs
 )
 
 func getPublicKey() string {
@@ -524,7 +524,7 @@ func GetSubscripionURL() gin.HandlerFunc {
 		var err error
 		name := helper.SanitizeStr(c.Param("name"))
 
-		var activeGlobalNodes []Domain
+		var activeGlobalNodes []SubscriptionNode
 
 		// 查询所有节点并按权重升序排序
 		cur, err := mongodb.GetCollection(model.SubscriptionNode{}).Find(
@@ -624,7 +624,7 @@ func ReturnSingboxJson() gin.HandlerFunc {
 			return
 		}
 
-		var activeGlobalNodes []Domain
+		var subscriptionNodes []SubscriptionNode
 
 		// 查询所有节点并按权重升序排序
 		cur, err := mongodb.GetCollection(model.SubscriptionNode{}).Find(
@@ -639,7 +639,7 @@ func ReturnSingboxJson() gin.HandlerFunc {
 		}
 		defer cur.Close(context.Background())
 
-		cur.All(context.Background(), &activeGlobalNodes)
+		cur.All(context.Background(), &subscriptionNodes)
 
 		if user.Status == "plain" {
 
@@ -658,7 +658,7 @@ func ReturnSingboxJson() gin.HandlerFunc {
 			}
 
 			// append reality and hysteria2 nodes to outbounds in jsonfile.
-			for _, node := range activeGlobalNodes {
+			for _, node := range subscriptionNodes {
 
 				server_port, _ := strconv.Atoi(node.SERVER_PORT)
 				var outboundTags = []string{
@@ -876,7 +876,7 @@ func ReturnVergeYAML() gin.HandlerFunc {
 			return
 		}
 
-		var activeGlobalNodes []Domain
+		var subscriptionNodes []SubscriptionNode
 		// 查询所有节点并按权重升序排序
 		cur, err := mongodb.GetCollection(model.SubscriptionNode{}).Find(
 			context.TODO(),
@@ -890,7 +890,7 @@ func ReturnVergeYAML() gin.HandlerFunc {
 		}
 		defer cur.Close(context.Background())
 
-		cur.All(context.Background(), &activeGlobalNodes)
+		cur.All(context.Background(), &subscriptionNodes)
 
 		if user.Status == "plain" {
 			yamlFile, err = os.ReadFile(helper.CurrentPath() + "/config/template_verge.yaml")
@@ -908,7 +908,7 @@ func ReturnVergeYAML() gin.HandlerFunc {
 			}
 
 			// append reality and hysteria2 nodes to outbounds in yamlfile.
-			for _, node := range activeGlobalNodes {
+			for _, node := range subscriptionNodes {
 
 				server_port, _ := strconv.Atoi(node.SERVER_PORT)
 				if node.Type == "reality" {

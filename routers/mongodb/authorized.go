@@ -28,11 +28,11 @@ func AuthorizedRoutes(incomingRoutes *gin.Engine) {
 	incomingRoutes.GET("/v1/deluser/:name", controller.DeleteUserByUserName())
 	incomingRoutes.PUT("/v1/disableuser/:name", controller.DisableUser())
 	incomingRoutes.PUT("/v1/enableuser/:name", controller.EnableUser())
-	incomingRoutes.PUT("/v1/759b0v", controller.AddNode())
-	incomingRoutes.GET("/v1/681p32", controller.GetDomainsExpiryInfo())
-	incomingRoutes.PUT("/v1/g7302b", controller.UpdateExpiryCheckDomainsInfo())
+	incomingRoutes.PUT("/v1/upsert-nodes", controller.UpsertNodes())
+	incomingRoutes.GET("/v1/monitored-domains", controller.GetMonitoredDomains())
+	incomingRoutes.PUT("/v1/update-monitored-domains", controller.UpdateMonitoredDomains())
 	incomingRoutes.GET("/v1/c47kr8", controller.GetSingboxNodes())
-	incomingRoutes.GET("/v1/t7k033", controller.GetActiveGlobalNodes())
+	incomingRoutes.GET("/v1/subscription-nodes", controller.GetSubscriptionNodes())
 
 	// 自定义日期管理相关路由 - MongoDB版本
 	incomingRoutes.PUT("/v1/custom-date", controller.SaveCustomDate())

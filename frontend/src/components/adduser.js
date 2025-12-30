@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { alert, success } from "../store/message";
-import { doRerender } from "../store/rerender";
-import axios from "axios";
+import { useAddUser } from "../hooks/useQueries";
 
 function AddUser({ btnName }) {
 
@@ -16,12 +15,13 @@ function AddUser({ btnName }) {
 	};
 	const [showModal, setShowModal] = useState(false);
 	const [{ email_as_id, name, path, role, uuid, remark }, setState] = useState(initialState);
-	const [isLoading, setIsLoading] = useState(false);
 	const [emailError, setEmailError] = useState("");
+
+	// 使用 mutation hook
+	const addUserMutation = useAddUser();
 
 	const dispatch = useDispatch();
 	const loginState = useSelector((state) => state.login);
-	const rerenderSignal = useSelector((state) => state.rerender);
 
 	const clearState = () => {
 		setState({ ...initialState });
@@ -39,7 +39,7 @@ function AddUser({ btnName }) {
 		return "";
 	};
 
-	const handleAddUser = async (e) => {
+	const handleAddUser = (e) => {
 		e.preventDefault();
 		
 		// 验证邮箱格式
@@ -49,40 +49,35 @@ function AddUser({ btnName }) {
 			return;
 		}
 
-		setIsLoading(true);
 		setEmailError("");
 
-		try {
-			await axios({
-				method: "post",
-				url: process.env.REACT_APP_API_HOST + "signup",
-				headers: { token: loginState.token },
-				data: {
-					email_as_id,
-					"password": email_as_id,
-					role,
-					name,
-					path,
-					status: "plain",
-					uuid,
-					remark
-				},
-			});
-			
-			dispatch(success({ show: true, content: "用户 " + (name || email_as_id) + " 添加成功！" }));
-			dispatch(doRerender({ rerender: !rerenderSignal.rerender }));
-			clearState();
-			setShowModal(false);
-		} catch (err) {
-			// 处理数据库中已存在邮箱的错误
-			if (err.response?.data?.error?.includes("already exists")) {
-				setEmailError("该用户ID已存在，请使用其他ID");
-			} else {
-				dispatch(alert({ show: true, content: err.response?.data?.error || err.toString() }));
+		const userData = {
+			email_as_id,
+			"password": email_as_id,
+			role,
+			name,
+			path,
+			status: "plain",
+			uuid,
+			remark
+		};
+
+		addUserMutation.mutate(userData, {
+			onSuccess: () => {
+				dispatch(success({ show: true, content: "用户 " + (name || email_as_id) + " 添加成功！" }));
+				clearState();
+				setShowModal(false);
+				// React Query 会自动刷新用户列表
+			},
+			onError: (err) => {
+				// 处理数据库中已存在邮箱的错误
+				if (err.response?.data?.error?.includes("already exists")) {
+					setEmailError("该用户ID已存在，请使用其他ID");
+				} else {
+					dispatch(alert({ show: true, content: err.response?.data?.error || err.toString() }));
+				}
 			}
-		} finally {
-			setIsLoading(false);
-		}
+		});
 	};
 
 	const onChange = (e) => {
@@ -268,14 +263,14 @@ function AddUser({ btnName }) {
 									{/* 提交按钮 */}
 									<button
 										type="submit"
-										disabled={isLoading || emailError}
+										disabled={addUserMutation.isPending || emailError}
 										className="w-full flex items-center justify-center px-4 py-3 text-sm font-medium text-white 
 											bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 
 											rounded-lg shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all duration-200 
 											focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-800
 											disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
 									>
-										{isLoading ? (
+										{addUserMutation.isPending ? (
 											<>
 												<svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
 													<circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />

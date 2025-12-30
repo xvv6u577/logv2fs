@@ -1,13 +1,17 @@
 import { useState, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { alert, success, reset } from "../store/message";
-import { doRerender } from "../store/rerender";
 import Alert from "./alert";
-import axios from "axios";
+import { useUpsertNodes, useSubscriptionNodes } from "../hooks/useQueries";
 
 const AddNode = () => {
-	const [nodes, setNodes] = useState([]);
+	// 使用 React Query 获取节点数据
+	const { data: subscriptionNodes = [], isLoading: subscriptionNodesLoading, error: subscriptionNodesError, refetch: refetchSubscriptionNodes } = useSubscriptionNodes();
+	const [nodes, setNodes] = useState([{}]);
 	const [enableOpenai, setEnableOpenai] = useState(false);
+	
+	// 使用 mutation hook
+	const upsertNodesMutation = useUpsertNodes();
 	
 	const initialState = {
 		type: "reality",
@@ -22,12 +26,10 @@ const AddNode = () => {
 	};
 	
 	const [formData, setFormData] = useState(initialState);
-	const { type, remark, domain, uuid, path, sni, ip, server_port, weight } = formData;
+	const { type, remark, domain, uuid, path, sni, ip, server_port, weight } = formData;	
 
 	const dispatch = useDispatch();
-	const loginState = useSelector((state) => state.login);
 	const message = useSelector((state) => state.message);
-	const rerenderSignal = useSelector((state) => state.rerender);
 
 	// 通用样式类
 	const styles = {
@@ -85,54 +87,57 @@ const AddNode = () => {
 		}
 	};
 
+	// 当现有节点数据加载完成后，初始化 nodes 状态
 	useEffect(() => {
-		axios
-			.get(process.env.REACT_APP_API_HOST + "t7k033", {
-				headers: { token: loginState.token },
-			})
-			.then((response) => {
-				setNodes(response.data);
-			})
-			.catch((err) => {
-				dispatch(alert({ show: true, content: err.toString() }));
-			});
-	}, [rerenderSignal, loginState.token, dispatch]);
+		if (subscriptionNodes.length > 0) {
+			setNodes(subscriptionNodes);
+		}
+	}, [subscriptionNodes]);
+
+	// 错误处理
+	useEffect(() => {
+		if (subscriptionNodesError) {
+			dispatch(alert({ show: true, content: subscriptionNodesError.toString() }));
+		}
+	}, [subscriptionNodesError, dispatch]);
 
 	const handleAddNode = (e) => {
 		e.preventDefault();
-		axios({
-			method: "put",
-			url: process.env.REACT_APP_API_HOST + "759b0v",
-			headers: { token: loginState.token },
-			data: nodes,
-		})
-			.then((response) => {
-				dispatch(success({ show: true, content: response.data.message }));
-				dispatch(doRerender({ rerender: !rerenderSignal.rerender }));
-				clearState();
-			})
-			.catch((err) => {
-				dispatch(alert({ show: true, content: err.toString() }));
-			});
+		upsertNodesMutation.mutate(nodes, {
+			onSuccess: () => {
+				dispatch(success({ show: true, content: "节点更新成功" }));
+				refetchSubscriptionNodes();
+			},
+			onError: (err) => {
+				dispatch(alert({ show: true, content: err.response?.data?.error || err.toString() }));
+			}
+		});
 	};
 
 	const addNodeToList = () => {
+		// 以 domain 为唯一标识，如果存在则更新，否则添加;随后清空表单
 		if (domain.length > 0 && remark.length > 0) {
-			setNodes((prevState) => ([
-				...prevState,
-				{
-					type,
-					remark,
-					domain,
-					ip,
-					server_port,
-					enable_openai: enableOpenai,
-					uuid,
-					path,
-					sni,
-					weight: parseInt(weight) || 0, // 确保 weight 是整数
+			const newNode = {
+				type,
+				remark,
+				domain,
+				ip,
+				server_port,
+				enable_openai: enableOpenai,
+				uuid,
+				path,
+				sni,
+				weight: parseInt(weight) || 0, // 确保 weight 是整数	
+			};
+			setNodes((prevState) => {
+				const index = prevState.findIndex((n) => n.domain === domain);
+				if (index !== -1) {
+					prevState[index] = newNode;
+				} else {
+					prevState.push(newNode);
 				}
-			]));
+				return prevState;
+			});
 			clearState();
 		} else {
 			dispatch(alert({ show: true, content: "域名和备注字段不能为空" }));
@@ -428,7 +433,15 @@ const AddNode = () => {
 
 				{/* 节点网格 */}
 				<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-					{nodes.length === 0 ? (
+					{subscriptionNodesLoading ? (
+						<div className={`${styles.card} p-8 text-center col-span-full`}>
+							<div className="flex flex-col items-center">
+								<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mb-4"></div>
+								<h3 className="text-lg font-medium text-gray-300 mb-2">加载中...</h3>
+								<p className="text-gray-400">正在获取节点数据</p>
+							</div>
+						</div>
+					) : subscriptionNodes.length === 0 ? (
 						<div className={`${styles.card} p-8 text-center col-span-full`}>
 							<svg className="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 								<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />

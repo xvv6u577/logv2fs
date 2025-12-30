@@ -232,6 +232,25 @@ class WebSocketService {
 		});
 	}
 
+	// 设置 React Query 的 queryClient 引用
+	// 这样 WebSocket 可以直接触发查询失效
+	setQueryClient(queryClient) {
+		this.queryClient = queryClient;
+		console.log('React Query queryClient 已设置到 WebSocket 服务');
+	}
+
+	// 触发特定查询的缓存失效
+	invalidateQueries(queryKeys) {
+		if (this.queryClient) {
+			console.log('WebSocket 触发查询失效:', queryKeys);
+			queryKeys.forEach(key => {
+				this.queryClient.invalidateQueries({ queryKey: key });
+			});
+		} else {
+			console.warn('queryClient 未设置，无法触发查询失效');
+		}
+	}
+
 	// 立即刷新（跳过防抖）
 	immediateRefresh() {
 		if (this.debounceTimeout) {

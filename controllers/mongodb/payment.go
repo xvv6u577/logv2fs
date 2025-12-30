@@ -142,7 +142,7 @@ func GetUserPayments() gin.HandlerFunc {
 		defer cancel()
 
 		// 查询该用户的所有缴费记录
-		cursor, err := mongodb.GetCollection(model.PaymentRecord{}).Find(ctx, bson.M{"user_email_as_id": userEmail}, options.Find().SetSort(bson.D{{"payment_date", -1}}))
+		cursor, err := mongodb.GetCollection(model.PaymentRecord{}).Find(ctx, bson.M{"user_email_as_id": userEmail}, options.Find().SetSort(bson.D{{Key: "created_at", Value: -1}}))
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "查询缴费记录失败"})
 			log.Printf("Query payment records error: %v", err)
@@ -516,7 +516,7 @@ func GetPaymentRecords() gin.HandlerFunc {
 		findOptions := options.Find()
 		findOptions.SetLimit(int64(limit))
 		findOptions.SetSkip(int64((page - 1) * limit))
-		findOptions.SetSort(bson.D{{"created_at", -1}})
+		findOptions.SetSort(bson.D{{Key: "created_at", Value: -1}})
 
 		cursor, err := collection.Find(context.Background(), filter, findOptions)
 		if err != nil {
