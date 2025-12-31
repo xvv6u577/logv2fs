@@ -13,18 +13,18 @@ const AddNode = () => {
 	// 使用 mutation hook
 	const upsertNodesMutation = useUpsertNodes();
 	
+	// 初始化表单数据
 	const initialState = {
 		type: "reality",
-		remark: "",
 		domain: "",
 		ip: "",
+		remark: "",
 		uuid: "",
 		path: "",
 		sni: "",
 		server_port: "",
 		weight: 0, // 权重字段，默认为0
 	};
-	
 	const [formData, setFormData] = useState(initialState);
 	const { type, remark, domain, uuid, path, sni, ip, server_port, weight } = formData;	
 
@@ -115,8 +115,8 @@ const AddNode = () => {
 	};
 
 	const addNodeToList = () => {
-		// 以 domain 为唯一标识，如果存在则更新，否则添加;随后清空表单
-		if (domain.length > 0 && remark.length > 0) {
+		// 以 remark 为唯一标识，如果存在则更新，否则添加;随后清空表单 
+		if (remark.length > 0) {
 			const newNode = {
 				type,
 				remark,
@@ -130,7 +130,7 @@ const AddNode = () => {
 				weight: parseInt(weight) || 0, // 确保 weight 是整数	
 			};
 			setNodes((prevState) => {
-				const index = prevState.findIndex((n) => n.domain === domain);
+				const index = prevState.findIndex((n) => n.remark === remark); 
 				if (index !== -1) {
 					prevState[index] = newNode;
 				} else {
@@ -140,7 +140,7 @@ const AddNode = () => {
 			});
 			clearState();
 		} else {
-			dispatch(alert({ show: true, content: "域名和备注字段不能为空" }));
+			dispatch(alert({ show: true, content: "备注字段不能为空" }));
 		}
 	};
 
@@ -155,7 +155,6 @@ const AddNode = () => {
 		setEnableOpenai(enable_openai || false);
 
 		window.scrollTo({ top: 0, behavior: "smooth" });
-		
 		dispatch(success({ show: true, content: `已复制节点 ${nodeToCopy.remark} 的信息到表单` }));
 	};
 

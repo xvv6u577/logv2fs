@@ -24,6 +24,7 @@ func PublicRoutes(incomingRoutes *gin.Engine) {
 		"/addnode",
 		"/paymentrecords",    // 添加缴费记录页面
 		"/paymentstatistics", // 费用统计页面
+		"/domain-monitor",
 		"/",
 	}
 	for _, route := range frontendRoutes {
