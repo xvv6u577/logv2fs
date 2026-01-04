@@ -16,7 +16,6 @@ import AddNode from "./components/addNode";
 import PaymentInput from "./components/paymentInput";
 import PaymentStatistics from "./components/paymentStatistics";
 import PaymentRecords from "./components/paymentRecords";
-import DomainMonitor from "./components/domainMonitor";
 
 function RequireAuth({ children }) {
 	const loginState = useSelector((state) => state.login);
@@ -76,19 +75,8 @@ function App() {
 							<Footer />
 						</div>
 					</RequireAuth>
-				} />
-				<Route path="/domain-monitor" element={
-					<RequireAuth>
-						<div className="min-h-screen bg-gray-900 flex flex-col">
-							<Menu />
-							<div className="flex-1">
-								<DomainMonitor />
-							</div>
-							<Footer />
-						</div>
-					</RequireAuth>
-				} />
-				<Route path="/macos" element={
+			} />
+			<Route path="/macos" element={
 					<RequireAuth>
 						<div className="min-h-screen bg-gray-900 flex flex-col">
 							<Menu />

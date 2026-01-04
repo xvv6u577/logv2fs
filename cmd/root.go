@@ -17,19 +17,17 @@ import (
 )
 
 type (
-	NodeAtPeriod          = model.NodeAtPeriod
-	Domain                = model.SubscriptionNode
-	Traffic               = model.Traffic
-	TrafficAtPeriod       = model.TrafficAtPeriod
-	UserTrafficLogs       = model.UserTrafficLogs
-	NodeTrafficLogs       = model.NodeTrafficLogs
-	ExpiryCheckDomainInfo = model.ExpiryCheckDomainInfo
+	NodeAtPeriod    = model.NodeAtPeriod
+	Domain          = model.SubscriptionNode
+	Traffic         = model.Traffic
+	TrafficAtPeriod = model.TrafficAtPeriod
+	UserTrafficLogs = model.UserTrafficLogs
+	NodeTrafficLogs = model.NodeTrafficLogs
 
 	// PostgreSQL模型
-	UserTrafficLogsPG       = model.UserTrafficLogsPG
-	NodeTrafficLogsPG       = model.NodeTrafficLogsPG
-	ExpiryCheckDomainInfoPG = model.ExpiryCheckDomainInfoPG
-	SubscriptionNodePG      = model.SubscriptionNodePG
+	UserTrafficLogsPG  = model.UserTrafficLogsPG
+	NodeTrafficLogsPG  = model.NodeTrafficLogsPG
+	SubscriptionNodePG = model.SubscriptionNodePG
 )
 
 // rootCmd represents the base command when called without any subcommands

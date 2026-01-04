@@ -65,19 +65,6 @@ export const fetchSubscriptionNodes = async (token) => {
 	return response.data;
 };
 
-/**
- * 获取监控的域名列表
- * @param {string} token - JWT token
- * @returns {Promise<Array>} 域名列表
- */
-export const fetchMonitoredDomainsList = async (token) => {
-	const response = await axios.get(
-		`${process.env.REACT_APP_API_HOST}monitored-domains`,
-		{ headers: { token } }
-	);
-	return response.data;
-};
-
 // ==================== Mutation 函数 ====================
 
 /**
@@ -160,22 +147,6 @@ export const deleteNodes = async ({ nodes, token }) => {
 			headers: { token },
 			data: nodes,
 		}
-	);
-	return response.data;
-};
-
-/**
- * 更新监控域名
- * @param {Object} params
- * @param {Array} params.domains - 域名列表
- * @param {string} params.token - JWT token
- * @returns {Promise<Object>} 响应数据
- */
-export const updateMonitoredDomains = async ({ domains, token }) => {
-	const response = await axios.put(
-		`${process.env.REACT_APP_API_HOST}update-monitored-domains`,
-		domains,
-		{ headers: { token } }
 	);
 	return response.data;
 };

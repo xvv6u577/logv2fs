@@ -2,11 +2,8 @@ package mongodb
 
 import (
 	"context"
-	"crypto/tls"
 	"log"
-	"net"
 	"net/http"
-	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -16,10 +13,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo/options"
-)
-
-type (
-	ExpiryCheckDomainInfo = model.ExpiryCheckDomainInfo
 )
 
 // check if a domain is in a domain object list
@@ -173,151 +166,6 @@ func GetSubscriptionNodes() gin.HandlerFunc {
 		}
 
 		c.JSON(http.StatusOK, activeNodes)
-	}
-}
-
-func GetMonitoredDomains() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		if err := helper.CheckUserType(c, "admin"); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
-		}
-
-		ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-		defer cancel()
-
-		// 获取所有需要检查的域名
-		var expiryDomains []ExpiryCheckDomainInfo
-		cur, err := mongodb.GetCollection(model.ExpiryCheckDomainInfo{}).Find(ctx, bson.D{})
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			log.Printf("Find error: %v", err)
-			return
-		}
-
-		if err = cur.All(ctx, &expiryDomains); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			log.Printf("All error: %v", err)
-			return
-		}
-
-		// 准备结果数组和域名分类映射
-		var domainInfos []ExpiryCheckDomainInfo
-		normalDomains := make(map[string]string)
-		unreachableDomains := make(map[string]string)
-
-		// 并行处理域名可达性检查
-		var wg sync.WaitGroup
-		for _, domain := range expiryDomains {
-			if domain.Domain == "localhost" {
-				continue
-			}
-			wg.Add(1)
-			go func(d ExpiryCheckDomainInfo) {
-				defer wg.Done()
-				if helper.IsDomainReachable(d.Domain) {
-					normalDomains[d.Domain] = d.Remark
-				} else {
-					unreachableDomains[d.Domain] = d.Remark
-				}
-			}(domain)
-		}
-		wg.Wait()
-
-		// 处理可达域名的证书信息
-		port := "443"
-		conf := &tls.Config{}
-
-		for domain, remark := range normalDomains {
-			conn, err := tls.DialWithDialer(&net.Dialer{Timeout: 20 * time.Second}, "tcp", domain+":"+port, conf)
-			if err != nil {
-				log.Printf("tls.DialWithDialer Error for domain %s: %v", domain, err)
-				// 如果TLS连接失败，将其标记为不可达
-				unreachableDomains[domain] = remark
-				continue
-			}
-
-			if err = conn.VerifyHostname(domain); err != nil {
-				log.Printf("conn.VerifyHostname Error for domain %s: %v", domain, err)
-				conn.Close()
-				// 如果主机名验证失败，将其标记为不可达
-				unreachableDomains[domain] = remark
-				continue
-			}
-
-			expiry := conn.ConnectionState().PeerCertificates[0].NotAfter
-			conn.Close()
-
-			domainInfos = append(domainInfos, ExpiryCheckDomainInfo{
-				Domain:       domain,
-				Remark:       remark,
-				ExpiredDate:  expiry.Local().Format("2006-01-02 15:04:05"),
-				DaysToExpire: int(time.Until(expiry).Hours() / 24),
-			})
-		}
-
-		// 处理不可达域名
-		for domain, remark := range unreachableDomains {
-			domainInfos = append(domainInfos, ExpiryCheckDomainInfo{
-				Domain:       domain,
-				Remark:       remark,
-				ExpiredDate:  "unreachable",
-				DaysToExpire: -1,
-			})
-		}
-
-		c.JSON(http.StatusOK, domainInfos)
-	}
-}
-
-func UpdateMonitoredDomains() gin.HandlerFunc {
-	return func(c *gin.Context) {
-
-		if err := helper.CheckUserType(c, "admin"); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
-		}
-
-		var domainOfWebForm []ExpiryCheckDomainInfo
-		err := c.BindJSON(&domainOfWebForm)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			log.Printf("BindJSON error: %v", err)
-			return
-		}
-
-		// Track domains to keep
-		domainsToKeep := []string{}
-
-		for _, domain := range domainOfWebForm {
-			filter := bson.M{"domain": domain.Domain}
-			update := bson.M{"$set": bson.M{
-				"domain":         domain.Domain,
-				"remark":         domain.Remark,
-				"expired_date":   domain.ExpiredDate,
-				"days_to_expire": domain.DaysToExpire,
-			}}
-			opts := options.Update().SetUpsert(true)
-			_, err := mongodb.GetCollection(model.ExpiryCheckDomainInfo{}).UpdateOne(context.TODO(), filter, update, opts)
-			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-				log.Printf("UpdateOne error: %v", err)
-				return
-			}
-
-			domainsToKeep = append(domainsToKeep, domain.Domain)
-		}
-
-		// Remove domains not in domainOfWebForm
-		filter := bson.M{"domain": bson.M{"$nin": domainsToKeep}}
-		_, err = mongodb.GetCollection(model.ExpiryCheckDomainInfo{}).DeleteMany(context.TODO(), filter)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			log.Printf("DeleteMany error: %v", err)
-			return
-		}
-
-		c.JSON(http.StatusOK, gin.H{"message": "Update expiry check domains list successfully!"})
 	}
 }
 

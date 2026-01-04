@@ -58,7 +58,6 @@ var (
 
 ### 节点管理相关
 - `SubscriptionNode` → `subscription_nodes`
-- `ExpiryCheckDomainInfo` → `expiry_check_domains`
 
 ### 缴费管理相关
 - `PaymentRecord` → `payment_records`

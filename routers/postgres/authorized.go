@@ -29,8 +29,6 @@ func AuthorizedRoutesPG(incomingRoutes *gin.Engine) {
 	incomingRoutes.PUT("/v1/disableuser/:name", controller.DisableUserPG())
 	incomingRoutes.PUT("/v1/enableuser/:name", controller.EnableUserPG())
 	incomingRoutes.PUT("/v1/759b0v", controller.AddNodePG())
-	incomingRoutes.GET("/v1/681p32", controller.GetDomainsExpiryInfoPG())
-	incomingRoutes.PUT("/v1/g7302b", controller.UpdateExpiryCheckDomainsInfoPG())
 	incomingRoutes.GET("/v1/c47kr8", controller.GetSingboxNodesPG())
 	incomingRoutes.GET("/v1/t7k033", controller.GetActiveGlobalNodesPG())
 

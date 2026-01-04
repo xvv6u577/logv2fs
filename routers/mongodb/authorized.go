@@ -29,8 +29,6 @@ func AuthorizedRoutes(incomingRoutes *gin.Engine) {
 	incomingRoutes.PUT("/v1/disableuser/:name", controller.DisableUser())
 	incomingRoutes.PUT("/v1/enableuser/:name", controller.EnableUser())
 	incomingRoutes.PUT("/v1/upsert-nodes", controller.UpsertNodes())
-	incomingRoutes.GET("/v1/monitored-domains", controller.GetMonitoredDomains())
-	incomingRoutes.PUT("/v1/update-monitored-domains", controller.UpdateMonitoredDomains())
 	incomingRoutes.GET("/v1/c47kr8", controller.GetSingboxNodes())
 	incomingRoutes.GET("/v1/subscription-nodes", controller.GetSubscriptionNodes())
 

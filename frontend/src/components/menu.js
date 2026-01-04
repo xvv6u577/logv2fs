@@ -80,12 +80,9 @@ const Menu = () => {
 										<a href="/nodes" className="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white">
 											节点监控
 										</a>
-										<a href="/addnode" className="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white">
-											添加节点
-										</a>
-										<a href="/domain-monitor" className="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white">
-											域名监控
-										</a>
+									<a href="/addnode" className="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white">
+										添加节点
+									</a>
 									</div>
 								</div>
 							</div>
@@ -97,12 +94,9 @@ const Menu = () => {
 										<a href="/nodes" className="block text-sm text-gray-300 hover:text-white py-1">
 											节点监控
 										</a>
-										<a href="/addnode" className="block text-sm text-gray-300 hover:text-white py-1">
-											添加节点
-										</a>
-										<a href="/domain-monitor" className="block text-sm text-gray-300 hover:text-white py-1">
-											域名监控
-										</a>
+									<a href="/addnode" className="block text-sm text-gray-300 hover:text-white py-1">
+										添加节点
+									</a>
 									</div>
 								)}
 							</div>

@@ -63,15 +63,3 @@ type SubscriptionNode struct {
 func (SubscriptionNode) CollectionName() string {
 	return "subscription_nodes"
 }
-
-type ExpiryCheckDomainInfo struct {
-	Domain       string `json:"domain" bson:"domain"`
-	Remark       string `json:"remark" bson:"remark"`
-	ExpiredDate  string `json:"expired_date" bson:"expired_date"`
-	DaysToExpire int    `json:"days_to_expire" bson:"days_to_expire"`
-}
-
-// CollectionName 返回MongoDB集合名称
-func (ExpiryCheckDomainInfo) CollectionName() string {
-	return "expiry_check_domains"
-}

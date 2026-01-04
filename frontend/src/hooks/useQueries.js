@@ -16,7 +16,6 @@ export const queryKeys = {
 	users: ['users'],
 	currentUser: (email) => ['currentUser', email],
 	nodes: ['nodes'],
-	monitoredDomains: ['monitoredDomains'],
 	subscriptionNodes: ['subscriptionNodes'],
 };
 
@@ -71,19 +70,6 @@ export const useSubscriptionNodes = () => {
 	return useQuery({
 		queryKey: queryKeys.subscriptionNodes,
 		queryFn: () => api.fetchSubscriptionNodes(token),
-		enabled: !!token,
-	});
-};
-
-/**
- * 获取监控域名列表
- */
-export const useMonitoredDomainsList = () => {
-	const token = useSelector((state) => state.login.token);
-	
-	return useQuery({
-		queryKey: queryKeys.monitoredDomains,
-		queryFn: () => api.fetchMonitoredDomainsList(token),
 		enabled: !!token,
 	});
 };
@@ -172,23 +158,6 @@ export const useDeleteNodes = (options = {}) => {
 		onSuccess: () => {
 			// 成功后刷新节点列表
 			queryClient.invalidateQueries({ queryKey: queryKeys.nodes });
-		},
-		...options,
-	});
-};
-
-/**
- * 更新监控域名
- */
-export const useUpdateMonitoredDomains = (options = {}) => {
-	const token = useSelector((state) => state.login.token);
-	const queryClient = useQueryClient();
-	
-	return useMutation({
-		mutationFn: (domains) => api.updateMonitoredDomains({ domains, token }),
-		onSuccess: () => {
-			// 成功后刷新域名列表
-			queryClient.invalidateQueries({ queryKey: queryKeys.monitoredDomains });
 		},
 		...options,
 	});

@@ -192,22 +192,6 @@ func (CustomDatePG) TableName() string {
 	return "node_custom_dates"
 }
 
-// PostgreSQL版本的域名证书过期信息模型
-type ExpiryCheckDomainInfoPG struct {
-	ID           uuid.UUID `json:"id" gorm:"type:uuid;primary_key;default:gen_random_uuid()"`
-	Domain       string    `json:"domain" gorm:"not null;index"`
-	Remark       string    `json:"remark"`
-	ExpiredDate  string    `json:"expired_date"`
-	DaysToExpire int       `json:"days_to_expire"`
-	CreatedAt    time.Time `json:"created_at"`
-	UpdatedAt    time.Time `json:"updated_at"`
-}
-
-// 为PostgreSQL表设置表名
-func (ExpiryCheckDomainInfoPG) TableName() string {
-	return "expiry_check_domains"
-}
-
 // PostgreSQL版本的订阅节点模型
 type SubscriptionNodePG struct {
 	ID           uuid.UUID `json:"id" gorm:"type:uuid;primary_key;default:gen_random_uuid()"`
