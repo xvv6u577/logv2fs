@@ -1,0 +1,17 @@
+node_modules/
+
+*worker.js
+*.md
+
+# wrangler project
+.dev.vars*
+!.dev.vars.example
+.env*
+!.env.example
+.wrangler/
+
+# Logs
+
+logs
+_.log
+

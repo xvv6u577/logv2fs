@@ -18,12 +18,8 @@ cloudflare-*/wrangler.toml
 cloudflare-*/wrangler.jsonc 
 cloudflare-*/worker-configuration.d.ts  
 
-cloudflare-edgetunnel/
-
 development/
 CA
-cmd/init.go
-cmd/dev.go
 
 logv2fs
 .env

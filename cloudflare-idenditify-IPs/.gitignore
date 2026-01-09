@@ -1,0 +1,33 @@
+# 依赖目录
+node_modules/
+
+reminder.md
+
+# 输入输出文件
+*.json
+*.txt
+
+# 日志文件
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# 操作系统文件
+.DS_Store
+Thumbs.db
+
+# IDE 配置
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# 临时文件
+*.tmp
+*.temp
+
+# 环境变量
+.env
+.env.local
