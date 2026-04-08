@@ -49,115 +49,11 @@ interface SSLLabsResponse {
 }
 
 /**
- * 使用 SSL Labs API 检查域名的 SSL 证书
- * @param domain 域名
- * @param supabase Supabase 客户端
- */
-async function checkSSLCertificate(domain: string, supabase: any): Promise<void> {
-	try {
-		console.log(`开始检查域名: ${domain}`);
-		
-		// 步骤1: 启动分析
-		const startUrl = `https://api.ssllabs.com/api/v3/analyze?host=${encodeURIComponent(domain)}&startNew=on&all=done`;
-		const startResponse = await fetch(startUrl);
-		
-		if (!startResponse.ok) {
-			throw new Error(`SSL Labs API 返回错误: ${startResponse.status}`);
-		}
-		
-		let analysisData = await startResponse.json() as SSLLabsResponse;
-		
-		// 步骤2: 轮询检查分析状态（最多等待 5 分钟）
-		let attempts = 0;
-		const maxAttempts = 30; // 30次 * 10秒 = 5分钟
-		
-		while (analysisData.status !== 'READY' && analysisData.status !== 'ERROR' && attempts < maxAttempts) {
-			await new Promise(resolve => setTimeout(resolve, 10000)); // 等待 10 秒
-			
-			const checkUrl = `https://api.ssllabs.com/api/v3/analyze?host=${encodeURIComponent(domain)}&all=done`;
-			const checkResponse = await fetch(checkUrl);
-			
-			if (!checkResponse.ok) {
-				throw new Error(`SSL Labs API 返回错误: ${checkResponse.status}`);
-			}
-			
-			analysisData = await checkResponse.json() as SSLLabsResponse;
-			attempts++;
-		}
-		
-		// 步骤3: 处理结果
-		if (analysisData.status === 'ERROR') {
-			throw new Error('SSL Labs 分析失败');
-		}
-		
-		if (!analysisData.endpoints || analysisData.endpoints.length === 0) {
-			throw new Error('未找到证书信息');
-		}
-		
-		// 获取第一个端点的证书信息
-		const endpoint = analysisData.endpoints[0];
-		const cert = endpoint.details?.cert;
-		
-		if (!cert || !cert.notAfter) {
-			throw new Error('证书信息不完整');
-		}
-		
-		// 转换时间戳为 ISO 字符串
-		const expiryDate = new Date(cert.notAfter);
-		const now = new Date();
-		const daysRemaining = Math.floor((expiryDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-		
-		// 确定状态
-		let status: 'valid' | 'expiring' | 'expired';
-		if (daysRemaining < 0) {
-			status = 'expired';
-		} else if (daysRemaining <= 7) {
-			status = 'expiring';
-		} else {
-			status = 'valid';
-		}
-		
-		// 更新数据库
-		const { error: updateError } = await supabase
-			.from('ssl_certificates')
-			.update({
-				expiry_date: expiryDate.toISOString(),
-				issuer: cert.issuerSubject || 'Unknown',
-				status: status,
-				last_checked: new Date().toISOString(),
-				error_message: null
-			})
-			.eq('domain', domain);
-		
-		if (updateError) {
-			console.error(`更新数据库失败 (${domain}):`, updateError);
-		} else {
-			console.log(`成功检查域名 ${domain}, 状态: ${status}, 剩余天数: ${daysRemaining}`);
-		}
-		
-	} catch (error: any) {
-		console.error(`检查域名 ${domain} 失败:`, error.message);
-		
-		// 更新数据库，标记为错误
-		await supabase
-			.from('ssl_certificates')
-			.update({
-				status: 'error',
-				error_message: error.message || '检查失败',
-				last_checked: new Date().toISOString()
-			})
-			.eq('domain', domain);
-	}
-}
-
-/**
  * 使用备用方案检查证书（简化版，使用 crt.sh）
  * 注意：这个方案更快但信息较少
  */
 async function checkSSLCertificateSimple(domain: string, supabase: any): Promise<void> {
 	try {
-		console.log(`使用简化方案检查域名: ${domain}`);
-		
 		// 使用 crt.sh API 获取证书信息
 		const crtshUrl = `https://crt.sh/?q=${encodeURIComponent(domain)}&output=json`;
 		const response = await fetch(crtshUrl);
@@ -180,7 +76,7 @@ async function checkSSLCertificateSimple(domain: string, supabase: any): Promise
 		const latestCert = certificates.sort((a, b) => 
 			new Date(b.not_after).getTime() - new Date(a.not_after).getTime()
 		)[0];
-		
+
 		const expiryDate = new Date(latestCert.not_after);
 		const now = new Date();
 		const daysRemaining = Math.floor((expiryDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
@@ -377,8 +273,13 @@ export default {
 						.from('ssl_certificates')
 						.delete()
 						.eq('id', id);
+
+					console.log('删除域名:', id);
 					
-					if (error) throw error;
+					if (error) {
+						console.error('删除域名失败:', error);
+						throw error;
+					}
 					
 					return new Response(JSON.stringify({ success: true }), {
 						headers: corsHeaders
