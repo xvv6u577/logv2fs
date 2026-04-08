@@ -36,7 +36,7 @@ proxies:
     udp: true
     tls: true
     flow: xtls-rprx-vision
-    servername: itunes.apple.com
+    servername: www.microsoft.com
     client-fingerprint: chrome
     reality-opts:
       public-key: txAhCYEz70FRNazyf0echZco6QrkUblGuJBiOTXWXHA

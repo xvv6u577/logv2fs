@@ -114,7 +114,7 @@ FormatIPForURL("example.com")        // 返回 "example.com"
 
 ### 生成的订阅URL
 ```
-vless://uuid@[2001:db8::1]:443?encryption=none&flow=xtls-rprx-vision&security=reality&sni=itunes.apple.com&fp=chrome&pbk=public_key&sid=short_id&type=tcp&headerType=none#节点备注
+vless://uuid@[2001:db8::1]:443?encryption=none&flow=xtls-rprx-vision&security=reality&sni=www.microsoft.com&fp=chrome&pbk=public_key&sid=short_id&type=tcp&headerType=none#节点备注
 ```
 
 ### 生成的JSON配置

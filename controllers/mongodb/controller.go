@@ -564,9 +564,9 @@ func GetSubscripionURL() gin.HandlerFunc {
 
 				if node.Type == "reality" {
 					if len(sub) == 0 {
-						sub = "vless://" + user.UUID + "@" + formattedIP + ":" + node.SERVER_PORT + "?encryption=none&flow=xtls-rprx-vision&security=reality&sni=itunes.apple.com&fp=chrome&pbk=" + getPublicKey() + "&sid=" + getShortID() + "&type=tcp&headerType=none#" + node.Remark
+						sub = "vless://" + user.UUID + "@" + formattedIP + ":" + node.SERVER_PORT + "?encryption=none&flow=xtls-rprx-vision&security=reality&sni=www.microsoft.com&fp=chrome&pbk=" + getPublicKey() + "&sid=" + getShortID() + "&type=tcp&headerType=none#" + node.Remark
 					} else {
-						sub = sub + "\n" + "vless://" + user.UUID + "@" + formattedIP + ":" + node.SERVER_PORT + "?encryption=none&flow=xtls-rprx-vision&security=reality&sni=itunes.apple.com&fp=chrome&pbk=" + getPublicKey() + "&sid=" + getShortID() + "&type=tcp&headerType=none#" + node.Remark
+						sub = sub + "\n" + "vless://" + user.UUID + "@" + formattedIP + ":" + node.SERVER_PORT + "?encryption=none&flow=xtls-rprx-vision&security=reality&sni=www.microsoft.com&fp=chrome&pbk=" + getPublicKey() + "&sid=" + getShortID() + "&type=tcp&headerType=none#" + node.Remark
 					}
 				}
 
@@ -705,7 +705,7 @@ func ReturnSingboxJson() gin.HandlerFunc {
 							} `json:"reality"`
 						}{
 							Enabled:    true,
-							ServerName: "itunes.apple.com",
+							ServerName: "www.microsoft.com",
 							Utls: struct {
 								Enabled     bool   `json:"enabled"`
 								Fingerprint string `json:"fingerprint"`
@@ -929,7 +929,7 @@ func ReturnVergeYAML() gin.HandlerFunc {
 						UDP:               true,
 						TLS:               true,
 						Flow:              "xtls-rprx-vision",
-						Servername:        "itunes.apple.com",
+						Servername:        "www.microsoft.com",
 						ClientFingerprint: "chrome",
 						RealityOpts: struct {
 							PublicKey string `yaml:"public-key"`

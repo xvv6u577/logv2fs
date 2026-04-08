@@ -51,9 +51,9 @@ func GetSubscripionURLPG() gin.HandlerFunc {
 
 				if node.Type == "reality" {
 					if len(sub) == 0 {
-						sub = "vless://" + pgUser.UUID + "@" + formattedIP + ":" + node.ServerPort + "?encryption=none&flow=xtls-rprx-vision&security=reality&sni=itunes.apple.com&fp=chrome&pbk=" + node.PublicKey + "&sid=" + node.ShortID + "&type=tcp&headerType=none#" + node.Remark
+						sub = "vless://" + pgUser.UUID + "@" + formattedIP + ":" + node.ServerPort + "?encryption=none&flow=xtls-rprx-vision&security=reality&sni=www.microsoft.com&fp=chrome&pbk=" + node.PublicKey + "&sid=" + node.ShortID + "&type=tcp&headerType=none#" + node.Remark
 					} else {
-						sub = sub + "\n" + "vless://" + pgUser.UUID + "@" + formattedIP + ":" + node.ServerPort + "?encryption=none&flow=xtls-rprx-vision&security=reality&sni=itunes.apple.com&fp=chrome&pbk=" + node.PublicKey + "&sid=" + node.ShortID + "&type=tcp&headerType=none#" + node.Remark
+						sub = sub + "\n" + "vless://" + pgUser.UUID + "@" + formattedIP + ":" + node.ServerPort + "?encryption=none&flow=xtls-rprx-vision&security=reality&sni=www.microsoft.com&fp=chrome&pbk=" + node.PublicKey + "&sid=" + node.ShortID + "&type=tcp&headerType=none#" + node.Remark
 					}
 				}
 
@@ -106,17 +106,17 @@ func ReturnSingboxJsonPG() gin.HandlerFunc {
 			return
 		}
 
-	var activeGlobalNodes []model.SubscriptionNodePG
+		var activeGlobalNodes []model.SubscriptionNodePG
 
-	// 查询活跃的全局节点，按权重升序排序
-	if err := db.Where("type != ?", "work").Order("weight ASC").Find(&activeGlobalNodes).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "error occurred while getting active global nodes"})
-		log.Printf("Getting active global nodes error: %s", err.Error())
-		return
-	}
+		// 查询活跃的全局节点，按权重升序排序
+		if err := db.Where("type != ?", "work").Order("weight ASC").Find(&activeGlobalNodes).Error; err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "error occurred while getting active global nodes"})
+			log.Printf("Getting active global nodes error: %s", err.Error())
+			return
+		}
 
-	if pgUser.Status == "plain" {
-		jsonFile, err = os.ReadFile(helper.CurrentPath() + "/config/template_singbox.json")
+		if pgUser.Status == "plain" {
+			jsonFile, err = os.ReadFile(helper.CurrentPath() + "/config/template_singbox.json")
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 				log.Printf("error: %v", err)
@@ -176,7 +176,7 @@ func ReturnSingboxJsonPG() gin.HandlerFunc {
 							} `json:"reality"`
 						}{
 							Enabled:    true,
-							ServerName: "itunes.apple.com",
+							ServerName: "www.microsoft.com",
 							Utls: struct {
 								Enabled     bool   `json:"enabled"`
 								Fingerprint string `json:"fingerprint"`
@@ -338,17 +338,17 @@ func ReturnVergeYAMLPG() gin.HandlerFunc {
 			return
 		}
 
-	var activeGlobalNodes []model.SubscriptionNodePG
+		var activeGlobalNodes []model.SubscriptionNodePG
 
-	// 查询活跃的全局节点，按权重升序排序
-	if err := db.Where("type != ?", "work").Order("weight ASC").Find(&activeGlobalNodes).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "error occurred while getting active global nodes"})
-		log.Printf("Getting active global nodes error: %s", err.Error())
-		return
-	}
+		// 查询活跃的全局节点，按权重升序排序
+		if err := db.Where("type != ?", "work").Order("weight ASC").Find(&activeGlobalNodes).Error; err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "error occurred while getting active global nodes"})
+			log.Printf("Getting active global nodes error: %s", err.Error())
+			return
+		}
 
-	if pgUser.Status == "plain" {
-		yamlFile, err = os.ReadFile(helper.CurrentPath() + "/config/template_verge.yaml")
+		if pgUser.Status == "plain" {
+			yamlFile, err = os.ReadFile(helper.CurrentPath() + "/config/template_verge.yaml")
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 				log.Printf("error: %v", err)
@@ -382,7 +382,7 @@ func ReturnVergeYAMLPG() gin.HandlerFunc {
 						UDP:               true,
 						TLS:               true,
 						Flow:              "xtls-rprx-vision",
-						Servername:        "itunes.apple.com",
+						Servername:        "www.microsoft.com",
 						ClientFingerprint: "chrome",
 						RealityOpts: struct {
 							PublicKey string `yaml:"public-key"`
