@@ -1,17 +1,16 @@
-package mongodb
+package jobs
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"os"
 	"time"
 
 	"github.com/robfig/cron"
 	box "github.com/sagernet/sing-box"
-	"github.com/xvv6u577/logv2fs/database/mongodb"
+	"github.com/xvv6u577/logv2fs/database"
 	"github.com/xvv6u577/logv2fs/model"
-	mongodb_pkg "github.com/xvv6u577/logv2fs/pkg/mongodb"
+	"github.com/xvv6u577/logv2fs/singbox"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -19,40 +18,10 @@ import (
 
 type (
 	Traffic = model.Traffic
-	// PostgreSQL相关类型别名
-	UserTrafficLogsPG = model.UserTrafficLogsPG
-	NodeTrafficLogsPG = model.NodeTrafficLogsPG
-	DailyLogEntry     = model.DailyLogEntry
-	MonthlyLogEntry   = model.MonthlyLogEntry
-	YearlyLogEntry    = model.YearlyLogEntry
 )
-
-// UserTrafficRequest 定义调用 upsert_user_traffic_log 函数的请求参数
-type UserTrafficRequest struct {
-	Email     string    `json:"p_email"`
-	Timestamp time.Time `json:"p_timestamp"`
-	Traffic   int64     `json:"p_traffic"`
-}
-
-// NodeTrafficRequest 定义调用 upsert_node_traffic_log 函数的请求参数
-type NodeTrafficRequest struct {
-	Domain    string    `json:"p_domain"`
-	Timestamp time.Time `json:"p_timestamp"`
-	Traffic   int64     `json:"p_traffic"`
-}
 
 func getCurrentDomain() string {
 	return os.Getenv("CURRENT_DOMAIN")
-}
-
-// PostgreSQL版本的用户流量记录函数（MongoDB包中不实现）
-func LogUserTrafficPG(email string, timestamp time.Time, traffic int64) error {
-	return fmt.Errorf("MongoDB包中不应该调用PostgreSQL函数")
-}
-
-// LogNodeTrafficPG PostgreSQL版本的节点流量记录函数（MongoDB包中不实现）
-func LogNodeTrafficPG(domain string, timestamp time.Time, traffic int64) error {
-	return fmt.Errorf("MongoDB 版本不应该调用 LogNodeTrafficPG 函数")
 }
 
 // traffic: {Name: "tom", Total: 100}
@@ -245,14 +214,13 @@ func LogNodeTraffic(collection *mongo.Collection, domain string, timestamp time.
 
 }
 
-// Cron_loggingJobs MongoDB版本的定时任务
+// Cron_loggingJobs 注册定时任务：每 15 分钟将 sing-box 中累积的流量数据写入 MongoDB
 func Cron_loggingJobs(c *cron.Cron, instance *box.Box) {
 
-	// cron job by 15 mins - MongoDB版本
 	c.AddFunc("0 */15 * * * *", func() {
 
 		timesteamp := time.Now().Local()
-		usageData, err := mongodb_pkg.UsageDataOfAll(instance)
+		usageData, err := singbox.UsageDataOfAll(instance)
 		if err != nil {
 			log.Printf("获取使用数据时出错: %v\n", err)
 			return
@@ -263,20 +231,17 @@ func Cron_loggingJobs(c *cron.Cron, instance *box.Box) {
 			return
 		}
 
-		log.Printf("使用MongoDB记录流量数据...")
-		// 使用原有的MongoDB逻辑
 		for _, perUser := range usageData {
-
 			// perUser = traffic: {Name: "tom", Total: 100}
-			if err := LogUserTraffic(mongodb.GetCollection(model.UserTrafficLogs{}), perUser.Name, timesteamp, perUser.Total); err != nil {
-				log.Printf("MongoDB用户流量记录失败: %v\n", err)
+			if err := LogUserTraffic(database.GetCollection(model.UserTrafficLogs{}), perUser.Name, timesteamp, perUser.Total); err != nil {
+				log.Printf("用户流量记录失败: %v\n", err)
 			}
 
-			if err := LogNodeTraffic(mongodb.GetCollection(model.NodeTrafficLogs{}), getCurrentDomain(), timesteamp, perUser.Total); err != nil {
-				log.Printf("MongoDB节点流量记录失败: %v\n", err)
+			if err := LogNodeTraffic(database.GetCollection(model.NodeTrafficLogs{}), getCurrentDomain(), timesteamp, perUser.Total); err != nil {
+				log.Printf("节点流量记录失败: %v\n", err)
 			}
 		}
-		log.Printf("MongoDB流量记录完成: %v 用户=%d", timesteamp.Format("20060102 15:04:05"), len(usageData))
+		log.Printf("流量记录完成: %v 用户=%d", timesteamp.Format("20060102 15:04:05"), len(usageData))
 
 	})
 

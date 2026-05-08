@@ -1,4 +1,4 @@
-package mongodb
+package controllers
 
 import (
 	"context"
@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/xvv6u577/logv2fs/database/mongodb"
+	"github.com/xvv6u577/logv2fs/database"
 	helper "github.com/xvv6u577/logv2fs/helpers"
 	"github.com/xvv6u577/logv2fs/model"
 	"go.mongodb.org/mongo-driver/bson"
@@ -73,13 +73,13 @@ func UpsertNodes() gin.HandlerFunc {
 
 		// types: reality, hysteria2, vlessCDN! if type is reality, reassgin public_key and short_id.
 		// then, empty subscription_nodes collection, and insert rawFormData into it.
-		mongodb.GetCollection(model.SubscriptionNode{}).DeleteMany(context.TODO(), bson.M{})
+		database.GetCollection(model.SubscriptionNode{}).DeleteMany(context.TODO(), bson.M{})
 		for i, domain := range rawFormData {
 			if domain.Type == "reality" {
 				rawFormData[i].PUBLIC_KEY = getPublicKey()
 				rawFormData[i].SHORT_ID = getShortID()
 			}
-			mongodb.GetCollection(model.SubscriptionNode{}).InsertOne(context.TODO(), domain)
+			database.GetCollection(model.SubscriptionNode{}).InsertOne(context.TODO(), domain)
 		}
 
 		// check if domain is in nodeTrafficLogsCol. if no, insert it. if yes, update it.
@@ -114,7 +114,7 @@ func UpsertNodes() gin.HandlerFunc {
 				},
 			}
 			opts := options.Update().SetUpsert(true)
-			_, err := mongodb.GetCollection(model.NodeTrafficLogs{}).UpdateOne(context.TODO(), filter, update, opts)
+			_, err := database.GetCollection(model.NodeTrafficLogs{}).UpdateOne(context.TODO(), filter, update, opts)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 				log.Printf("UpdateOne in nodeTrafficLogsCol error: %v", err)
@@ -130,7 +130,7 @@ func UpsertNodes() gin.HandlerFunc {
 		}
 		inactiveFilter := bson.M{"domain_as_id": bson.M{"$nin": domainAsIds}}
 		inactiveUpdate := bson.M{"$set": bson.M{"status": "inactive"}}
-		_, err := mongodb.GetCollection(model.NodeTrafficLogs{}).UpdateMany(context.TODO(), inactiveFilter, inactiveUpdate)
+		_, err := database.GetCollection(model.NodeTrafficLogs{}).UpdateMany(context.TODO(), inactiveFilter, inactiveUpdate)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			log.Printf("UpdateMany in nodeTrafficLogsCol error: %v", err)
@@ -152,7 +152,7 @@ func GetSubscriptionNodes() gin.HandlerFunc {
 		var activeNodes []SubscriptionNode
 		// type is not "work"
 		var filter = bson.D{{Key: "type", Value: bson.D{{Key: "$ne", Value: "work"}}}}
-		cur, err := mongodb.GetCollection(model.SubscriptionNode{}).Find(context.TODO(), filter)
+		cur, err := database.GetCollection(model.SubscriptionNode{}).Find(context.TODO(), filter)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			log.Printf("Find error: %v", err)
@@ -179,7 +179,7 @@ func GetSingboxNodes() gin.HandlerFunc {
 
 		var activeNodes []NodeTrafficLogs
 		var filter = bson.D{primitive.E{Key: "status", Value: "active"}}
-		cur, err := mongodb.GetCollection(model.NodeTrafficLogs{}).Find(context.TODO(), filter)
+		cur, err := database.GetCollection(model.NodeTrafficLogs{}).Find(context.TODO(), filter)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			log.Printf("Find error: %v", err)
@@ -232,7 +232,7 @@ func SaveCustomDate() gin.HandlerFunc {
 		}
 		opts := options.Update().SetUpsert(true)
 
-		_, err := mongodb.GetCollection(model.CustomDate{}).UpdateOne(context.TODO(), filter, update, opts)
+		_, err := database.GetCollection(model.CustomDate{}).UpdateOne(context.TODO(), filter, update, opts)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			log.Printf("保存自定义日期失败: %v", err)
@@ -251,7 +251,7 @@ func GetCustomDates() gin.HandlerFunc {
 			return
 		}
 
-		cur, err := mongodb.GetCollection(model.CustomDate{}).Find(context.TODO(), bson.M{})
+		cur, err := database.GetCollection(model.CustomDate{}).Find(context.TODO(), bson.M{})
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			log.Printf("查询自定义日期失败: %v", err)

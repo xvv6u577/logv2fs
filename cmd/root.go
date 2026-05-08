@@ -10,9 +10,7 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/spf13/cobra"
 	httpserver "github.com/xvv6u577/logv2fs/cmd/httpserver"
-	httpserverpg "github.com/xvv6u577/logv2fs/cmd/httpserverpg"
 	singbox "github.com/xvv6u577/logv2fs/cmd/singbox"
-	singboxpg "github.com/xvv6u577/logv2fs/cmd/singboxpg"
 	"github.com/xvv6u577/logv2fs/model"
 )
 
@@ -23,11 +21,6 @@ type (
 	TrafficAtPeriod = model.TrafficAtPeriod
 	UserTrafficLogs = model.UserTrafficLogs
 	NodeTrafficLogs = model.NodeTrafficLogs
-
-	// PostgreSQL模型
-	UserTrafficLogsPG  = model.UserTrafficLogsPG
-	NodeTrafficLogsPG  = model.NodeTrafficLogsPG
-	SubscriptionNodePG = model.SubscriptionNodePG
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -64,8 +57,6 @@ func init() {
 
 	// 添加子命令
 	rootCmd.AddCommand(singbox.NewSingboxCmd())
-	rootCmd.AddCommand(singboxpg.NewSingboxPGCmd())
 	rootCmd.AddCommand(httpserver.NewHTTPServerCmd())
-	rootCmd.AddCommand(httpserverpg.NewHTTPServerPGCmd())
 
 }

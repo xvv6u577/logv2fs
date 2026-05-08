@@ -1,4 +1,4 @@
-package mongodb_pkg
+package singbox
 
 import (
 	"context"
@@ -6,7 +6,7 @@ import (
 	"sync"
 
 	"github.com/sagernet/sing-box/option"
-	"github.com/xvv6u577/logv2fs/database/mongodb"
+	"github.com/xvv6u577/logv2fs/database"
 	"github.com/xvv6u577/logv2fs/model"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -27,7 +27,7 @@ func UpdateOptionsFromMongoDB(opt option.Options) (option.Options, error) {
 		{Key: "user_id", Value: 1},
 	}
 
-	cur, err := mongodb.GetCollection(model.UserTrafficLogs{}).Find(context.Background(), bson.D{}, options.Find().SetProjection(projections))
+	cur, err := database.GetCollection(model.UserTrafficLogs{}).Find(context.Background(), bson.D{}, options.Find().SetProjection(projections))
 	if err != nil {
 		log.Printf("error getting all users portion info: %v\n", err)
 		return opt, err

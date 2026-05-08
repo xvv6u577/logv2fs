@@ -1,4 +1,4 @@
-package postgres_pkg
+package singbox
 
 import (
 	"context"

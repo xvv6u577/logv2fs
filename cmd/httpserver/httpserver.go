@@ -12,7 +12,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/cobra"
 	"github.com/xvv6u577/logv2fs/middleware"
-	routersMongodb "github.com/xvv6u577/logv2fs/routers/mongodb"
+	"github.com/xvv6u577/logv2fs/routers"
 	"github.com/xvv6u577/logv2fs/websocket"
 )
 
@@ -50,8 +50,8 @@ func NewHTTPServerCmd() *cobra.Command {
 			websocket.HandleWebSocket(c.Writer, c.Request)
 		})
 
-			routersMongodb.PublicRoutes(router)
-			routersMongodb.AuthorizedRoutes(router)
+			routers.PublicRoutes(router)
+			routers.AuthorizedRoutes(router)
 
 			srv := &http.Server{
 				Addr:    fmt.Sprintf("%s:%s", SERVER_ADDRESS, SERVER_PORT),

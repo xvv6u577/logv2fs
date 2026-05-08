@@ -1,9 +1,9 @@
-package mongodb
+package routers
 
 import (
 	"os"
 
-	controller "github.com/xvv6u577/logv2fs/controllers/mongodb"
+	controller "github.com/xvv6u577/logv2fs/controllers"
 	"github.com/xvv6u577/logv2fs/middleware"
 
 	"github.com/gin-gonic/gin"

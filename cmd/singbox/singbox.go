@@ -12,8 +12,8 @@ import (
 
 	"github.com/robfig/cron"
 	"github.com/spf13/cobra"
-	mongodbCron "github.com/xvv6u577/logv2fs/cron/mongodb"
-	mongodb_pkg "github.com/xvv6u577/logv2fs/pkg/mongodb"
+	"github.com/xvv6u577/logv2fs/jobs"
+	singboxlib "github.com/xvv6u577/logv2fs/singbox"
 
 	box "github.com/sagernet/sing-box"
 )
@@ -53,12 +53,12 @@ func NewSingboxCmd() *cobra.Command {
 				var instance *box.Box
 				ctx, cancel := context.WithCancel(context.Background())
 
-				options, err := mongodb_pkg.InitOptionsFromConfig(configFile)
+				options, err := singboxlib.InitOptionsFromConfig(configFile)
 				if err != nil {
 					log.Fatal("error initializing options from config: ", err)
 				}
 
-				options, err = mongodb_pkg.UpdateOptionsFromMongoDB(options)
+				options, err = singboxlib.UpdateOptionsFromMongoDB(options)
 				if err != nil {
 					log.Printf("error updating options from MongoDB: %v\n", err)
 				}
@@ -75,7 +75,7 @@ func NewSingboxCmd() *cobra.Command {
 					log.Fatalf("error starting box instance: %v\n", err)
 				}
 
-				mongodbCron.Cron_loggingJobs(cronInstance, instance)
+				jobs.Cron_loggingJobs(cronInstance, instance)
 				for {
 					osSignal := <-osSignals
 					if osSignal == syscall.SIGINT || osSignal == syscall.SIGTERM || osSignal == syscall.SIGTSTP {
