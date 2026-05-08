@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
-import { alert, reset, success } from "../store/message";
+import { alert, reset } from "../store/message";
 import axios from "axios";
 import Alert from "./alert";
 import { formatBytes, getCurrentMonthTraffic, getCurrentYearTraffic, getTrafficOfTodayFromArray } from "../service/service";
@@ -14,7 +14,7 @@ function Nodes() {
 	const [customDates, setCustomDates] = useState({}); // 存储每个节点的自定义日期
 	
 	// 使用 WebSocket hook
-	const { status: wsStatus, isConnected } = useWebSocket();
+	const { status: wsStatus } = useWebSocket();
 
 	const dispatch = useDispatch();
 	const loginState = useSelector((state) => state.login);
@@ -52,11 +52,54 @@ function Nodes() {
 	}, [nodesError, dispatch]);
 
 	// 初始化自定义日期（当节点数据加载完成后）
+	// 直接将逻辑内联进 useEffect，避免外部函数引用导致的依赖循环
 	useEffect(() => {
-		if (singboxNodes.length > 0) {
-			initializeCustomDates(singboxNodes);
-		}
-	}, [singboxNodes]);
+		if (singboxNodes.length === 0) return;
+
+		// 计算当月首日，作为默认起始日期
+		const getDefaultDate = () => {
+			const today = new Date();
+			const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+			return firstDay.toISOString().split('T')[0];
+		};
+
+		const initialize = async () => {
+			try {
+				// 先尝试从后端拉取已保存的自定义日期映射
+				const response = await axios.get(
+					process.env.REACT_APP_API_HOST + "custom-dates",
+					{ headers: { token: loginState.token } }
+				);
+
+				const defaultDate = getDefaultDate();
+				const indexMapping = {};
+
+				if (response.data && Object.keys(response.data).length > 0) {
+					// 后端返回的是 domain_as_id -> date 映射，转换为 index -> date
+					singboxNodes.forEach((node, index) => {
+						indexMapping[index] = response.data[node.domain_as_id] || defaultDate;
+					});
+				} else {
+					// 没有任何保存记录，所有节点使用默认日期
+					singboxNodes.forEach((_, index) => {
+						indexMapping[index] = defaultDate;
+					});
+				}
+				setCustomDates(indexMapping);
+			} catch (error) {
+				console.error('初始化自定义日期失败:', error);
+				// 出错时也回退到默认日期，保证 UI 可用
+				const defaultDate = getDefaultDate();
+				const fallback = {};
+				singboxNodes.forEach((_, index) => {
+					fallback[index] = defaultDate;
+				});
+				setCustomDates(fallback);
+			}
+		};
+
+		initialize();
+	}, [singboxNodes, loginState.token]);
 
 	// 计算自定义日期流量
 	const calculateCustomDateTraffic = (node, customDate) => {
@@ -81,13 +124,6 @@ function Nodes() {
 		});
 		
 		return totalTraffic;
-	};
-
-	// 获取当月首日
-	const getFirstDayOfCurrentMonth = () => {
-		const today = new Date();
-		const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
-		return firstDay.toISOString().split('T')[0];
 	};
 
 	// 处理自定义日期变化
@@ -121,74 +157,6 @@ function Nodes() {
 		} catch (error) {
 			console.error('保存自定义日期失败:', error);
 			dispatch(alert({ show: true, content: "保存自定义日期失败" }));
-		}
-	};
-
-	// 从数据库加载自定义日期
-	const loadCustomDatesFromDatabase = async () => {
-		try {
-			const response = await axios.get(
-				process.env.REACT_APP_API_HOST + "custom-dates",
-				{
-					headers: { token: loginState.token }
-				}
-			);
-			
-			if (response.data) {
-				setCustomDates(response.data);
-			}
-		} catch (error) {
-			console.error('加载自定义日期失败:', error);
-			// 如果加载失败，使用默认日期
-			const defaultDate = getFirstDayOfCurrentMonth();
-			const defaultDates = {};
-			singboxNodes.forEach((_, index) => {
-				defaultDates[index] = defaultDate;
-			});
-			setCustomDates(defaultDates);
-		}
-	};
-
-	// 初始化自定义日期
-	const initializeCustomDates = async (nodes) => {
-		try {
-			// 先尝试从数据库加载
-			const response = await axios.get(
-				process.env.REACT_APP_API_HOST + "custom-dates",
-				{
-					headers: { token: loginState.token }
-				}
-			);
-			
-			if (response.data && Object.keys(response.data).length > 0) {
-				// 将domain_as_id映射转换为索引映射
-				const indexMapping = {};
-				nodes.forEach((node, index) => {
-					if (response.data[node.domain_as_id]) {
-						indexMapping[index] = response.data[node.domain_as_id];
-					} else {
-						indexMapping[index] = getFirstDayOfCurrentMonth();
-					}
-				});
-				setCustomDates(indexMapping);
-			} else {
-				// 如果没有保存的日期，使用默认日期（当月首日）
-				const defaultDate = getFirstDayOfCurrentMonth();
-				const defaultDates = {};
-				nodes.forEach((_, index) => {
-					defaultDates[index] = defaultDate;
-				});
-				setCustomDates(defaultDates);
-			}
-		} catch (error) {
-			console.error('初始化自定义日期失败:', error);
-			// 如果加载失败，使用默认日期
-			const defaultDate = getFirstDayOfCurrentMonth();
-			const defaultDates = {};
-			nodes.forEach((_, index) => {
-				defaultDates[index] = defaultDate;
-			});
-			setCustomDates(defaultDates);
 		}
 	};
 

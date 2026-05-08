@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { useSelector } from "react-redux";
-import { BrowserRouter, Routes, Route, Navigate, Link } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import "./App.css";
 import Login from "./components/login";
 import User from "./components/user";
@@ -78,7 +78,6 @@ const faqs = [
 function LandingPage() {
 	const [scrolled, setScrolled] = useState(false);
 	const [openFaq, setOpenFaq] = useState(null);
-	const heroRef = useRef(null);
 
 	useEffect(() => {
 		const onScroll = () => setScrolled(window.scrollY > 20);
@@ -369,7 +368,7 @@ function LandingPage() {
 				<div className="glow-dot" style={{ position: "absolute", bottom: -160, left: -120, pointerEvents: "none", opacity: 0.5 }} />
 
 				<div className="container" style={{ position: "relative" }}>
-					<p className="section-label fade-up delay-1">// remote software & devops services</p>
+					<p className="section-label fade-up delay-1">{'// remote software & devops services'}</p>
 
 					<h1 className="gradient-text fade-up delay-2" style={{ maxWidth: 780, marginBottom: "1.5rem" }}>
 						Infrastructure That&nbsp;
@@ -419,7 +418,7 @@ function LandingPage() {
 			{/* SERVICES */}
 			<section id="services">
 				<div className="container">
-					<p className="section-label">// what we build</p>
+					<p className="section-label">{'// what we build'}</p>
 					<h2 style={{ marginBottom: "0.75rem" }}>Our Services</h2>
 					<p style={{ color: "var(--text-muted)", fontSize: "1.05rem", maxWidth: 500, marginBottom: "3.5rem", lineHeight: 1.7 }}>
 						Full-cycle delivery from design to production — everything your online presence needs, maintained and optimized.
@@ -444,7 +443,7 @@ function LandingPage() {
 			<section id="about" style={{ background: "var(--bg2)", borderTop: "1px solid var(--border)", borderBottom: "1px solid var(--border)" }}>
 				<div className="container" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4rem", alignItems: "center" }}>
 					<div>
-						<p className="section-label">// how we work</p>
+						<p className="section-label">{'// how we work'}</p>
 						<h2 style={{ marginBottom: "1rem" }}>100% Remote,<br />Zero Compromise</h2>
 						<p style={{ color: "var(--text-muted)", lineHeight: 1.8, marginBottom: "1.5rem" }}>
 							Every engagement is delivered remotely. You receive configured systems, deployment access, or managed software solutions — with documentation clear enough to hand off to anyone.
@@ -462,7 +461,7 @@ function LandingPage() {
 								<span key={c} style={{ width: 12, height: 12, borderRadius: "50%", background: c, display: "inline-block" }} />
 							))}
 						</div>
-						<div><span style={{ color: "var(--text-muted)" }}>// deploy.yml</span></div>
+						<div><span style={{ color: "var(--text-muted)" }}>{'// deploy.yml'}</span></div>
 						<div><span style={{ color: "#c792ea" }}>on:</span> <span style={{ color: "var(--cyan)" }}>push</span></div>
 						<div><span style={{ color: "#c792ea" }}>jobs:</span></div>
 						<div style={{ paddingLeft: "1rem" }}><span style={{ color: "#82aaff" }}>build:</span></div>
@@ -478,7 +477,7 @@ function LandingPage() {
 			{/* FAQ */}
 			<section id="faq">
 				<div className="container" style={{ maxWidth: 720 }}>
-					<p className="section-label">// common questions</p>
+					<p className="section-label">{'// common questions'}</p>
 					<h2 style={{ marginBottom: "3rem" }}>FAQ</h2>
 					{faqs.map((item, i) => (
 						<div key={i} className="faq-item">
@@ -499,7 +498,7 @@ function LandingPage() {
 			{/* CTA BANNER */}
 			<section style={{ background: "var(--bg2)", borderTop: "1px solid var(--border)", paddingTop: 80, paddingBottom: 80 }}>
 				<div className="container" style={{ textAlign: "center" }}>
-					<p className="section-label" style={{ textAlign: "center" }}>// ready to ship?</p>
+					<p className="section-label" style={{ textAlign: "center" }}>{'// ready to ship?'}</p>
 					<h2 style={{ marginBottom: "1rem", maxWidth: 560, margin: "0 auto 1rem" }}>Let's Build Something That Lasts</h2>
 					<p style={{ color: "var(--text-muted)", marginBottom: "2.5rem", maxWidth: 440, margin: "0 auto 2.5rem" }}>
 						Reach out and describe what you need — we'll scope it and get started.

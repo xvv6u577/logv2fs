@@ -39,9 +39,8 @@
 
 ### 方法 1：查看后端路由定义
 
-查看后端代码中的路由定义，例如：
-- `routers/postgres/router.go` 或
-- `routers/mongodb/router.go`
+查看后端代码中的路由定义：
+- `routers/public.go` 与 `routers/authorized.go`
 
 ### 方法 2：检查浏览器网络请求
 

@@ -15,7 +15,7 @@ function Mypanel() {
 	const { data: user = {}, isLoading, error } = useCurrentUser();
 	
 	// 使用 WebSocket 实时更新
-	const { status: wsStatus, isConnected } = useWebSocket();
+	const { status: wsStatus } = useWebSocket();
 
 	// 通用样式类
 	const styles = {
@@ -44,14 +44,14 @@ function Mypanel() {
 				dispatch(reset({}));
 			}, 5000);
 		}
-	}, [message]);
+	}, [message, dispatch]);
 
 	// 错误处理
 	useEffect(() => {
 		if (error) {
 			dispatch(alert({ show: true, content: error.toString() }));
 		}
-	}, [error]);
+	}, [error, dispatch]);
 
 	// 加载中状态
 	if (isLoading) {

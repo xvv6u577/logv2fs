@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useSelector, useDispatch } from "react-redux";
+import { useDispatch } from "react-redux";
 import { alert, success } from "../store/message";
 import { useAddUser } from "../hooks/useQueries";
 
@@ -21,7 +21,6 @@ function AddUser({ btnName }) {
 	const addUserMutation = useAddUser();
 
 	const dispatch = useDispatch();
-	const loginState = useSelector((state) => state.login);
 
 	const clearState = () => {
 		setState({ ...initialState });

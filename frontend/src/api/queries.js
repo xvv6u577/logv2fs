@@ -85,34 +85,67 @@ export const addUser = async ({ userData, token }) => {
 
 /**
  * 更新用户信息
+ * 后端真实路由：POST /v1/edit/:name，路径段为 email_as_id
  * @param {Object} params
- * @param {Object} params.userData - 用户数据
+ * @param {Object} params.userData - 用户数据，必须包含 email_as_id
  * @param {string} params.token - JWT token
  * @returns {Promise<Object>} 响应数据
  */
 export const updateUser = async ({ userData, token }) => {
-	const response = await axios.put(
-		`${process.env.REACT_APP_API_HOST}edit`,
+	const response = await axios.post(
+		`${process.env.REACT_APP_API_HOST}edit/${userData.email_as_id}`,
 		userData,
-		{ headers: { token } }
+		{ headers: { token, 'Content-Type': 'application/json' } }
 	);
 	return response.data;
 };
 
 /**
  * 删除用户
+ * 后端真实路由：GET /v1/deluser/:name
  * @param {Object} params
- * @param {Object} params.userData - 用户数据
+ * @param {Object} params.userData - 必须包含 email_as_id
  * @param {string} params.token - JWT token
  * @returns {Promise<Object>} 响应数据
  */
 export const deleteUser = async ({ userData, token }) => {
-	const response = await axios.delete(
-		`${process.env.REACT_APP_API_HOST}deluser`,
-		{
-			headers: { token },
-			data: userData,
-		}
+	const response = await axios.get(
+		`${process.env.REACT_APP_API_HOST}deluser/${userData.email_as_id}`,
+		{ headers: { token } }
+	);
+	return response.data;
+};
+
+/**
+ * 禁用用户
+ * 后端真实路由：PUT /v1/disableuser/:name
+ * @param {Object} params
+ * @param {Object} params.userData - 必须包含 email_as_id
+ * @param {string} params.token - JWT token
+ * @returns {Promise<Object>} 响应数据
+ */
+export const disableUser = async ({ userData, token }) => {
+	const response = await axios.put(
+		`${process.env.REACT_APP_API_HOST}disableuser/${userData.email_as_id}`,
+		{},
+		{ headers: { token, 'Content-Type': 'application/json' } }
+	);
+	return response.data;
+};
+
+/**
+ * 启用用户
+ * 后端真实路由：PUT /v1/enableuser/:name
+ * @param {Object} params
+ * @param {Object} params.userData - 必须包含 email_as_id
+ * @param {string} params.token - JWT token
+ * @returns {Promise<Object>} 响应数据
+ */
+export const enableUser = async ({ userData, token }) => {
+	const response = await axios.put(
+		`${process.env.REACT_APP_API_HOST}enableuser/${userData.email_as_id}`,
+		{},
+		{ headers: { token, 'Content-Type': 'application/json' } }
 	);
 	return response.data;
 };

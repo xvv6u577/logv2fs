@@ -130,6 +130,38 @@ export const useDeleteUser = (options = {}) => {
 };
 
 /**
+ * 禁用用户
+ */
+export const useDisableUser = (options = {}) => {
+	const token = useSelector((state) => state.login.token);
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: (userData) => api.disableUser({ userData, token }),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: queryKeys.users });
+		},
+		...options,
+	});
+};
+
+/**
+ * 启用用户
+ */
+export const useEnableUser = (options = {}) => {
+	const token = useSelector((state) => state.login.token);
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: (userData) => api.enableUser({ userData, token }),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: queryKeys.users });
+		},
+		...options,
+	});
+};
+
+/**
  * 添加/更新节点
  */
 export const useUpsertNodes = (options = {}) => {

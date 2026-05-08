@@ -4,8 +4,14 @@ import { alert, reset, success } from "../store/message";
 import axios from "axios";
 import Alert from "./alert";
 import AddUser from "./adduser";
-import { formatBytes, formatDate, getCurrentMonthTraffic, getCurrentYearTraffic, getTrafficOfTodayFromArray } from "../service/service";
-import { useUsers, useUpdateUser, useDeleteUser } from "../hooks/useQueries";
+import { formatBytes, formatDate, getCurrentMonthTraffic, getTrafficOfTodayFromArray } from "../service/service";
+import {
+	useUsers,
+	useUpdateUser,
+	useDeleteUser,
+	useDisableUser,
+	useEnableUser,
+} from "../hooks/useQueries";
 import { useWebSocket } from "../hooks/useWebSocket";
 
 const User = () => {
@@ -40,11 +46,13 @@ const User = () => {
 	const [paymentFormLoading, setPaymentFormLoading] = useState(false);
 
 	// 使用 WebSocket hook
-	const { status: wsStatus, isConnected } = useWebSocket();
-	
-	// 使用 mutation hooks
+	const { status: wsStatus } = useWebSocket();
+
+	// 使用 mutation hooks（成功后会自动 invalidate users 缓存，无需手动 reload）
 	const updateUserMutation = useUpdateUser();
 	const deleteUserMutation = useDeleteUser();
+	const disableUserMutation = useDisableUser();
+	const enableUserMutation = useEnableUser();
 
 	const dispatch = useDispatch();
 	const loginState = useSelector((state) => state.login);
@@ -218,102 +226,63 @@ const User = () => {
 			editData.password = editForm.password;
 		}
 
-		// 调用编辑用户API
-		axios
-			.post(`${process.env.REACT_APP_API_HOST}edit/${editingUser.email_as_id}`, editData, {
-				headers: { 
-					token: loginState.token,
-					'Content-Type': 'application/json'
-				},
-			})
-			.then((response) => {
-				dispatch(success({ show: true, content: response.data.message || "用户编辑成功" }));
+		// 调用编辑用户的 mutation hook，成功后 React Query 会自动刷新用户列表
+		updateUserMutation.mutate(editData, {
+			onSuccess: (data) => {
+				dispatch(success({ show: true, content: data.message || "用户编辑成功" }));
 				closeEditModal();
-				// 重新获取用户列表
-				window.location.reload();
-			})
-			.catch((err) => {
+			},
+			onError: (err) => {
 				if (err.response) {
 					dispatch(alert({ show: true, content: err.response.data.error || "编辑失败" }));
 				} else {
 					dispatch(alert({ show: true, content: "编辑失败: " + err.toString() }));
 				}
-			});
+			},
+		});
 	};
+
+	// 提取通用的 mutation 错误处理器，避免三处重复
+	const buildMutationCallbacks = (successText, errorText) => ({
+		onSuccess: (data) => {
+			dispatch(success({ show: true, content: data.message || successText }));
+		},
+		onError: (err) => {
+			if (err.response) {
+				dispatch(alert({ show: true, content: err.response.data.error || errorText }));
+			} else {
+				dispatch(alert({ show: true, content: `${errorText}: ${err.toString()}` }));
+			}
+		},
+	});
 
 	// 删除用户
 	const deleteUser = (user) => {
 		if (window.confirm(`确定要删除用户 "${user.name || user.email_as_id}" 吗？此操作不可撤销。`)) {
-			// 调用删除用户API
-			axios
-				.get(`${process.env.REACT_APP_API_HOST}deluser/${user.email_as_id}`, {
-					headers: { 
-						token: loginState.token,
-						'Content-Type': 'application/json'
-					},
-				})
-				.then((response) => {
-					dispatch(success({ show: true, content: response.data.message || "用户删除成功" }));
-					// 重新加载页面以刷新用户列表
-					window.location.reload();
-				})
-				.catch((err) => {
-					if (err.response) {
-						dispatch(alert({ show: true, content: err.response.data.error || "删除失败" }));
-					} else {
-						dispatch(alert({ show: true, content: "删除失败: " + err.toString() }));
-					}
-				});
+			deleteUserMutation.mutate(
+				{ email_as_id: user.email_as_id },
+				buildMutationCallbacks("用户删除成功", "删除失败")
+			);
 		}
 	};
 
 	// 禁用用户
 	const disableUser = (user) => {
 		if (window.confirm(`确定要禁用用户 "${user.name || user.email_as_id}" 吗？禁用后用户将无法使用服务。`)) {
-			axios
-				.put(`${process.env.REACT_APP_API_HOST}disableuser/${user.email_as_id}`, {}, {
-					headers: { 
-						token: loginState.token,
-						'Content-Type': 'application/json'
-					},
-				})
-				.then((response) => {
-					dispatch(success({ show: true, content: response.data.message || "用户已禁用" }));
-					// 重新加载页面以刷新用户列表
-					window.location.reload();
-				})
-				.catch((err) => {
-					if (err.response) {
-						dispatch(alert({ show: true, content: err.response.data.error || "禁用失败" }));
-					} else {
-						dispatch(alert({ show: true, content: "禁用失败: " + err.toString() }));
-					}
-				});
+			disableUserMutation.mutate(
+				{ email_as_id: user.email_as_id },
+				buildMutationCallbacks("用户已禁用", "禁用失败")
+			);
 		}
 	};
 
 	// 启用用户
 	const enableUser = (user) => {
 		if (window.confirm(`确定要启用用户 "${user.name || user.email_as_id}" 吗？`)) {
-			axios
-				.put(`${process.env.REACT_APP_API_HOST}enableuser/${user.email_as_id}`, {}, {
-					headers: { 
-						token: loginState.token,
-						'Content-Type': 'application/json'
-					},
-				})
-				.then((response) => {
-					dispatch(success({ show: true, content: response.data.message || "用户已启用" }));
-					// 重新加载页面以刷新用户列表
-					window.location.reload();
-				})
-				.catch((err) => {
-					if (err.response) {
-						dispatch(alert({ show: true, content: err.response.data.error || "启用失败" }));
-					} else {
-						dispatch(alert({ show: true, content: "启用失败: " + err.toString() }));
-					}
-				});
+			enableUserMutation.mutate(
+				{ email_as_id: user.email_as_id },
+				buildMutationCallbacks("用户已启用", "启用失败")
+			);
 		}
 	};
 
