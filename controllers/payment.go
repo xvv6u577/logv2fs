@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"sort"
 	"strconv"
 	"time"
 
@@ -14,9 +15,30 @@ import (
 	"github.com/xvv6u577/logv2fs/model"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
+
+// 计费模块设计取向（与之前版本相比的核心变化）：
+//
+//   - 唯一事实表：payment_records。一笔缴费 = 一行，不再向 daily_payment_allocations
+//     展开 N 行。collection size 直接缩小到原来的 ~1/服务天数。
+//   - 月/年统计走「实时分摊」：把每条 PaymentRecord 的金额按服务期均摊到日，
+//     再把日金额累加到对应月/年。整个过程发生在 Go 内存里，避免冗余物化。
+//   - daily_amount / service_days 仍保留为 PaymentRecord 自带的派生字段，
+//     在新增 / 更新 时由后端统一计算并写回，前端列表展示无需改动。
+
+// computeServiceDaysAndDaily 把 (amount, start, end) 转换成派生字段 (days, daily)。
+// 服务天数包含起止两端 —— 与前端 paymentRecords.js 的 calculateDays 对齐。
+func computeServiceDaysAndDaily(amount float64, start, end time.Time) (int, float64) {
+	if end.Before(start) {
+		return 0, 0
+	}
+	days := int(end.Sub(start).Hours()/24) + 1
+	if days <= 0 {
+		days = 1
+	}
+	return days, amount / float64(days)
+}
 
 // AddPaymentRecord 添加缴费记录
 func AddPaymentRecord() gin.HandlerFunc {
@@ -58,9 +80,7 @@ func AddPaymentRecord() gin.HandlerFunc {
 			return
 		}
 
-		// 计算服务天数（包含结束日期）
-		serviceDays := int(endDate.Sub(startDate).Hours()/24) + 1
-		dailyAmount := req.Amount / float64(serviceDays)
+		serviceDays, dailyAmount := computeServiceDaysAndDaily(req.Amount, startDate, endDate)
 
 		// 获取用户信息
 		userEmail, exists := c.Get("email")
@@ -71,7 +91,6 @@ func AddPaymentRecord() gin.HandlerFunc {
 
 		userName, _ := c.Get("username")
 
-		// 安全转换字符串
 		operatorEmail := ""
 		if userEmail != nil {
 			operatorEmail = userEmail.(string)
@@ -82,11 +101,10 @@ func AddPaymentRecord() gin.HandlerFunc {
 			operatorName = userName.(string)
 		}
 
-		// 创建缴费记录
 		paymentRecord := model.PaymentRecord{
 			ID:            primitive.NewObjectID(),
 			UserEmailAsId: req.UserEmailAsId,
-			UserName:      getUserNameByEmail(req.UserEmailAsId), // 获取被充值用户名
+			UserName:      getUserNameByEmail(req.UserEmailAsId),
 			Amount:        req.Amount,
 			StartDate:     startDate,
 			EndDate:       endDate,
@@ -99,18 +117,10 @@ func AddPaymentRecord() gin.HandlerFunc {
 			UpdatedAt:     time.Now(),
 		}
 
-		// 插入缴费记录
 		_, err = database.GetCollection(model.PaymentRecord{}).InsertOne(context.Background(), paymentRecord)
 		if err != nil {
 			log.Printf("添加缴费记录失败: %v", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "添加缴费记录失败"})
-			return
-		}
-
-		// 创建每日分摊记录
-		if err := createDailyAllocations(paymentRecord.ID, paymentRecord); err != nil {
-			log.Printf("创建每日分摊记录失败: %v", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "创建每日分摊记录失败"})
 			return
 		}
 
@@ -141,8 +151,9 @@ func GetUserPayments() gin.HandlerFunc {
 		var ctx, cancel = context.WithTimeout(context.Background(), 60*time.Second)
 		defer cancel()
 
-		// 查询该用户的所有缴费记录
-		cursor, err := database.GetCollection(model.PaymentRecord{}).Find(ctx, bson.M{"user_email_as_id": userEmail}, options.Find().SetSort(bson.D{{Key: "created_at", Value: -1}}))
+		cursor, err := database.GetCollection(model.PaymentRecord{}).Find(ctx,
+			bson.M{"user_email_as_id": userEmail},
+			options.Find().SetSort(bson.D{{Key: "created_at", Value: -1}}))
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "查询缴费记录失败"})
 			log.Printf("Query payment records error: %v", err)
@@ -157,7 +168,6 @@ func GetUserPayments() gin.HandlerFunc {
 			return
 		}
 
-		// 计算总金额
 		var totalAmount float64
 		for _, p := range payments {
 			totalAmount += p.Amount
@@ -171,21 +181,24 @@ func GetUserPayments() gin.HandlerFunc {
 	}
 }
 
-// GetPaymentStatistics 获取费用统计
+// GetPaymentStatistics 获取费用统计（仅支持 monthly / yearly / overall）
+//
+// 算法概要：
+//  1. 按 start_date <= Q_end AND end_date >= Q_start 拉出所有相关 PaymentRecord
+//  2. 对每条 record，把 [max(S, Q_start), min(E, Q_end)] 这段交集按月切片，
+//     每个月分到 daily_amount * 该月落入交集的天数
+//  3. 顺手统计每个月/年涉及到的 PaymentRecord 数量与不同用户数（去重）
 func GetPaymentStatistics() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// 检查权限
 		if err := helper.CheckUserType(c, "admin"); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
 
-		// 获取查询参数
-		statType := c.DefaultQuery("type", "daily") // daily, monthly, yearly, overall
+		statType := c.DefaultQuery("type", "monthly") // monthly | yearly | overall
 		startDateStr := c.Query("start_date")
 		endDateStr := c.Query("end_date")
 
-		// 解析日期范围
 		var startDate, endDate time.Time
 		var err error
 
@@ -196,7 +209,7 @@ func GetPaymentStatistics() gin.HandlerFunc {
 				return
 			}
 		} else {
-			// 默认为30天前
+			// 默认为 30 天前
 			startDate = time.Now().AddDate(0, 0, -30)
 		}
 
@@ -206,16 +219,13 @@ func GetPaymentStatistics() gin.HandlerFunc {
 				c.JSON(http.StatusBadRequest, gin.H{"error": "结束日期格式错误"})
 				return
 			}
-			// 设置为当天的最后一秒
-			endDate = endDate.Add(24*time.Hour - time.Second)
 		} else {
-			// 默认为今天
 			endDate = time.Now()
 		}
 
-		// 设置查询范围：startDate 00:00:00 到 endDate 23:59:59
-		startDateTime := time.Date(startDate.Year(), startDate.Month(), startDate.Day(), 0, 0, 0, 0, startDate.Location())
-		endDateTime := time.Date(endDate.Year(), endDate.Month(), endDate.Day(), 23, 59, 59, 999999999, endDate.Location())
+		// 查询区间统一在 UTC 下取「日」边界，避免和 PaymentRecord 中带时区的时间戳错位
+		startDateTime := time.Date(startDate.Year(), startDate.Month(), startDate.Day(), 0, 0, 0, 0, time.UTC)
+		endDateTime := time.Date(endDate.Year(), endDate.Month(), endDate.Day(), 23, 59, 59, 999999999, time.UTC)
 
 		stats := model.PaymentStatistics{
 			StartDate: startDateTime,
@@ -223,267 +233,224 @@ func GetPaymentStatistics() gin.HandlerFunc {
 			DateRange: fmt.Sprintf("%s 至 %s", startDate.Format("2006-01-02"), endDate.Format("2006-01-02")),
 		}
 
-		// 基于每日分摊记录进行统计
-		collection := database.GetCollection(model.DailyPaymentAllocation{})
+		records, err := findOverlappingPayments(startDateTime, endDateTime)
+		if err != nil {
+			log.Printf("查询缴费记录失败: %v", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "查询缴费记录失败"})
+			return
+		}
+
+		monthly, yearly := aggregatePayments(records, startDateTime, endDateTime)
 
 		switch statType {
-		case "daily":
-			dailyStats, err := getDailyStats(collection, startDateTime, endDateTime)
-			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "获取每日统计失败"})
-				return
-			}
-			stats.DailyStats = dailyStats
-
-			// 计算总计
-			for _, daily := range dailyStats {
-				stats.TotalAmount += daily.TotalAmount
-				stats.PaymentCount += daily.PaymentCount
-			}
-
 		case "monthly":
-			monthlyStats, err := getMonthlyStats(collection, startDateTime, endDateTime)
-			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "获取每月统计失败"})
-				return
-			}
-			stats.MonthlyStats = monthlyStats
-
-			// 计算总计
-			for _, monthly := range monthlyStats {
-				stats.TotalAmount += monthly.TotalAmount
-				stats.PaymentCount += monthly.PaymentCount
-			}
-
+			stats.MonthlyStats = bucketsToMonthly(monthly)
+			stats.TotalAmount, stats.PaymentCount = totalsFromBuckets(monthly)
 		case "yearly":
-			yearlyStats, err := getYearlyStats(collection, startDateTime, endDateTime)
-			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "获取每年统计失败"})
-				return
-			}
-			stats.YearlyStats = yearlyStats
-
-			// 计算总计
-			for _, yearly := range yearlyStats {
-				stats.TotalAmount += yearly.TotalAmount
-				stats.PaymentCount += yearly.PaymentCount
-			}
-
+			stats.YearlyStats = bucketsToYearly(yearly)
+			stats.TotalAmount, stats.PaymentCount = totalsFromBuckets(yearly)
 		case "overall":
-			// 获取所有类型的统计
-			dailyStats, _ := getDailyStats(collection, startDateTime, endDateTime)
-			monthlyStats, _ := getMonthlyStats(collection, startDateTime, endDateTime)
-			yearlyStats, _ := getYearlyStats(collection, startDateTime, endDateTime)
-
-			stats.DailyStats = dailyStats
-			stats.MonthlyStats = monthlyStats
-			stats.YearlyStats = yearlyStats
-
-			// 基于日统计计算总计（避免重复计算）
-			for _, daily := range dailyStats {
-				stats.TotalAmount += daily.TotalAmount
-				stats.PaymentCount += daily.PaymentCount
-			}
+			stats.MonthlyStats = bucketsToMonthly(monthly)
+			stats.YearlyStats = bucketsToYearly(yearly)
+			// 用月桶推总数，避免年/月口径不一致
+			stats.TotalAmount, stats.PaymentCount = totalsFromBuckets(monthly)
+		default:
+			c.JSON(http.StatusBadRequest, gin.H{"error": "不支持的统计类型，仅支持 monthly / yearly / overall"})
+			return
 		}
 
 		c.JSON(http.StatusOK, stats)
 	}
 }
 
-// 获取每日统计
-func getDailyStats(collection *mongo.Collection, startDate, endDate time.Time) ([]model.DailyPaymentStats, error) {
-	pipeline := []bson.M{
-		{
-			"$match": bson.M{
-				"date": bson.M{
-					"$gte": startDate,
-					"$lte": endDate,
-				},
-			},
-		},
-		{
-			"$group": bson.M{
-				"_id":           "$date_string",
-				"total_amount":  bson.M{"$sum": "$allocated_amount"},
-				"payment_count": bson.M{"$sum": 1},
-				"users":         bson.M{"$addToSet": "$user_email_as_id"},
-			},
-		},
-		{
-			"$project": bson.M{
-				"date":          "$_id",
-				"total_amount":  1,
-				"payment_count": 1,
-				"user_count":    bson.M{"$size": "$users"},
-			},
-		},
-		{
-			"$sort": bson.M{"date": 1},
-		},
+// periodBucket 按月或按年聚合时的中间结构
+type periodBucket struct {
+	Amount   float64
+	Payments map[primitive.ObjectID]struct{}
+	Users    map[string]struct{}
+}
+
+func newBucket() *periodBucket {
+	return &periodBucket{
+		Payments: map[primitive.ObjectID]struct{}{},
+		Users:    map[string]struct{}{},
+	}
+}
+
+// findOverlappingPayments 拉出所有与 [qStart, qEnd] 有交集的缴费记录
+func findOverlappingPayments(qStart, qEnd time.Time) ([]model.PaymentRecord, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+
+	filter := bson.M{
+		"start_date": bson.M{"$lte": qEnd},
+		"end_date":   bson.M{"$gte": qStart},
 	}
 
-	cursor, err := collection.Aggregate(context.Background(), pipeline)
+	cursor, err := database.GetCollection(model.PaymentRecord{}).Find(ctx, filter)
 	if err != nil {
 		return nil, err
 	}
-	defer cursor.Close(context.Background())
+	defer cursor.Close(ctx)
 
-	var results []model.DailyPaymentStats
-	for cursor.Next(context.Background()) {
-		var result struct {
-			Date         string  `bson:"date"`
-			TotalAmount  float64 `bson:"total_amount"`
-			PaymentCount int64   `bson:"payment_count"`
-			UserCount    int64   `bson:"user_count"`
-		}
-		if err := cursor.Decode(&result); err != nil {
-			continue
-		}
-
-		results = append(results, model.DailyPaymentStats{
-			Date:         result.Date,
-			TotalAmount:  result.TotalAmount,
-			PaymentCount: result.PaymentCount,
-			UserCount:    result.UserCount,
-		})
-	}
-
-	return results, nil
-}
-
-// 获取每月统计
-func getMonthlyStats(collection *mongo.Collection, startDate, endDate time.Time) ([]model.MonthlyPaymentStats, error) {
-	pipeline := []bson.M{
-		{
-			"$match": bson.M{
-				"date": bson.M{
-					"$gte": startDate,
-					"$lte": endDate,
-				},
-			},
-		},
-		{
-			"$group": bson.M{
-				"_id": bson.M{
-					"$dateToString": bson.M{
-						"format": "%Y%m",
-						"date":   "$date",
-					},
-				},
-				"total_amount":  bson.M{"$sum": "$allocated_amount"},
-				"payment_count": bson.M{"$sum": 1},
-				"users":         bson.M{"$addToSet": "$user_email_as_id"},
-			},
-		},
-		{
-			"$project": bson.M{
-				"month":         "$_id",
-				"total_amount":  1,
-				"payment_count": 1,
-				"user_count":    bson.M{"$size": "$users"},
-			},
-		},
-		{
-			"$sort": bson.M{"month": 1},
-		},
-	}
-
-	cursor, err := collection.Aggregate(context.Background(), pipeline)
-	if err != nil {
+	var records []model.PaymentRecord
+	if err := cursor.All(ctx, &records); err != nil {
 		return nil, err
 	}
-	defer cursor.Close(context.Background())
-
-	var results []model.MonthlyPaymentStats
-	for cursor.Next(context.Background()) {
-		var result struct {
-			Month        string  `bson:"month"`
-			TotalAmount  float64 `bson:"total_amount"`
-			PaymentCount int64   `bson:"payment_count"`
-			UserCount    int64   `bson:"user_count"`
-		}
-		if err := cursor.Decode(&result); err != nil {
-			continue
-		}
-
-		results = append(results, model.MonthlyPaymentStats{
-			Month:        result.Month,
-			TotalAmount:  result.TotalAmount,
-			PaymentCount: result.PaymentCount,
-			UserCount:    result.UserCount,
-		})
-	}
-
-	return results, nil
+	return records, nil
 }
 
-// 获取每年统计
-func getYearlyStats(collection *mongo.Collection, startDate, endDate time.Time) ([]model.YearlyPaymentStats, error) {
-	pipeline := []bson.M{
-		{
-			"$match": bson.M{
-				"date": bson.M{
-					"$gte": startDate,
-					"$lte": endDate,
-				},
-			},
-		},
-		{
-			"$group": bson.M{
-				"_id": bson.M{
-					"$dateToString": bson.M{
-						"format": "%Y",
-						"date":   "$date",
-					},
-				},
-				"total_amount":  bson.M{"$sum": "$allocated_amount"},
-				"payment_count": bson.M{"$sum": 1},
-				"users":         bson.M{"$addToSet": "$user_email_as_id"},
-			},
-		},
-		{
-			"$project": bson.M{
-				"year":          "$_id",
-				"total_amount":  1,
-				"payment_count": 1,
-				"user_count":    bson.M{"$size": "$users"},
-			},
-		},
-		{
-			"$sort": bson.M{"year": 1},
-		},
+// aggregatePayments 在内存里把 records 按月、按年同时分摊
+//
+// 月桶 key = "YYYYMM"，年桶 key = "YYYY"。同一笔缴费横跨 N 个月 / Y 年时，
+// 在每个月 / 年里都计 1 次（PaymentCount / UserCount 通过 set 去重）。
+func aggregatePayments(records []model.PaymentRecord, qStart, qEnd time.Time) (
+	monthly map[string]*periodBucket, yearly map[string]*periodBucket,
+) {
+	monthly = map[string]*periodBucket{}
+	yearly = map[string]*periodBucket{}
+
+	for i := range records {
+		rec := &records[i]
+		allocateOne(rec, qStart, qEnd, monthly, yearly)
 	}
-
-	cursor, err := collection.Aggregate(context.Background(), pipeline)
-	if err != nil {
-		return nil, err
-	}
-	defer cursor.Close(context.Background())
-
-	var results []model.YearlyPaymentStats
-	for cursor.Next(context.Background()) {
-		var result struct {
-			Year         string  `bson:"year"`
-			TotalAmount  float64 `bson:"total_amount"`
-			PaymentCount int64   `bson:"payment_count"`
-			UserCount    int64   `bson:"user_count"`
-		}
-		if err := cursor.Decode(&result); err != nil {
-			continue
-		}
-
-		results = append(results, model.YearlyPaymentStats{
-			Year:         result.Year,
-			TotalAmount:  result.TotalAmount,
-			PaymentCount: result.PaymentCount,
-			UserCount:    result.UserCount,
-		})
-	}
-
-	return results, nil
+	return
 }
 
-// GetPaymentRecords 获取缴费记录列表
+// allocateOne 把一条 PaymentRecord 按月切片分摊到 monthly / yearly 桶
+func allocateOne(rec *model.PaymentRecord, qStart, qEnd time.Time,
+	monthly, yearly map[string]*periodBucket) {
+
+	// 计算和查询区间的交集
+	iStart := maxTime(rec.StartDate, qStart)
+	iEnd := minTime(rec.EndDate, qEnd)
+	if iEnd.Before(iStart) {
+		return
+	}
+
+	// 把交集两端规整到 UTC 日，避免时分秒误差
+	s := time.Date(iStart.Year(), iStart.Month(), iStart.Day(), 0, 0, 0, 0, time.UTC)
+	e := time.Date(iEnd.Year(), iEnd.Month(), iEnd.Day(), 0, 0, 0, 0, time.UTC)
+
+	// 容错：DailyAmount 缺失时即时算（兼容历史脏数据）
+	daily := rec.DailyAmount
+	if daily == 0 && rec.ServiceDays > 0 {
+		daily = rec.Amount / float64(rec.ServiceDays)
+	}
+
+	cur := time.Date(s.Year(), s.Month(), 1, 0, 0, 0, 0, time.UTC)
+	endMonth := time.Date(e.Year(), e.Month(), 1, 0, 0, 0, 0, time.UTC)
+
+	for !cur.After(endMonth) {
+		monthStart := cur
+		monthEnd := cur.AddDate(0, 1, -1) // 该月最后一天
+
+		lo := monthStart
+		if s.After(lo) {
+			lo = s
+		}
+		hi := monthEnd
+		if e.Before(hi) {
+			hi = e
+		}
+
+		if !hi.Before(lo) {
+			days := int(hi.Sub(lo).Hours()/24) + 1
+			amount := daily * float64(days)
+			mKey := cur.Format("200601")
+			yKey := cur.Format("2006")
+
+			mb := monthly[mKey]
+			if mb == nil {
+				mb = newBucket()
+				monthly[mKey] = mb
+			}
+			mb.Amount += amount
+			mb.Payments[rec.ID] = struct{}{}
+			mb.Users[rec.UserEmailAsId] = struct{}{}
+
+			yb := yearly[yKey]
+			if yb == nil {
+				yb = newBucket()
+				yearly[yKey] = yb
+			}
+			yb.Amount += amount
+			yb.Payments[rec.ID] = struct{}{}
+			yb.Users[rec.UserEmailAsId] = struct{}{}
+		}
+
+		cur = cur.AddDate(0, 1, 0)
+	}
+}
+
+func bucketsToMonthly(buckets map[string]*periodBucket) []model.MonthlyPaymentStats {
+	keys := sortedKeys(buckets)
+	out := make([]model.MonthlyPaymentStats, 0, len(keys))
+	for _, k := range keys {
+		b := buckets[k]
+		out = append(out, model.MonthlyPaymentStats{
+			Month:        k,
+			TotalAmount:  b.Amount,
+			PaymentCount: int64(len(b.Payments)),
+			UserCount:    int64(len(b.Users)),
+		})
+	}
+	return out
+}
+
+func bucketsToYearly(buckets map[string]*periodBucket) []model.YearlyPaymentStats {
+	keys := sortedKeys(buckets)
+	out := make([]model.YearlyPaymentStats, 0, len(keys))
+	for _, k := range keys {
+		b := buckets[k]
+		out = append(out, model.YearlyPaymentStats{
+			Year:         k,
+			TotalAmount:  b.Amount,
+			PaymentCount: int64(len(b.Payments)),
+			UserCount:    int64(len(b.Users)),
+		})
+	}
+	return out
+}
+
+// totalsFromBuckets 用某一组互斥桶（同一记录可能出现在多个桶里，但金额不重叠）
+// 推算出总金额与去重后的缴费笔数。
+func totalsFromBuckets(buckets map[string]*periodBucket) (float64, int64) {
+	var total float64
+	allPayments := map[primitive.ObjectID]struct{}{}
+	for _, b := range buckets {
+		total += b.Amount
+		for id := range b.Payments {
+			allPayments[id] = struct{}{}
+		}
+	}
+	return total, int64(len(allPayments))
+}
+
+func sortedKeys(buckets map[string]*periodBucket) []string {
+	keys := make([]string, 0, len(buckets))
+	for k := range buckets {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	return keys
+}
+
+func maxTime(a, b time.Time) time.Time {
+	if a.After(b) {
+		return a
+	}
+	return b
+}
+
+func minTime(a, b time.Time) time.Time {
+	if a.Before(b) {
+		return a
+	}
+	return b
+}
+
+// GetPaymentRecords 获取缴费记录列表（分页）
 func GetPaymentRecords() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
@@ -499,20 +466,17 @@ func GetPaymentRecords() gin.HandlerFunc {
 
 		collection := database.GetCollection(model.PaymentRecord{})
 
-		// 构建查询条件
 		filter := bson.M{}
 		if userEmail != "" {
 			filter["user_email_as_id"] = userEmail
 		}
 
-		// 计算总数
 		total, err := collection.CountDocuments(context.Background(), filter)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "获取记录总数失败"})
 			return
 		}
 
-		// 查询数据
 		findOptions := options.Find()
 		findOptions.SetLimit(int64(limit))
 		findOptions.SetSkip(int64((page - 1) * limit))
@@ -541,9 +505,10 @@ func GetPaymentRecords() gin.HandlerFunc {
 }
 
 // DeletePaymentRecord 删除缴费记录
+//
+// 改造后不再有 daily_payment_allocations 派生表需要联动清理。
 func DeletePaymentRecord() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// 权限检查 - 只有管理员可以删除缴费记录
 		if err := helper.CheckUserType(c, "admin"); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
@@ -555,17 +520,15 @@ func DeletePaymentRecord() gin.HandlerFunc {
 			return
 		}
 
-		var ctx, cancel = context.WithTimeout(context.Background(), 60*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 		defer cancel()
 
-		// 转换ID
 		objID, err := primitive.ObjectIDFromHex(paymentId)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "无效的缴费记录ID"})
 			return
 		}
 
-		// 先查询记录是否存在
 		var payment model.PaymentRecord
 		err = database.GetCollection(model.PaymentRecord{}).FindOne(ctx, bson.M{"_id": objID}).Decode(&payment)
 		if err != nil {
@@ -573,14 +536,6 @@ func DeletePaymentRecord() gin.HandlerFunc {
 			return
 		}
 
-		// 删除每日分摊记录
-		allocationCollection := database.GetCollection(model.DailyPaymentAllocation{})
-		_, err = allocationCollection.DeleteMany(ctx, bson.M{"payment_record_id": objID})
-		if err != nil {
-			log.Printf("删除每日分摊记录失败: %v", err)
-		}
-
-		// 删除缴费记录
 		result, err := database.GetCollection(model.PaymentRecord{}).DeleteOne(ctx, bson.M{"_id": objID})
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "删除缴费记录失败"})
@@ -599,16 +554,18 @@ func DeletePaymentRecord() gin.HandlerFunc {
 	}
 }
 
-// UpdatePaymentRecord 更新缴费记录 - MongoDB版本
+// UpdatePaymentRecord 更新缴费记录
+//
+// 关键修复：amount / start_date / end_date 任一字段变化时，
+// 必须同步重算 service_days 与 daily_amount，防止派生字段失同步。
 func UpdatePaymentRecord() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// 权限检查 - 只有管理员可以更新缴费记录
 		if err := helper.CheckUserType(c, "admin"); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
 
-		var ctx, cancel = context.WithTimeout(context.Background(), 60*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 		defer cancel()
 
 		recordId := c.Param("id")
@@ -617,14 +574,12 @@ func UpdatePaymentRecord() gin.HandlerFunc {
 			return
 		}
 
-		// 转换ID
 		objectId, err := primitive.ObjectIDFromHex(recordId)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "无效的记录ID"})
 			return
 		}
 
-		// 查找原记录
 		var existingRecord model.PaymentRecord
 		err = database.GetCollection(model.PaymentRecord{}).FindOne(ctx, bson.M{"_id": objectId}).Decode(&existingRecord)
 		if err != nil {
@@ -632,7 +587,6 @@ func UpdatePaymentRecord() gin.HandlerFunc {
 			return
 		}
 
-		// 绑定更新数据
 		var updateData model.PaymentRecord
 		if err := c.BindJSON(&updateData); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -640,35 +594,23 @@ func UpdatePaymentRecord() gin.HandlerFunc {
 			return
 		}
 
-		// 构建更新字段
-		update := bson.M{"updated_at": time.Now()}
-
-		// 只更新提供的字段
-		if updateData.Amount > 0 {
-			update["amount"] = updateData.Amount
-		}
-
-		if !updateData.StartDate.IsZero() {
-			update["start_date"] = updateData.StartDate
-		}
-
-		if !updateData.EndDate.IsZero() {
-			update["end_date"] = updateData.EndDate
-		}
-
-		if updateData.Remark != "" {
-			update["remark"] = updateData.Remark
-		}
-
-		// 验证日期逻辑
+		// 取「合并后」的最终值，再决定是否需要重算派生字段
+		amount := existingRecord.Amount
 		startDate := existingRecord.StartDate
 		endDate := existingRecord.EndDate
+		needRecalc := false
 
-		if !updateData.StartDate.IsZero() {
-			startDate = updateData.StartDate
+		if updateData.Amount > 0 && updateData.Amount != existingRecord.Amount {
+			amount = updateData.Amount
+			needRecalc = true
 		}
-		if !updateData.EndDate.IsZero() {
+		if !updateData.StartDate.IsZero() && !updateData.StartDate.Equal(existingRecord.StartDate) {
+			startDate = updateData.StartDate
+			needRecalc = true
+		}
+		if !updateData.EndDate.IsZero() && !updateData.EndDate.Equal(existingRecord.EndDate) {
 			endDate = updateData.EndDate
+			needRecalc = true
 		}
 
 		if endDate.Before(startDate) {
@@ -676,7 +618,27 @@ func UpdatePaymentRecord() gin.HandlerFunc {
 			return
 		}
 
-		// 更新记录
+		update := bson.M{"updated_at": time.Now()}
+
+		if needRecalc {
+			serviceDays, dailyAmount := computeServiceDaysAndDaily(amount, startDate, endDate)
+			update["amount"] = amount
+			update["start_date"] = startDate
+			update["end_date"] = endDate
+			update["service_days"] = serviceDays
+			update["daily_amount"] = dailyAmount
+		}
+
+		if updateData.Remark != "" && updateData.Remark != existingRecord.Remark {
+			update["remark"] = updateData.Remark
+		}
+
+		// 只有 updated_at 一项时直接拒绝，避免「空更新」让用户误以为修改了字段
+		if len(update) == 1 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "没有可更新的字段"})
+			return
+		}
+
 		result, err := database.GetCollection(model.PaymentRecord{}).UpdateOne(
 			ctx,
 			bson.M{"_id": objectId},
@@ -700,9 +662,8 @@ func UpdatePaymentRecord() gin.HandlerFunc {
 	}
 }
 
-// 获取用户名
+// 获取用户名（用户表里查 name；查不到则退化为邮箱）
 func getUserNameByEmail(email string) string {
-	// 从users集合查询用户名
 	userCollection := database.GetCollection(model.UserTrafficLogs{})
 	var user struct {
 		Name string `bson:"name"`
@@ -710,40 +671,8 @@ func getUserNameByEmail(email string) string {
 
 	err := userCollection.FindOne(context.Background(), bson.M{"email_as_id": email}).Decode(&user)
 	if err != nil {
-		return email // 如果找不到用户名，返回邮箱
+		return email
 	}
 
 	return user.Name
-}
-
-// 创建每日分摊记录
-func createDailyAllocations(paymentRecordID primitive.ObjectID, payment model.PaymentRecord) error {
-	collection := database.GetCollection(model.DailyPaymentAllocation{})
-
-	// 生成从开始日期到结束日期的每日分摊记录
-	current := payment.StartDate
-	for current.Before(payment.EndDate) || current.Equal(payment.EndDate) {
-		allocation := model.DailyPaymentAllocation{
-			ID:               primitive.NewObjectID(),
-			PaymentRecordID:  paymentRecordID,
-			UserEmailAsId:    payment.UserEmailAsId,
-			UserName:         payment.UserName,
-			Date:             current,
-			DateString:       current.Format("20060102"),
-			AllocatedAmount:  payment.DailyAmount,
-			OriginalAmount:   payment.Amount,
-			ServiceStartDate: payment.StartDate,
-			ServiceEndDate:   payment.EndDate,
-			CreatedAt:        time.Now(),
-		}
-
-		_, err := collection.InsertOne(context.Background(), allocation)
-		if err != nil {
-			return err
-		}
-
-		current = current.AddDate(0, 0, 1) // 增加一天
-	}
-
-	return nil
 }

@@ -63,13 +63,16 @@ func DBinstance() *mongo.Client {
 // 当前涵盖：
 //   - user_traffic_periods: 唯一复合索引 (email_as_id, kind, period)
 //   - node_traffic_periods: 唯一复合索引 (domain_as_id, kind, period)
+//   - payment_records:      非唯一索引 (start_date, end_date) 与 (user_email_as_id)
+//     用于费用统计接口的实时区间扫描，以及按用户拉取缴费历史。
 //
-// 索引已存在时 CreateMany 是幂等的；任何失败都只打日志而不中断启动，
+// 索引已存在时 CreateOne 是幂等的；任何失败都只打日志而不中断启动，
 // 以便在权限受限的运行环境下也能降级跑起来。
 func ensureCoreIndexes(ctx context.Context, client *mongo.Client) {
 	db := client.Database("logV2rayTrafficDB")
 
-	indexJobs := []struct {
+	// 周期表的 (owner, kind, period) 唯一索引
+	uniqueOwnerJobs := []struct {
 		collection string
 		ownerKey   string
 	}{
@@ -77,7 +80,7 @@ func ensureCoreIndexes(ctx context.Context, client *mongo.Client) {
 		{"node_traffic_periods", "domain_as_id"},
 	}
 
-	for _, job := range indexJobs {
+	for _, job := range uniqueOwnerJobs {
 		coll := db.Collection(job.collection)
 		idx := mongo.IndexModel{
 			Keys: bson.D{
@@ -94,6 +97,32 @@ func ensureCoreIndexes(ctx context.Context, client *mongo.Client) {
 			continue
 		}
 		log.Printf("ensureCoreIndexes: %s 唯一索引就绪 (%s, kind, period)", job.collection, job.ownerKey)
+	}
+
+	// payment_records: 计费统计 / 用户历史查询常用索引
+	paymentColl := db.Collection("payment_records")
+	paymentIndexes := []mongo.IndexModel{
+		{
+			// 区间扫描：findOverlappingPayments 用 start_date <= Q_end AND end_date >= Q_start
+			Keys: bson.D{
+				{Key: "start_date", Value: 1},
+				{Key: "end_date", Value: 1},
+			},
+			Options: options.Index().SetName("idx_start_end"),
+		},
+		{
+			// 用户维度查询：GetUserPayments / GetPaymentRecords?user_email=...
+			Keys:    bson.D{{Key: "user_email_as_id", Value: 1}},
+			Options: options.Index().SetName("idx_user_email"),
+		},
+	}
+	for _, idx := range paymentIndexes {
+		if _, err := paymentColl.Indexes().CreateOne(ctx, idx); err != nil {
+			log.Printf("ensureCoreIndexes 警告: 为 payment_records 创建索引 %s 失败: %v",
+				*idx.Options.Name, err)
+			continue
+		}
+		log.Printf("ensureCoreIndexes: payment_records 索引就绪 %s", *idx.Options.Name)
 	}
 }
 

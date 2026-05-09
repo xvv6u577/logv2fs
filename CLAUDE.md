@@ -80,8 +80,7 @@ make web                # 开发态，自动代理到后端 API
 - `USER_TRAFFIC_LOGS` —— 用户信息及小时/日/月/年流量日志
 - `NODE_TRAFFIC_LOGS` —— 节点流量统计
 - `subscription_nodes` —— 代理节点配置
-- `payment_records` —— 缴费记录
-- `daily_payment_allocations` —— 每日分摊
+- `payment_records` —— 缴费记录（费用领域唯一事实表，月/年统计在接口里实时分摊算出，不再物化每日分摊集合）
 - `CUSTOM_DATES` —— 节点自定义日期
 
 集合名通过 `model.X.CollectionName()` 暴露，避免硬编码。

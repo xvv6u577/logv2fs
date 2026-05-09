@@ -3,6 +3,10 @@ import { useSelector, useDispatch } from 'react-redux';
 import { alert } from '../store/message';
 import axios from 'axios';
 
+// 计费统计页（仅按月 / 按年 / 综合）
+//
+// 后端改造后已不再支持「按日统计」：所有金额都按服务期均摊到日，再聚合到月/年。
+// 因此本组件去掉了 daily 选项与日级表格，默认进入按月。
 const PaymentStatistics = () => {
 	const [statistics, setStatistics] = useState(null);
 	const [loading, setLoading] = useState(false);
@@ -15,7 +19,6 @@ const PaymentStatistics = () => {
 	const dispatch = useDispatch();
 	const loginState = useSelector((state) => state.login);
 
-	// 通用样式类
 	const styles = {
 		container: "min-h-screen bg-gray-900 text-white p-6",
 		card: "bg-gray-800 rounded-lg shadow-lg p-6",
@@ -32,7 +35,6 @@ const PaymentStatistics = () => {
 		tableRow: "border-b border-gray-700 hover:bg-gray-700",
 	};
 
-	// 格式化金额
 	const formatAmount = (amount) => {
 		return new Intl.NumberFormat('zh-CN', {
 			style: 'currency',
@@ -40,12 +42,9 @@ const PaymentStatistics = () => {
 		}).format(amount);
 	};
 
-	// 格式化日期
+	// 把后端返回的 YYYYMM / YYYY 字符串格式化为人类友好的标签
 	const formatDate = (dateStr, type) => {
-		if (type === 'daily') {
-			// 20240101 -> 2024-01-01
-			return `${dateStr.slice(0, 4)}-${dateStr.slice(4, 6)}-${dateStr.slice(6, 8)}`;
-		} else if (type === 'monthly') {
+		if (type === 'monthly') {
 			// 202401 -> 2024年1月
 			return `${dateStr.slice(0, 4)}年${parseInt(dateStr.slice(4, 6))}月`;
 		} else if (type === 'yearly') {
@@ -55,7 +54,6 @@ const PaymentStatistics = () => {
 		return dateStr;
 	};
 
-	// 获取统计数据
 	const fetchStatistics = () => {
 		setLoading(true);
 
@@ -85,13 +83,11 @@ const PaymentStatistics = () => {
 			});
 	};
 
-	// 初始加载
 	useEffect(() => {
 		fetchStatistics();
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [statType, dateRange]);
 
-	// 统计卡片组件
 	const StatCard = ({ title, value, subValue, color }) => (
 		<div className={`${styles.statCard} ${color}`}>
 			<h3 className="text-gray-400 text-sm mb-2">{title}</h3>
@@ -119,8 +115,8 @@ const PaymentStatistics = () => {
 								value={statType}
 								onChange={(e) => setStatType(e.target.value)}
 								className={styles.select}
+								aria-label="统计类型"
 							>
-								<option value="daily">按日统计</option>
 								<option value="monthly">按月统计</option>
 								<option value="yearly">按年统计</option>
 								<option value="overall">综合统计</option>
@@ -135,6 +131,7 @@ const PaymentStatistics = () => {
 								value={dateRange.startDate}
 								onChange={(e) => setDateRange({ ...dateRange, startDate: e.target.value })}
 								className={styles.input}
+								aria-label="开始日期"
 							/>
 						</div>
 
@@ -146,6 +143,7 @@ const PaymentStatistics = () => {
 								value={dateRange.endDate}
 								onChange={(e) => setDateRange({ ...dateRange, endDate: e.target.value })}
 								className={styles.input}
+								aria-label="结束日期"
 							/>
 						</div>
 
@@ -188,26 +186,6 @@ const PaymentStatistics = () => {
 						{/* 综合统计 */}
 						{statType === 'overall' && (
 							<div className="p-6 space-y-6">
-								{/* 最近日统计 */}
-								{statistics.daily_stats && statistics.daily_stats.length > 0 && (
-									<div>
-										<h4 className="text-md font-medium text-gray-300 mb-3">最近日统计</h4>
-										<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-											{statistics.daily_stats.slice(0, 6).map((stat, index) => (
-												<div key={index} className="bg-gray-700 rounded-lg p-3">
-													<p className="text-sm text-gray-400">{formatDate(stat.date, 'daily')}</p>
-													<p className="text-lg font-semibold text-green-400 mt-1">
-														{formatAmount(stat.total_amount)}
-													</p>
-													<p className="text-xs text-gray-500">
-														{stat.payment_count} 笔 / {stat.user_count} 人
-													</p>
-												</div>
-											))}
-										</div>
-									</div>
-								)}
-
 								{/* 最近月统计 */}
 								{statistics.monthly_stats && statistics.monthly_stats.length > 0 && (
 									<div>
@@ -227,6 +205,26 @@ const PaymentStatistics = () => {
 										</div>
 									</div>
 								)}
+
+								{/* 最近年统计 */}
+								{statistics.yearly_stats && statistics.yearly_stats.length > 0 && (
+									<div>
+										<h4 className="text-md font-medium text-gray-300 mb-3">最近年统计</h4>
+										<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+											{statistics.yearly_stats.slice(0, 6).map((stat, index) => (
+												<div key={index} className="bg-gray-700 rounded-lg p-3">
+													<p className="text-sm text-gray-400">{formatDate(stat.year, 'yearly')}</p>
+													<p className="text-lg font-semibold text-green-400 mt-1">
+														{formatAmount(stat.total_amount)}
+													</p>
+													<p className="text-xs text-gray-500">
+														{stat.payment_count} 笔 / {stat.user_count} 人
+													</p>
+												</div>
+											))}
+										</div>
+									</div>
+								)}
 							</div>
 						)}
 
@@ -234,42 +232,9 @@ const PaymentStatistics = () => {
 						{statType && (
 							<div className={styles.card}>
 								<h3 className="text-lg font-semibold mb-4">
-									{statType === 'daily' ? '每日统计' : 
-									 statType === 'monthly' ? '每月统计' : 
+									{statType === 'monthly' ? '每月统计' :
 									 statType === 'yearly' ? '每年统计' : ''}
 								</h3>
-
-								{/* 日统计表 */}
-								{statType === 'daily' && statistics.daily_stats && statistics.daily_stats.length > 0 && (
-									<div className="overflow-x-auto">
-										<table className={styles.table}>
-											<thead className={styles.tableHeader}>
-												<tr>
-													<th className="px-6 py-3">日期</th>
-													<th className="px-6 py-3">收入金额</th>
-													<th className="px-6 py-3">缴费次数</th>
-													<th className="px-6 py-3">缴费用户数</th>
-													<th className="px-6 py-3">平均金额</th>
-												</tr>
-											</thead>
-											<tbody>
-												{statistics.daily_stats.map((stat) => (
-													<tr key={stat.date} className={styles.tableRow}>
-														<td className="px-6 py-4">{formatDate(stat.date, 'daily')}</td>
-														<td className="px-6 py-4 font-semibold text-green-400">
-															{formatAmount(stat.total_amount)}
-														</td>
-														<td className="px-6 py-4">{stat.payment_count}</td>
-														<td className="px-6 py-4">{stat.user_count}</td>
-														<td className="px-6 py-4">
-															{formatAmount(stat.total_amount / stat.payment_count)}
-														</td>
-													</tr>
-												))}
-											</tbody>
-										</table>
-									</div>
-								)}
 
 								{/* 月统计表 */}
 								{statType === 'monthly' && statistics.monthly_stats && statistics.monthly_stats.length > 0 && (
@@ -294,7 +259,9 @@ const PaymentStatistics = () => {
 														<td className="px-6 py-4">{stat.payment_count}</td>
 														<td className="px-6 py-4">{stat.user_count}</td>
 														<td className="px-6 py-4">
-															{formatAmount(stat.total_amount / stat.payment_count)}
+															{stat.payment_count > 0
+																? formatAmount(stat.total_amount / stat.payment_count)
+																: formatAmount(0)}
 														</td>
 													</tr>
 												))}
@@ -326,7 +293,9 @@ const PaymentStatistics = () => {
 														<td className="px-6 py-4">{stat.payment_count}</td>
 														<td className="px-6 py-4">{stat.user_count}</td>
 														<td className="px-6 py-4">
-															{formatAmount(stat.total_amount / stat.payment_count)}
+															{stat.payment_count > 0
+																? formatAmount(stat.total_amount / stat.payment_count)
+																: formatAmount(0)}
 														</td>
 													</tr>
 												))}
@@ -336,8 +305,7 @@ const PaymentStatistics = () => {
 								)}
 
 								{/* 无数据提示 */}
-								{((statType === 'daily' && (!statistics.daily_stats || statistics.daily_stats.length === 0)) ||
-								  (statType === 'monthly' && (!statistics.monthly_stats || statistics.monthly_stats.length === 0)) ||
+								{((statType === 'monthly' && (!statistics.monthly_stats || statistics.monthly_stats.length === 0)) ||
 								  (statType === 'yearly' && (!statistics.yearly_stats || statistics.yearly_stats.length === 0))) && (
 									<div className="text-center py-8 text-gray-400">
 										<p>暂无数据</p>
@@ -352,4 +320,4 @@ const PaymentStatistics = () => {
 	);
 };
 
-export default PaymentStatistics; 
+export default PaymentStatistics;

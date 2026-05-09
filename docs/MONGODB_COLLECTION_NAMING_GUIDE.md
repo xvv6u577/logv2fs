@@ -61,7 +61,10 @@ var (
 
 ### 缴费管理相关
 - `PaymentRecord` → `payment_records`
-- `DailyPaymentAllocation` → `daily_payment_allocations`
+
+> 历史上曾存在 `DailyPaymentAllocation` → `daily_payment_allocations`（每日费用分摊表），
+> 现已废弃：所有月/年统计直接基于 `payment_records` 实时分摊计算。
+> 老集合通过 `./main drop-daily-allocations --dry-run=false` 一次性清理。
 
 ## 使用方法
 

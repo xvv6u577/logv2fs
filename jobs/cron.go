@@ -147,8 +147,8 @@ func LogNodeTraffic(collection *mongo.Collection, domain string, timestamp time.
 // Cron_loggingJobs 注册定时任务：每 15 分钟将 sing-box 中累积的流量数据写入 MongoDB
 func Cron_loggingJobs(c *cron.Cron, instance *box.Box) {
 
-	c.AddFunc("0 * * * * *", func() {
-		// c.AddFunc("0 */15 * * * *", func() {
+	// c.AddFunc("0 * * * * *", func() {
+	c.AddFunc("0 */15 * * * *", func() {
 
 		timesteamp := time.Now().Local()
 		usageData, err := singbox.UsageDataOfAll(instance)
