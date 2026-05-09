@@ -10,6 +10,7 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/spf13/cobra"
 	httpserver "github.com/xvv6u577/logv2fs/cmd/httpserver"
+	migratetrafficlogs "github.com/xvv6u577/logv2fs/cmd/migratetrafficlogs"
 	singbox "github.com/xvv6u577/logv2fs/cmd/singbox"
 	"github.com/xvv6u577/logv2fs/model"
 )
@@ -58,5 +59,6 @@ func init() {
 	// 添加子命令
 	rootCmd.AddCommand(singbox.NewSingboxCmd())
 	rootCmd.AddCommand(httpserver.NewHTTPServerCmd())
+	rootCmd.AddCommand(migratetrafficlogs.NewMigrateTrafficLogsCmd())
 
 }

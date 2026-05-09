@@ -6,6 +6,9 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
+// NodeTrafficLogs 是节点主文档；按周期粒度的流量日志已拆出到 NodeTrafficPeriod 集合，
+// 通过 domain_as_id 关联。读接口会用 $lookup 将 daily_logs / monthly_logs / yearly_logs
+// 拼回原嵌套数组形态以兼容前端（仅作为响应字段，不会持久化到本集合）。
 type NodeTrafficLogs struct {
 	ID           primitive.ObjectID `json:"_id" bson:"_id"`
 	Domain_As_Id string             `json:"domain_as_id" bson:"domain_as_id"`
@@ -13,27 +16,44 @@ type NodeTrafficLogs struct {
 	Status       string             `json:"status" bson:"status" validate:"required,eq=active|eq=inactive"` // status: "active", "inactive"
 	CreatedAt    time.Time          `json:"created_at" bson:"created_at"`
 	UpdatedAt    time.Time          `json:"updated_at" bson:"updated_at"`
-	HourlyLogs   []struct {
-		Timestamp time.Time `json:"timestamp" bson:"timestamp"`
-		Traffic   int64     `json:"traffic" bson:"traffic"`
-	} `json:"hourly_logs" bson:"hourly_logs"`
+
+	// 以下三个字段不会写入 NODE_TRAFFIC_LOGS 集合，仅在读接口通过 $lookup
+	// 从 node_traffic_periods 集合关联出来，保持原前端 JSON 结构兼容。
 	DailyLogs []struct {
 		Date    string `json:"date" bson:"date"`
 		Traffic int64  `json:"traffic" bson:"traffic"`
-	} `json:"daily_logs" bson:"daily_logs"`
+	} `json:"daily_logs" bson:"daily_logs,omitempty"`
 	MonthlyLogs []struct {
 		Month   string `json:"month" bson:"month"`
 		Traffic int64  `json:"traffic" bson:"traffic"`
-	} `json:"monthly_logs" bson:"monthly_logs"`
+	} `json:"monthly_logs" bson:"monthly_logs,omitempty"`
 	YearlyLogs []struct {
 		Year    string `json:"year" bson:"year"`
 		Traffic int64  `json:"traffic" bson:"traffic"`
-	} `json:"yearly_logs" bson:"yearly_logs"`
+	} `json:"yearly_logs" bson:"yearly_logs,omitempty"`
 }
 
 // CollectionName 返回MongoDB集合名称
 func (NodeTrafficLogs) CollectionName() string {
 	return "NODE_TRAFFIC_LOGS"
+}
+
+// NodeTrafficPeriod 是从 NODE_TRAFFIC_LOGS 拆出的周期级流量记录。
+// 唯一键为 (domain_as_id, kind, period)，由启动时的索引保障。
+//   - kind 取值: "daily" | "monthly" | "yearly"
+//   - period 格式: daily=yyyymmdd, monthly=yyyymm, yearly=yyyy
+type NodeTrafficPeriod struct {
+	ID         primitive.ObjectID `json:"_id" bson:"_id"`
+	DomainAsId string             `json:"domain_as_id" bson:"domain_as_id"`
+	Kind       string             `json:"kind" bson:"kind"`
+	Period     string             `json:"period" bson:"period"`
+	Traffic    int64              `json:"traffic" bson:"traffic"`
+	UpdatedAt  time.Time          `json:"updated_at" bson:"updated_at"`
+}
+
+// CollectionName 返回 MongoDB 集合名称
+func (NodeTrafficPeriod) CollectionName() string {
+	return "node_traffic_periods"
 }
 
 type NodeAtPeriod struct {

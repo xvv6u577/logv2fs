@@ -38,6 +38,17 @@ func UsageDataOfAll(instance *box.Box) ([]Traffic, error) {
 
 	myStats := response.GetStat()
 
+	// log.Printf("myStats: %v", myStats)
+	// log.Printf("compRegEx: %v", compRegEx)
+	// log.Printf("loggingData: %v", loggingData)
+	// log.Printf("temp: %v", temp)
+	// log.Printf("response: %v", response)
+	// log.Printf("statsService: %v", statsService)
+	// log.Printf("instance: %v", instance)
+	// log.Printf("regEx: %v", regEx)
+	// log.Printf("compRegEx: %v", compRegEx)
+	// log.Printf("loggingData: %v", loggingData)
+
 	for _, stat := range myStats {
 
 		if stat.Value == 0 {

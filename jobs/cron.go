@@ -24,200 +24,131 @@ func getCurrentDomain() string {
 	return os.Getenv("CURRENT_DOMAIN")
 }
 
-// traffic: {Name: "tom", Total: 100}
-func LogUserTraffic(collection *mongo.Collection, email string, timestamp time.Time, traffic int64) error {
-
-	var ctx, cancel = context.WithTimeout(context.Background(), 120*time.Second)
-	defer cancel()
-
-	var date = timestamp.Format("20060102")
-	var month = timestamp.Format("200601")
-	var year = timestamp.Format("2006")
-
-	var beforeUpdate model.UserTrafficLogs
-	filter := bson.M{"email_as_id": email}
-
-	err := collection.FindOne(ctx, filter).Decode(&beforeUpdate)
-	if err != nil {
-		log.Printf("error getting user traffic logs: %v\n", err)
+// upsertTrafficPeriod 在指定的周期集合（user_traffic_periods 或 node_traffic_periods）
+// 中按 (ownerKey=ownerVal, kind, period) 唯一键累加 traffic。
+//
+// 集合的唯一索引保证了高并发下原子安全；首次写入会触发 upsert。
+func upsertTrafficPeriod(
+	ctx context.Context,
+	periodCol *mongo.Collection,
+	ownerKey string, // "email_as_id" 或 "domain_as_id"
+	ownerVal string,
+	kind string, // "daily" | "monthly" | "yearly"
+	period string, // 对应粒度的字符串
+	traffic int64,
+	now time.Time,
+) error {
+	filter := bson.M{
+		ownerKey: ownerVal,
+		"kind":   kind,
+		"period": period,
 	}
-
-	filters := []interface{}{}
 	update := bson.M{
-		"$set": bson.M{
-			"updated_at": time.Now(),
-			"used":       beforeUpdate.Used + traffic,
-		},
-		"$inc":  bson.M{},
-		"$push": bson.M{},
+		"$inc": bson.M{"traffic": traffic},
+		"$set": bson.M{"updated_at": now},
 	}
-
-	// check if date exists in daily_logs
-	var found bool
-	for _, daily := range beforeUpdate.DailyLogs {
-		if daily.Date == date {
-			found = true
-			break
-		}
-	}
-	if !found {
-		update["$push"].(bson.M)["daily_logs"] = bson.M{
-			"date":    date,
-			"traffic": traffic,
-		}
-
-	} else {
-		update["$inc"].(bson.M)["daily_logs.$[daily].traffic"] = traffic
-		filters = append(filters, bson.M{"daily.date": date})
-	}
-
-	// check if month exists in monthly_logs
-	for _, monthly := range beforeUpdate.MonthlyLogs {
-		if monthly.Month == month {
-			found = true
-			break
-		}
-	}
-	if !found {
-		update["$push"].(bson.M)["monthly_logs"] = bson.M{
-			"month":   month,
-			"traffic": traffic,
-		}
-	} else {
-		update["$inc"].(bson.M)["monthly_logs.$[monthly].traffic"] = traffic
-		filters = append(filters, bson.M{"monthly.month": month})
-	}
-
-	// check if year exists in yearly_logs
-	for _, yearly := range beforeUpdate.YearlyLogs {
-		if yearly.Year == year {
-			found = true
-			break
-		}
-	}
-	if !found {
-		update["$push"].(bson.M)["yearly_logs"] = bson.M{
-			"year":    year,
-			"traffic": traffic,
-		}
-	} else {
-		update["$inc"].(bson.M)["yearly_logs.$[yearly].traffic"] = traffic
-		filters = append(filters, bson.M{"yearly.year": year})
-	}
-
-	arrayFilters := options.ArrayFilters{
-		Filters: filters,
-	}
-
 	upsert := true
-	updateOptions := options.UpdateOptions{
-		ArrayFilters: &arrayFilters,
-		Upsert:       &upsert,
-	}
-
-	_, err = collection.UpdateOne(ctx, filter, update, &updateOptions)
+	_, err := periodCol.UpdateOne(ctx, filter, update, &options.UpdateOptions{Upsert: &upsert})
 	return err
-
 }
 
-func LogNodeTraffic(collection *mongo.Collection, domain string, timestamp time.Time, traffic int64) error {
+// LogUserTraffic 写入单个用户的本次采样流量。
+//
+// 拆分集合后流程被显著简化：
+//  1. 累加用户主文档的 used 字段（仅 $inc，不再 Find 整个文档）；
+//  2. 在 user_traffic_periods 集合中按日/月/年 upsert 累加 traffic。
+//
+// 入参 collection 仍是 USER_TRAFFIC_LOGS 集合，保持调用点签名不变。
+func LogUserTraffic(collection *mongo.Collection, email string, timestamp time.Time, traffic int64) error {
 
-	var ctx, cancel = context.WithTimeout(context.Background(), 120*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	var date = timestamp.Format("20060102")
-	var month = timestamp.Format("200601")
-	var year = timestamp.Format("2006")
+	now := time.Now()
+	date := timestamp.Format("20060102")
+	month := timestamp.Format("200601")
+	year := timestamp.Format("2006")
 
-	var beforeUpdate model.NodeTrafficLogs
-	filter := bson.M{"domain_as_id": domain}
-
-	err := collection.FindOne(ctx, filter).Decode(&beforeUpdate)
-	if err != nil {
-		log.Printf("error getting node traffic logs: %v\n", err)
-	}
-
-	filters := []interface{}{}
-	update := bson.M{
-		"$set": bson.M{
-			"updated_at": time.Now(),
+	// 1) 用户主文档：累加 used、刷新 updated_at
+	if _, err := collection.UpdateOne(
+		ctx,
+		bson.M{"email_as_id": email},
+		bson.M{
+			"$inc": bson.M{"used": traffic},
+			"$set": bson.M{"updated_at": now},
 		},
-		"$inc":  bson.M{},
-		"$push": bson.M{},
+	); err != nil {
+		log.Printf("更新用户主文档 used 失败: %v", err)
+		return err
 	}
 
-	// check if date exists in daily_logs
-	var found bool
-	for _, daily := range beforeUpdate.DailyLogs {
-		if daily.Date == date {
-			found = true
-			break
+	// 2) 周期集合：按日/月/年分别 upsert
+	periodCol := database.GetCollection(model.UserTrafficPeriod{})
+	for _, item := range []struct {
+		kind   string
+		period string
+	}{
+		{"daily", date},
+		{"monthly", month},
+		{"yearly", year},
+	} {
+		if err := upsertTrafficPeriod(ctx, periodCol, "email_as_id", email, item.kind, item.period, traffic, now); err != nil {
+			log.Printf("用户流量周期 upsert 失败 email=%s kind=%s period=%s err=%v",
+				email, item.kind, item.period, err)
+			return err
 		}
 	}
-	if !found {
-		update["$push"].(bson.M)["daily_logs"] = bson.M{
-			"date":    date,
-			"traffic": traffic,
+	return nil
+}
+
+// LogNodeTraffic 写入单个节点的本次采样流量。
+//
+// 与 LogUserTraffic 同理：节点主文档仅更新 updated_at，
+// 周期数据全部下沉到 node_traffic_periods 集合。
+func LogNodeTraffic(collection *mongo.Collection, domain string, timestamp time.Time, traffic int64) error {
+
+	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
+	defer cancel()
+
+	now := time.Now()
+	date := timestamp.Format("20060102")
+	month := timestamp.Format("200601")
+	year := timestamp.Format("2006")
+
+	// 1) 节点主文档：刷新 updated_at（只在已存在时更新；不在则跳过，避免凭空创建节点）
+	if _, err := collection.UpdateOne(
+		ctx,
+		bson.M{"domain_as_id": domain},
+		bson.M{"$set": bson.M{"updated_at": now}},
+	); err != nil {
+		log.Printf("更新节点主文档 updated_at 失败: %v", err)
+		return err
+	}
+
+	// 2) 周期集合：按日/月/年分别 upsert
+	periodCol := database.GetCollection(model.NodeTrafficPeriod{})
+	for _, item := range []struct {
+		kind   string
+		period string
+	}{
+		{"daily", date},
+		{"monthly", month},
+		{"yearly", year},
+	} {
+		if err := upsertTrafficPeriod(ctx, periodCol, "domain_as_id", domain, item.kind, item.period, traffic, now); err != nil {
+			log.Printf("节点流量周期 upsert 失败 domain=%s kind=%s period=%s err=%v",
+				domain, item.kind, item.period, err)
+			return err
 		}
-
-	} else {
-		update["$inc"].(bson.M)["daily_logs.$[daily].traffic"] = traffic
-		filters = append(filters, bson.M{"daily.date": date})
 	}
-
-	// check if month exists in monthly_logs
-	for _, monthly := range beforeUpdate.MonthlyLogs {
-		if monthly.Month == month {
-			found = true
-			break
-		}
-	}
-	if !found {
-		update["$push"].(bson.M)["monthly_logs"] = bson.M{
-			"month":   month,
-			"traffic": traffic,
-		}
-	} else {
-		update["$inc"].(bson.M)["monthly_logs.$[monthly].traffic"] = traffic
-		filters = append(filters, bson.M{"monthly.month": month})
-	}
-
-	// check if year exists in yearly_logs
-	for _, yearly := range beforeUpdate.YearlyLogs {
-		if yearly.Year == year {
-			found = true
-			break
-		}
-	}
-	if !found {
-		update["$push"].(bson.M)["yearly_logs"] = bson.M{
-			"year":    year,
-			"traffic": traffic,
-		}
-	} else {
-		update["$inc"].(bson.M)["yearly_logs.$[yearly].traffic"] = traffic
-		filters = append(filters, bson.M{"yearly.year": year})
-	}
-
-	arrayFilters := options.ArrayFilters{
-		Filters: filters,
-	}
-
-	upsert := true
-	updateOptions := options.UpdateOptions{
-		ArrayFilters: &arrayFilters,
-		Upsert:       &upsert,
-	}
-
-	_, err = collection.UpdateOne(ctx, filter, update, &updateOptions)
-	return err
-
+	return nil
 }
 
 // Cron_loggingJobs 注册定时任务：每 15 分钟将 sing-box 中累积的流量数据写入 MongoDB
 func Cron_loggingJobs(c *cron.Cron, instance *box.Box) {
 
-	c.AddFunc("0 */15 * * * *", func() {
+	c.AddFunc("0 * * * * *", func() {
+		// c.AddFunc("0 */15 * * * *", func() {
 
 		timesteamp := time.Now().Local()
 		usageData, err := singbox.UsageDataOfAll(instance)
@@ -233,6 +164,7 @@ func Cron_loggingJobs(c *cron.Cron, instance *box.Box) {
 
 		for _, perUser := range usageData {
 			// perUser = traffic: {Name: "tom", Total: 100}
+			log.Printf("用户流量记录: %v %v", perUser.Name, perUser.Total)
 			if err := LogUserTraffic(database.GetCollection(model.UserTrafficLogs{}), perUser.Name, timesteamp, perUser.Total); err != nil {
 				log.Printf("用户流量记录失败: %v\n", err)
 			}

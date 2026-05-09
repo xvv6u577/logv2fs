@@ -6,6 +6,9 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
+// UserTrafficLogs 是用户主文档；按周期粒度的流量日志已拆出到 UserTrafficPeriod 集合，
+// 通过 email_as_id 关联。读接口会用 $lookup 将 daily_logs / monthly_logs / yearly_logs
+// 重新拼回原嵌套数组形态以保持前端兼容（仅作为响应字段，不会持久化到本集合）。
 type UserTrafficLogs struct {
 	ID            primitive.ObjectID `json:"_id" bson:"_id"`
 	Email_As_Id   string             `json:"email_as_id" bson:"email_as_id"`
@@ -22,27 +25,44 @@ type UserTrafficLogs struct {
 	Credit        int64              `json:"credit" bson:"credit"`
 	CreatedAt     time.Time          `json:"created_at" bson:"created_at"`
 	UpdatedAt     time.Time          `json:"updated_at" bson:"updated_at"`
-	HourlyLogs    []struct {
-		Timestamp time.Time `json:"timestamp" bson:"timestamp"`
-		Traffic   int64     `json:"traffic" bson:"traffic"`
-	} `json:"hourly_logs" bson:"hourly_logs"`
+
+	// 以下三个字段不会写入 USER_TRAFFIC_LOGS 集合，仅在读接口通过 $lookup
+	// 从 user_traffic_periods 集合关联出来，保持原前端 JSON 结构兼容。
 	DailyLogs []struct {
 		Date    string `json:"date" bson:"date"`
 		Traffic int64  `json:"traffic" bson:"traffic"`
-	} `json:"daily_logs" bson:"daily_logs"`
+	} `json:"daily_logs" bson:"daily_logs,omitempty"`
 	MonthlyLogs []struct {
 		Month   string `json:"month" bson:"month"`
 		Traffic int64  `json:"traffic" bson:"traffic"`
-	} `json:"monthly_logs" bson:"monthly_logs"`
+	} `json:"monthly_logs" bson:"monthly_logs,omitempty"`
 	YearlyLogs []struct {
 		Year    string `json:"year" bson:"year"`
 		Traffic int64  `json:"traffic" bson:"traffic"`
-	} `json:"yearly_logs" bson:"yearly_logs"`
+	} `json:"yearly_logs" bson:"yearly_logs,omitempty"`
 }
 
 // CollectionName 返回MongoDB集合名称
 func (UserTrafficLogs) CollectionName() string {
 	return "USER_TRAFFIC_LOGS"
+}
+
+// UserTrafficPeriod 是从 USER_TRAFFIC_LOGS 拆出的周期级流量记录。
+// 唯一键为 (email_as_id, kind, period)，由启动时的索引保障。
+//   - kind 取值: "daily" | "monthly" | "yearly"
+//   - period 格式: daily=yyyymmdd, monthly=yyyymm, yearly=yyyy
+type UserTrafficPeriod struct {
+	ID        primitive.ObjectID `json:"_id" bson:"_id"`
+	EmailAsId string             `json:"email_as_id" bson:"email_as_id"`
+	Kind      string             `json:"kind" bson:"kind"`
+	Period    string             `json:"period" bson:"period"`
+	Traffic   int64              `json:"traffic" bson:"traffic"`
+	UpdatedAt time.Time          `json:"updated_at" bson:"updated_at"`
+}
+
+// CollectionName 返回 MongoDB 集合名称
+func (UserTrafficPeriod) CollectionName() string {
+	return "user_traffic_periods"
 }
 
 // CustomDate 自定义日期模型

@@ -116,6 +116,43 @@ func UpdateAllTokens(signedToken string, signedRefreshToken string, userId strin
 
 }
 
+// lookupUserPeriodStage 构造一个 $lookup 聚合 stage，把 user_traffic_periods 集合中
+// 当前用户对应粒度（kind）的周期记录，重新组装为前端兼容形态注入到结果文档。
+//
+// 参数:
+//   - kind:        "daily" | "monthly" | "yearly"
+//   - periodAlias: 输出数组中表示周期的字段名（"date" / "month" / "year"），保持与旧前端一致
+//   - asField:     注入到结果文档的字段名（"daily_logs" / "monthly_logs" / "yearly_logs"）
+//   - limit:       仅保留最近的多少条；<=0 表示不限
+//
+// 关联键：USER_TRAFFIC_LOGS.email_as_id == user_traffic_periods.email_as_id
+func lookupUserPeriodStage(kind, periodAlias, asField string, limit int) bson.D {
+	pipeline := bson.A{
+		bson.D{{Key: "$match", Value: bson.D{
+			{Key: "$expr", Value: bson.D{{Key: "$and", Value: bson.A{
+				bson.D{{Key: "$eq", Value: bson.A{"$email_as_id", "$$email"}}},
+				bson.D{{Key: "$eq", Value: bson.A{"$kind", kind}}},
+			}}}},
+		}}},
+		bson.D{{Key: "$sort", Value: bson.D{{Key: "period", Value: -1}}}},
+	}
+	if limit > 0 {
+		pipeline = append(pipeline, bson.D{{Key: "$limit", Value: limit}})
+	}
+	pipeline = append(pipeline, bson.D{{Key: "$project", Value: bson.D{
+		{Key: "_id", Value: 0},
+		{Key: periodAlias, Value: "$period"},
+		{Key: "traffic", Value: 1},
+	}}})
+
+	return bson.D{{Key: "$lookup", Value: bson.D{
+		{Key: "from", Value: model.UserTrafficPeriod{}.CollectionName()},
+		{Key: "let", Value: bson.D{{Key: "email", Value: "$email_as_id"}}},
+		{Key: "pipeline", Value: pipeline},
+		{Key: "as", Value: asField},
+	}}}
+}
+
 // check if a string in a slice
 func Contains(s []string, e string) bool {
 	for _, a := range s {
@@ -191,22 +228,8 @@ func SignUp() gin.HandlerFunc {
 		user.Token = &token
 		user.Refresh_token = &refreshToken
 
-		user.HourlyLogs = []struct {
-			Timestamp time.Time `json:"timestamp" bson:"timestamp"`
-			Traffic   int64     `json:"traffic" bson:"traffic"`
-		}{}
-		user.DailyLogs = []struct {
-			Date    string `json:"date" bson:"date"`
-			Traffic int64  `json:"traffic" bson:"traffic"`
-		}{}
-		user.MonthlyLogs = []struct {
-			Month   string `json:"month" bson:"month"`
-			Traffic int64  `json:"traffic" bson:"traffic"`
-		}{}
-		user.YearlyLogs = []struct {
-			Year    string `json:"year" bson:"year"`
-			Traffic int64  `json:"traffic" bson:"traffic"`
-		}{}
+		// 周期级流量数据已拆分到 user_traffic_periods 集合，新建用户无需在主文档预置空数组。
+		// 后续读接口会通过 $lookup 自动返回空数组保持前端兼容。
 
 		_, err = database.GetCollection(model.UserTrafficLogs{}).InsertOne(context.Background(), user)
 		if err != nil {
@@ -396,6 +419,14 @@ func DeleteUserByUserName() gin.HandlerFunc {
 			return
 		}
 
+		// 同步清理拆分出去的周期流量数据，避免新建同名用户时残留历史
+		if _, err := database.GetCollection(model.UserTrafficPeriod{}).DeleteMany(
+			context.TODO(),
+			bson.M{"email_as_id": name},
+		); err != nil {
+			log.Printf("DeleteUserByUserName - cleanup user_traffic_periods failed: %s", err.Error())
+		}
+
 		log.Printf("Delete user %s successfully!", user.Name)
 		c.JSON(http.StatusOK, gin.H{"message": "Delete user " + user.Name + " successfully!"})
 	}
@@ -412,6 +443,8 @@ func GetAllUsers() gin.HandlerFunc {
 		var ctx, cancel = context.WithTimeout(context.Background(), 60*time.Second)
 		defer cancel()
 
+		// 列表场景仅取每种粒度最近的 10 条，足够前端展示且控制响应体大小。
+		// 用户主文档已不再保存 daily/monthly/yearly_logs，全部通过 $lookup 从 user_traffic_periods 注入。
 		pipeline := mongo.Pipeline{
 			{{Key: "$project", Value: bson.D{
 				{Key: "email_as_id", Value: 1},
@@ -422,40 +455,10 @@ func GetAllUsers() gin.HandlerFunc {
 				{Key: "used", Value: 1},
 				{Key: "remark", Value: 1},
 				{Key: "updated_at", Value: 1},
-				{Key: "daily_logs", Value: bson.D{
-					{Key: "$slice", Value: bson.A{
-						bson.D{
-							{Key: "$sortArray", Value: bson.D{
-								{Key: "input", Value: "$daily_logs"},
-								{Key: "sortBy", Value: bson.D{{Key: "date", Value: -1}}},
-							}},
-						},
-						10,
-					}},
-				}},
-				{Key: "monthly_logs", Value: bson.D{
-					{Key: "$slice", Value: bson.A{
-						bson.D{
-							{Key: "$sortArray", Value: bson.D{
-								{Key: "input", Value: "$monthly_logs"},
-								{Key: "sortBy", Value: bson.D{{Key: "month", Value: -1}}},
-							}},
-						},
-						10,
-					}},
-				}},
-				{Key: "yearly_logs", Value: bson.D{
-					{Key: "$slice", Value: bson.A{
-						bson.D{
-							{Key: "$sortArray", Value: bson.D{
-								{Key: "input", Value: "$yearly_logs"},
-								{Key: "sortBy", Value: bson.D{{Key: "year", Value: -1}}},
-							}},
-						},
-						10,
-					}},
-				}},
 			}}},
+			lookupUserPeriodStage("daily", "date", "daily_logs", 10),
+			lookupUserPeriodStage("monthly", "month", "monthly_logs", 10),
+			lookupUserPeriodStage("yearly", "year", "yearly_logs", 10),
 		}
 
 		cursor, err := database.GetCollection(model.UserTrafficLogs{}).Aggregate(ctx, pipeline)
@@ -489,31 +492,47 @@ func GetUserByName() gin.HandlerFunc {
 			return
 		}
 
-		var projections = bson.D{
-			{Key: "email_as_id", Value: 1},
-			{Key: "used", Value: 1},
-			{Key: "uuid", Value: 1},
-			{Key: "name", Value: 1},
-			{Key: "status", Value: 1},
-			{Key: "role", Value: 1},
-			{Key: "remark", Value: 1},
-			{Key: "credit", Value: 1},
-			{Key: "daily_logs", Value: 1},
-			{Key: "monthly_logs", Value: 1},
-			{Key: "yearly_logs", Value: 1},
-			{Key: "created_at", Value: 1},
-			{Key: "updated_at", Value: 1},
+		// 单用户详情：通过聚合管道注入 daily/monthly/yearly_logs，全部周期不截断。
+		pipeline := mongo.Pipeline{
+			{{Key: "$match", Value: bson.D{{Key: "email_as_id", Value: name}}}},
+			{{Key: "$project", Value: bson.D{
+				{Key: "email_as_id", Value: 1},
+				{Key: "used", Value: 1},
+				{Key: "uuid", Value: 1},
+				{Key: "name", Value: 1},
+				{Key: "status", Value: 1},
+				{Key: "role", Value: 1},
+				{Key: "remark", Value: 1},
+				{Key: "credit", Value: 1},
+				{Key: "created_at", Value: 1},
+				{Key: "updated_at", Value: 1},
+			}}},
+			lookupUserPeriodStage("daily", "date", "daily_logs", 0),
+			lookupUserPeriodStage("monthly", "month", "monthly_logs", 0),
+			lookupUserPeriodStage("yearly", "year", "yearly_logs", 0),
 		}
 
-		var user UserTrafficLogs
-		err := database.GetCollection(model.UserTrafficLogs{}).FindOne(context.Background(), bson.M{"email_as_id": name}, options.FindOne().SetProjection(projections)).Decode(&user)
+		cursor, err := database.GetCollection(model.UserTrafficLogs{}).Aggregate(context.Background(), pipeline)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			log.Printf("GetUserByName: %s", err.Error())
+			log.Printf("GetUserByName aggregate: %s", err.Error())
+			return
+		}
+		defer cursor.Close(context.Background())
+
+		var users []UserTrafficLogs
+		if err := cursor.All(context.Background(), &users); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			log.Printf("GetUserByName cursor.All: %s", err.Error())
+			return
+		}
+		if len(users) == 0 {
+			c.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
+			log.Printf("GetUserByName: user %s not found", name)
 			return
 		}
 
-		c.JSON(http.StatusOK, user)
+		c.JSON(http.StatusOK, users[0])
 	}
 }
 

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/joho/godotenv"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
@@ -50,7 +51,50 @@ func DBinstance() *mongo.Client {
 
 	log.Println("MongoDB successfully connected and pinged.")
 
+	// 首次连接成功后，立即确保关键集合的唯一索引存在。
+	// 拆出周期表后这一步是数据一致性的硬性前提（防止重复 (owner, kind, period)）。
+	ensureCoreIndexes(ctx, client)
+
 	return client
+}
+
+// ensureCoreIndexes 在 MongoDB 客户端首次建立后保证核心索引存在。
+//
+// 当前涵盖：
+//   - user_traffic_periods: 唯一复合索引 (email_as_id, kind, period)
+//   - node_traffic_periods: 唯一复合索引 (domain_as_id, kind, period)
+//
+// 索引已存在时 CreateMany 是幂等的；任何失败都只打日志而不中断启动，
+// 以便在权限受限的运行环境下也能降级跑起来。
+func ensureCoreIndexes(ctx context.Context, client *mongo.Client) {
+	db := client.Database("logV2rayTrafficDB")
+
+	indexJobs := []struct {
+		collection string
+		ownerKey   string
+	}{
+		{"user_traffic_periods", "email_as_id"},
+		{"node_traffic_periods", "domain_as_id"},
+	}
+
+	for _, job := range indexJobs {
+		coll := db.Collection(job.collection)
+		idx := mongo.IndexModel{
+			Keys: bson.D{
+				{Key: job.ownerKey, Value: 1},
+				{Key: "kind", Value: 1},
+				{Key: "period", Value: 1},
+			},
+			Options: options.Index().
+				SetUnique(true).
+				SetName("uniq_owner_kind_period"),
+		}
+		if _, err := coll.Indexes().CreateOne(ctx, idx); err != nil {
+			log.Printf("ensureCoreIndexes 警告: 为 %s 创建唯一索引失败: %v", job.collection, err)
+			continue
+		}
+		log.Printf("ensureCoreIndexes: %s 唯一索引就绪 (%s, kind, period)", job.collection, job.ownerKey)
+	}
 }
 
 // function to get the MongoDB client

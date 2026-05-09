@@ -12,8 +12,44 @@ import (
 	"github.com/xvv6u577/logv2fs/model"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
+
+// lookupNodePeriodStage 同 lookupUserPeriodStage，但作用于 node_traffic_periods 集合，
+// 关联键为 NODE_TRAFFIC_LOGS.domain_as_id == node_traffic_periods.domain_as_id。
+//
+// 参数语义与 lookupUserPeriodStage 一致：
+//   - kind: "daily" | "monthly" | "yearly"
+//   - periodAlias: 输出数组中表示周期的字段名（"date" / "month" / "year"）
+//   - asField: 注入字段名（"daily_logs" / "monthly_logs" / "yearly_logs"）
+//   - limit: <=0 表示不限
+func lookupNodePeriodStage(kind, periodAlias, asField string, limit int) bson.D {
+	pipeline := bson.A{
+		bson.D{{Key: "$match", Value: bson.D{
+			{Key: "$expr", Value: bson.D{{Key: "$and", Value: bson.A{
+				bson.D{{Key: "$eq", Value: bson.A{"$domain_as_id", "$$domain"}}},
+				bson.D{{Key: "$eq", Value: bson.A{"$kind", kind}}},
+			}}}},
+		}}},
+		bson.D{{Key: "$sort", Value: bson.D{{Key: "period", Value: -1}}}},
+	}
+	if limit > 0 {
+		pipeline = append(pipeline, bson.D{{Key: "$limit", Value: limit}})
+	}
+	pipeline = append(pipeline, bson.D{{Key: "$project", Value: bson.D{
+		{Key: "_id", Value: 0},
+		{Key: periodAlias, Value: "$period"},
+		{Key: "traffic", Value: 1},
+	}}})
+
+	return bson.D{{Key: "$lookup", Value: bson.D{
+		{Key: "from", Value: model.NodeTrafficPeriod{}.CollectionName()},
+		{Key: "let", Value: bson.D{{Key: "domain", Value: "$domain_as_id"}}},
+		{Key: "pipeline", Value: pipeline},
+		{Key: "as", Value: asField},
+	}}}
+}
 
 // check if a domain is in a domain object list
 func IsDomainInDomainList(domain string, domainList []SubscriptionNode) bool {
@@ -83,6 +119,7 @@ func UpsertNodes() gin.HandlerFunc {
 		}
 
 		// check if domain is in nodeTrafficLogsCol. if no, insert it. if yes, update it.
+		// 周期级流量字段已下沉到 node_traffic_periods 集合，主文档不再预置任何空数组。
 		for _, domain := range dataCollectableNodes {
 			filter := bson.M{"domain_as_id": domain.Domain}
 			update := bson.M{
@@ -95,22 +132,6 @@ func UpsertNodes() gin.HandlerFunc {
 					"_id":          primitive.NewObjectID(),
 					"domain_as_id": domain.Domain,
 					"created_at":   current,
-					"hourly_logs": []struct {
-						Timestamp time.Time `json:"timestamp" bson:"timestamp"`
-						Traffic   int64     `json:"traffic" bson:"traffic"`
-					}{},
-					"daily_logs": []struct {
-						Date    string `json:"date" bson:"date"`
-						Traffic int64  `json:"traffic" bson:"traffic"`
-					}{},
-					"monthly_logs": []struct {
-						Month   string `json:"month" bson:"month"`
-						Traffic int64  `json:"traffic" bson:"traffic"`
-					}{},
-					"yearly_logs": []struct {
-						Year    string `json:"year" bson:"year"`
-						Traffic int64  `json:"traffic" bson:"traffic"`
-					}{},
 				},
 			}
 			opts := options.Update().SetUpsert(true)
@@ -177,23 +198,28 @@ func GetSingboxNodes() gin.HandlerFunc {
 			return
 		}
 
-		var activeNodes []NodeTrafficLogs
-		var filter = bson.D{primitive.E{Key: "status", Value: "active"}}
-		cur, err := database.GetCollection(model.NodeTrafficLogs{}).Find(context.TODO(), filter)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			log.Printf("Find error: %v", err)
-			return
+		// 通过聚合管道把 node_traffic_periods 里对应粒度的数据注入回 daily/monthly/yearly_logs，
+		// 保持给前端的 JSON 结构与拆表前完全一致。前端 nodes.js 仍按原字段名访问。
+		pipeline := mongo.Pipeline{
+			{{Key: "$match", Value: bson.D{{Key: "status", Value: "active"}}}},
+			lookupNodePeriodStage("daily", "date", "daily_logs", 0),
+			lookupNodePeriodStage("monthly", "month", "monthly_logs", 0),
+			lookupNodePeriodStage("yearly", "year", "yearly_logs", 0),
 		}
 
-		for cur.Next(context.TODO()) {
-			var node NodeTrafficLogs
-			if err := cur.Decode(&node); err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-				log.Printf("Decode error: %v", err)
-				return
-			}
-			activeNodes = append(activeNodes, node)
+		cur, err := database.GetCollection(model.NodeTrafficLogs{}).Aggregate(context.TODO(), pipeline)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			log.Printf("GetSingboxNodes aggregate error: %v", err)
+			return
+		}
+		defer cur.Close(context.TODO())
+
+		var activeNodes []NodeTrafficLogs
+		if err := cur.All(context.TODO(), &activeNodes); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			log.Printf("GetSingboxNodes cursor.All error: %v", err)
+			return
 		}
 
 		c.JSON(http.StatusOK, activeNodes)
