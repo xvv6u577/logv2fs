@@ -1,3 +1,5 @@
+import api from '../lib/axios';
+
 // WebSocket 客户端服务
 class WebSocketService {
 	constructor() {
@@ -9,36 +11,46 @@ class WebSocketService {
 		this.isConnecting = false;
 		this.messageHandlers = new Map();
 		this.connectionStatus = 'disconnected'; // disconnected, connecting, connected, reconnecting
-		this.userID = null;
-		this.isAdmin = false;
-		
+
 		// 防抖机制
 		this.debounceTimeout = null;
 		this.pendingRefresh = false;
 		this.debounceDelay = 3000; // 3秒防抖延迟
 	}
 
-	// 初始化连接
-	connect(userID = null, isAdmin = false) {
+	/**
+	 * 初始化连接（Ticket 模式）
+	 *
+	 * 安全模型：
+	 *   1. 先用 JWT 调用 POST /v1/ws-ticket，拿到一次性 ticket（5 秒 TTL）。
+	 *   2. 再用 ticket 通过 ws://host/ws?ticket=xxx 建立 WebSocket。
+	 *   3. 用户身份（user_id / is_admin）由后端从 ticket 还原，前端无法伪造。
+	 *
+	 * 兼容旧签名 connect(userID, isAdmin)：参数被忽略，保留只是为了不破坏调用点。
+	 */
+	async connect(_userID = null, _isAdmin = false) {
 		if (this.isConnecting || this.ws?.readyState === WebSocket.OPEN) {
 			return;
 		}
 
-		this.userID = userID;
-		this.isAdmin = isAdmin;
 		this.isConnecting = true;
 		this.connectionStatus = 'connecting';
 
-		// 构建 WebSocket URL
-		const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-		const host = window.location.host;
-		const wsUrl = `${protocol}//${host}/ws?user_id=${encodeURIComponent(userID || '')}&is_admin=${isAdmin}`;
-
 		try {
+			const { data } = await api.post('ws-ticket');
+			const ticket = data?.ticket;
+			if (!ticket) {
+				throw new Error('empty ticket');
+			}
+
+			const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+			const host = window.location.host;
+			const wsUrl = `${protocol}//${host}/ws?ticket=${encodeURIComponent(ticket)}`;
+
 			this.ws = new WebSocket(wsUrl);
 			this.setupEventHandlers();
 		} catch (error) {
-			console.error('WebSocket 连接创建失败:', error);
+			console.error('WebSocket ticket 获取或连接失败:', error);
 			this.handleConnectionError();
 		}
 	}
@@ -106,7 +118,8 @@ class WebSocketService {
 		
 		setTimeout(() => {
 			if (this.connectionStatus === 'reconnecting') {
-				this.connect(this.userID, this.isAdmin);
+				// ticket 模式下重连仅需重新拿票据，无需传 userID/isAdmin。
+				this.connect();
 			}
 		}, delay);
 	}

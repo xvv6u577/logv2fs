@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useSelector } from "react-redux";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import "./App.css";
 import Login from "./components/login";
 import User from "./components/user";
@@ -16,6 +15,8 @@ import AddNode from "./components/addNode";
 import PaymentInput from "./components/paymentInput";
 import PaymentStatistics from "./components/paymentStatistics";
 import PaymentRecords from "./components/paymentRecords";
+import { PrivateRoute, AdminRoute } from "./components/PrivateRoute";
+import ErrorBoundary from "./components/ErrorBoundary";
 import {logoBase64} from "./components/logoImage"
 
 const services = [
@@ -540,145 +541,62 @@ function LandingPage() {
 	);
 }
 
-function RequireAuth({ children }) {
-	const loginState = useSelector((state) => state.login);
+/**
+ * authedLayout 把通用的 Menu / Footer / 布局抽出来，避免在每个 Route 上重复包装。
+ * 任何已登录用户均可访问。
+ */
+const authedLayout = (Component) => (
+	<PrivateRoute>
+		<div className="min-h-screen bg-gray-900 flex flex-col">
+			<Menu />
+			<div className="flex-1">
+				<Component />
+			</div>
+			<Footer />
+		</div>
+	</PrivateRoute>
+);
 
-	return loginState.isLogin === true ? (
-		children
-	) : (
-		<Navigate to="/login" replace />
-	);
-}
+/**
+ * adminLayout 仅允许 admin 访问。前端的守卫只是 UX 兜底，
+ * 真正的访问控制由后端的 AdminOnly 中间件保证。
+ */
+const adminLayout = (Component) => (
+	<AdminRoute>
+		<div className="min-h-screen bg-gray-900 flex flex-col">
+			<Menu />
+			<div className="flex-1">
+				<Component />
+			</div>
+			<Footer />
+		</div>
+	</AdminRoute>
+);
 
 function App() {
 	return (
-		<BrowserRouter>
-			<Routes>
-				<Route path="/user" element={
-					<RequireAuth>
-						<div className="min-h-screen bg-gray-900 flex flex-col">
-							<Menu />
-							<div className="flex-1">
-								<User />
-							</div>
-							<Footer />
-						</div>
-					</RequireAuth>
-				} />
-				<Route path="/login" element={<Login />} />
-				<Route path="/mypanel" element={
-					<RequireAuth>
-						<div className="min-h-screen bg-gray-900 flex flex-col">
-							<Menu />
-							<div className="flex-1">
-								<Mypanel />
-							</div>
-							<Footer />
-						</div>
-					</RequireAuth>
-				} />
-				<Route path="/addnode" element={
-					<RequireAuth>
-						<div className="min-h-screen bg-gray-900 flex flex-col">
-							<Menu />
-							<div className="flex-1">
-								<AddNode />
-							</div>
-							<Footer />
-						</div>
-					</RequireAuth>
-				} />
-				<Route path="/nodes" element={
-					<RequireAuth>
-						<div className="min-h-screen bg-gray-900 flex flex-col">
-							<Menu />
-							<div className="flex-1">
-								<Nodes />
-							</div>
-							<Footer />
-						</div>
-					</RequireAuth>
-				} />
-				<Route path="/macos" element={
-					<RequireAuth>
-						<div className="min-h-screen bg-gray-900 flex flex-col">
-							<Menu />
-							<div className="flex-1">
-								<Macos />
-							</div>
-							<Footer />
-						</div>
-					</RequireAuth>
-				} />
-				<Route path="/windows" element={
-					<RequireAuth>
-						<div className="min-h-screen bg-gray-900 flex flex-col">
-							<Menu />
-							<div className="flex-1">
-								<Windows />
-							</div>
-							<Footer />
-						</div>
-					</RequireAuth>
-				} />
-				<Route path="/iphone" element={
-					<RequireAuth>
-						<div className="min-h-screen bg-gray-900 flex flex-col">
-							<Menu />
-							<div className="flex-1">
-								<Iphone />
-							</div>
-							<Footer />
-						</div>
-					</RequireAuth>
-				} />
-				<Route path="/android" element={
-					<RequireAuth>
-						<div className="min-h-screen bg-gray-900 flex flex-col">
-							<Menu />
-							<div className="flex-1">
-								<Android />
-							</div>
-							<Footer />
-						</div>
-					</RequireAuth>
-				} />
-				<Route path="/paymentinput" element={
-					<RequireAuth>
-						<div className="min-h-screen bg-gray-900 flex flex-col">
-							<Menu />
-							<div className="flex-1">
-								<PaymentInput />
-							</div>
-							<Footer />
-						</div>
-					</RequireAuth>
-				} />
-				<Route path="/paymentstatistics" element={
-					<RequireAuth>
-						<div className="min-h-screen bg-gray-900 flex flex-col">
-							<Menu />
-							<div className="flex-1">
-								<PaymentStatistics />
-							</div>
-							<Footer />
-						</div>
-					</RequireAuth>
-				} />
-				<Route path="/paymentrecords" element={
-					<RequireAuth>
-						<div className="min-h-screen bg-gray-900 flex flex-col">
-							<Menu />
-							<div className="flex-1">
-								<PaymentRecords />
-							</div>
-							<Footer />
-						</div>
-					</RequireAuth>
-				} />
-				<Route path="/" element={<LandingPage />} />
-			</Routes>
-		</BrowserRouter>
+		<ErrorBoundary>
+			<BrowserRouter>
+				<Routes>
+					<Route path="/login" element={<Login />} />
+					<Route path="/mypanel" element={authedLayout(Mypanel)} />
+					<Route path="/macos" element={authedLayout(Macos)} />
+					<Route path="/windows" element={authedLayout(Windows)} />
+					<Route path="/iphone" element={authedLayout(Iphone)} />
+					<Route path="/android" element={authedLayout(Android)} />
+
+					{/* 仅管理员可访问 */}
+					<Route path="/user" element={adminLayout(User)} />
+					<Route path="/addnode" element={adminLayout(AddNode)} />
+					<Route path="/nodes" element={adminLayout(Nodes)} />
+					<Route path="/paymentinput" element={adminLayout(PaymentInput)} />
+					<Route path="/paymentstatistics" element={adminLayout(PaymentStatistics)} />
+					<Route path="/paymentrecords" element={adminLayout(PaymentRecords)} />
+
+					<Route path="/" element={<LandingPage />} />
+				</Routes>
+			</BrowserRouter>
+		</ErrorBoundary>
 	);
 }
 

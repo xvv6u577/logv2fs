@@ -1,185 +1,90 @@
-import axios from 'axios';
+import api from '../lib/axios';
 
 /**
  * API 查询函数集合
- * 
- * 这些函数被 React Query 的 useQuery 调用
- * 每个函数都返回一个 Promise，解析为实际的数据
+ *
+ * 这些函数被 React Query 的 useQuery / useMutation 调用。
+ * 每个函数返回 Promise，解析为后端响应数据。
+ *
+ * 安全说明：所有请求统一通过 src/lib/axios.js 的拦截器塞入 Authorization: Bearer，
+ * 因此本文件不再显式传 token 参数；保留 token 形参仅为向后兼容旧调用点，可在迁移完成后删除。
  */
 
 // ==================== 用户相关 ====================
 
-/**
- * 获取所有用户列表（管理员）
- * @param {string} token - JWT token
- * @returns {Promise<Array>} 用户列表
- */
-export const fetchUsers = async (token) => {
-	const response = await axios.get(
-		`${process.env.REACT_APP_API_HOST}n778cf`,
-		{ headers: { token } }
-	);
-	return response.data;
+export const fetchUsers = async () => {
+	const { data } = await api.get('n778cf');
+	return data;
 };
 
-/**
- * 获取当前用户信息
- * @param {string} email - 用户邮箱
- * @param {string} token - JWT token
- * @returns {Promise<Object>} 用户信息
- */
-export const fetchCurrentUser = async (email, token) => {
-	const response = await axios.get(
-		`${process.env.REACT_APP_API_HOST}user/${email}`,
-		{ headers: { token } }
-	);
-	return response.data;
+export const fetchCurrentUser = async (email) => {
+	const { data } = await api.get(`user/${email}`);
+	return data;
 };
 
 // ==================== 节点相关 ====================
 
-/**
- * 获取所有 Sing-box 节点
- * @param {string} token - JWT token
- * @returns {Promise<Array>} 节点列表
- */
-export const fetchNodes = async (token) => {
-	const response = await axios.get(
-		`${process.env.REACT_APP_API_HOST}c47kr8`,
-		{ headers: { token } }
-	);
-	return response.data;
+export const fetchNodes = async () => {
+	const { data } = await api.get('c47kr8');
+	return data;
 };
 
-/**
- * 获取所有节点列表
- * @param {string} token - JWT token
- * @returns {Promise<Array>} 节点列表
- */
-export const fetchSubscriptionNodes = async (token) => {
-	const response = await axios.get(
-		`${process.env.REACT_APP_API_HOST}subscription-nodes`,
-		{ headers: { token } }
-	);
-
-	return response.data;
+export const fetchSubscriptionNodes = async () => {
+	const { data } = await api.get('subscription-nodes');
+	return data;
 };
 
 // ==================== Mutation 函数 ====================
 
-/**
- * 添加新用户
- * @param {Object} params
- * @param {Object} params.userData - 用户数据
- * @param {string} params.token - JWT token
- * @returns {Promise<Object>} 响应数据
- */
-export const addUser = async ({ userData, token }) => {
-	const response = await axios.post(
-		`${process.env.REACT_APP_API_HOST}signup`,
-		userData,
-		{ headers: { token } }
-	);
-	return response.data;
+export const addUser = async ({ userData }) => {
+	const { data } = await api.post('signup', userData);
+	return data;
 };
 
 /**
  * 更新用户信息
- * 后端真实路由：POST /v1/edit/:name，路径段为 email_as_id
- * @param {Object} params
- * @param {Object} params.userData - 用户数据，必须包含 email_as_id
- * @param {string} params.token - JWT token
- * @returns {Promise<Object>} 响应数据
+ * 后端真实路由：POST /v1/edit/:name，路径段为 email_as_id。
  */
-export const updateUser = async ({ userData, token }) => {
-	const response = await axios.post(
-		`${process.env.REACT_APP_API_HOST}edit/${userData.email_as_id}`,
-		userData,
-		{ headers: { token, 'Content-Type': 'application/json' } }
-	);
-	return response.data;
+export const updateUser = async ({ userData }) => {
+	const { data } = await api.post(`edit/${userData.email_as_id}`, userData, {
+		headers: { 'Content-Type': 'application/json' },
+	});
+	return data;
 };
 
 /**
  * 删除用户
  * 后端真实路由：GET /v1/deluser/:name
- * @param {Object} params
- * @param {Object} params.userData - 必须包含 email_as_id
- * @param {string} params.token - JWT token
- * @returns {Promise<Object>} 响应数据
  */
-export const deleteUser = async ({ userData, token }) => {
-	const response = await axios.get(
-		`${process.env.REACT_APP_API_HOST}deluser/${userData.email_as_id}`,
-		{ headers: { token } }
-	);
-	return response.data;
+export const deleteUser = async ({ userData }) => {
+	const { data } = await api.get(`deluser/${userData.email_as_id}`);
+	return data;
+};
+
+export const disableUser = async ({ userData }) => {
+	const { data } = await api.put(`disableuser/${userData.email_as_id}`, {}, {
+		headers: { 'Content-Type': 'application/json' },
+	});
+	return data;
+};
+
+export const enableUser = async ({ userData }) => {
+	const { data } = await api.put(`enableuser/${userData.email_as_id}`, {}, {
+		headers: { 'Content-Type': 'application/json' },
+	});
+	return data;
+};
+
+export const upsertNodes = async ({ nodes }) => {
+	const { data } = await api.put('upsert-nodes', nodes);
+	return data;
 };
 
 /**
- * 禁用用户
- * 后端真实路由：PUT /v1/disableuser/:name
- * @param {Object} params
- * @param {Object} params.userData - 必须包含 email_as_id
- * @param {string} params.token - JWT token
- * @returns {Promise<Object>} 响应数据
+ * 删除节点（保留旧 API 形态以兼容历史调用点；
+ * 当前后端路由表中没有 7tpxya，调用前请先在 routers/authorized.go 注册）。
  */
-export const disableUser = async ({ userData, token }) => {
-	const response = await axios.put(
-		`${process.env.REACT_APP_API_HOST}disableuser/${userData.email_as_id}`,
-		{},
-		{ headers: { token, 'Content-Type': 'application/json' } }
-	);
-	return response.data;
-};
-
-/**
- * 启用用户
- * 后端真实路由：PUT /v1/enableuser/:name
- * @param {Object} params
- * @param {Object} params.userData - 必须包含 email_as_id
- * @param {string} params.token - JWT token
- * @returns {Promise<Object>} 响应数据
- */
-export const enableUser = async ({ userData, token }) => {
-	const response = await axios.put(
-		`${process.env.REACT_APP_API_HOST}enableuser/${userData.email_as_id}`,
-		{},
-		{ headers: { token, 'Content-Type': 'application/json' } }
-	);
-	return response.data;
-};
-
-/**
- * 添加节点
- * @param {Object} params
- * @param {Array} params.nodes - 节点数据
- * @param {string} params.token - JWT token
- * @returns {Promise<Object>} 响应数据
- */
-export const upsertNodes = async ({ nodes, token }) => {
-	const response = await axios.put(
-		`${process.env.REACT_APP_API_HOST}upsert-nodes`,
-		nodes,
-		{ headers: { token } }
-	);
-	return response.data;
-};
-
-/**
- * 删除节点
- * @param {Object} params
- * @param {Array} params.nodes - 节点数据
- * @param {string} params.token - JWT token
- * @returns {Promise<Object>} 响应数据
- */
-export const deleteNodes = async ({ nodes, token }) => {
-	const response = await axios.delete(
-		`${process.env.REACT_APP_API_HOST}7tpxya`,
-		{
-			headers: { token },
-			data: nodes,
-		}
-	);
-	return response.data;
+export const deleteNodes = async ({ nodes }) => {
+	const { data } = await api.delete('7tpxya', { data: nodes });
+	return data;
 };
