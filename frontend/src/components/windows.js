@@ -46,7 +46,7 @@ function Windows() {
 						1. 点击左边栏"订阅"<br />
 						2. 点击"添加"按钮<br />
 						3. 在URL输入框中粘贴以下地址：<br />
-						<TapToCopied>{process.env.REACT_APP_FILE_AND_SUB_URL + "/verge/" + loginState.jwt.Email}</TapToCopied>
+						<TapToCopied>{process.env.REACT_APP_FILE_AND_SUB_URL + "/verge/" + loginState.jwt.email}</TapToCopied>
 					</p>
 				</li>
 

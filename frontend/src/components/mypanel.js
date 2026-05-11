@@ -173,7 +173,7 @@ function Mypanel() {
 								)}
 							</div>
 						</div>
-						{loginState.jwt.Role === "admin" && (
+						{loginState.jwt.role === "admin" && (
 							<div className="flex items-center justify-between">
 								<span className="text-gray-400">用户名:</span>
 								<div className="flex items-center space-x-2">

@@ -60,7 +60,7 @@ function Ihpone() {
 						<li>"Name" 输入 "w8"</li>
 						<li>"type" 选 "Remote"</li>
 						<li>URL 输入：
-							<p class="bg-gray-200 dark:bg-gray-700 p-2 rounded mt-1"><TapToCopied>{process.env.REACT_APP_FILE_AND_SUB_URL + "/singbox/" + loginState.jwt.Email}</TapToCopied></p>
+							<p class="bg-gray-200 dark:bg-gray-700 p-2 rounded mt-1"><TapToCopied>{process.env.REACT_APP_FILE_AND_SUB_URL + "/singbox/" + loginState.jwt.email}</TapToCopied></p>
 						</li>
 						<li>"Auto Update Interval" 填 360</li>
 						<li>点按"Create",添加配置</li>

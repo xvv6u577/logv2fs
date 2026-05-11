@@ -38,7 +38,7 @@ function Android() {
 							<ul class="list-disc pl-6 mt-2 space-y-1">
 								<li>Name：w8</li>
 								<li>Type: remote</li>
-								<li>URL：<TapToCopied>{process.env.REACT_APP_FILE_AND_SUB_URL + "/singbox/" + loginState.jwt.Email}</TapToCopied></li>
+								<li>URL：<TapToCopied>{process.env.REACT_APP_FILE_AND_SUB_URL + "/singbox/" + loginState.jwt.email}</TapToCopied></li>
 								<li>Update Interval: 360</li>
 							</ul>
 						</li>

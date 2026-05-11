@@ -53,7 +53,7 @@ function Macos() {
 							<div className="bg-gray-100 dark:bg-gray-700 p-3 rounded-md mt-2">
 								<p>Name: w8</p>
 								<p>
-									URL: <TapToCopied>{process.env.REACT_APP_FILE_AND_SUB_URL + "/singbox/" + loginState.jwt.Email}</TapToCopied>
+									URL: <TapToCopied>{process.env.REACT_APP_FILE_AND_SUB_URL + "/singbox/" + loginState.jwt.email}</TapToCopied>
 								</p>
 								<p>Auto Update: ON</p>
 								<p>Auto Update Interval: 360</p>
@@ -83,7 +83,7 @@ function Macos() {
 						<li>点击标题栏 Clash Verge 图标，选择"订阅"</li>
 						<li>
 							填入地址：
-							<TapToCopied>{process.env.REACT_APP_FILE_AND_SUB_URL + "/verge/" + loginState.jwt.Email}</TapToCopied>
+							<TapToCopied>{process.env.REACT_APP_FILE_AND_SUB_URL + "/verge/" + loginState.jwt.email}</TapToCopied>
 						</li>
 					</ul>
 				</li>

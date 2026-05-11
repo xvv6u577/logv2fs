@@ -51,7 +51,7 @@ const Menu = () => {
 					<span className="ml-3 text-xl">Logv2fs Frontend</span>
 				</a>
 				<nav className="md:mr-auto md:ml-4 md:py-1 md:pl-4 md:border-l md:border-gray-700 flex flex-wrap items-center text-base justify-center">
-					{loginState.jwt.Role === "admin" && (
+					{loginState.jwt.role === "admin" && (
 						<>
 							<a className="mr-5 hover:text-white" href="/user">User</a>
 							
@@ -212,7 +212,7 @@ const Menu = () => {
 						)}
 					</div>
 				</nav>
-				<span className="hover:text-white" href="#">Signed in as: <b>{loginState.jwt.Email}</b></span>
+				<span className="hover:text-white" href="#">Signed in as: <b>{loginState.jwt.email}</b></span>
 				<button
 					className="w-full sm:w-auto block text-white-900 bg-white hover:bg-gray-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-1.5 py-1 m-1 text-center dark:bg-gray-600 dark:hover:bg-gray-800 dark:focus:ring-gray-800"
 					onClick={handleLogout}
