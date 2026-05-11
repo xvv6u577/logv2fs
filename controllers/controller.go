@@ -4,9 +4,11 @@ import (
 	"context"
 	b64 "encoding/base64"
 	"encoding/json"
+	"errors"
 	"log"
 	"os"
 	"strconv"
+	"unicode"
 
 	"net/http"
 	"time"
@@ -19,6 +21,7 @@ import (
 	"github.com/xvv6u577/logv2fs/database"
 
 	helper "github.com/xvv6u577/logv2fs/helpers"
+	"github.com/xvv6u577/logv2fs/middleware"
 
 	"github.com/xvv6u577/logv2fs/model"
 
@@ -28,6 +31,34 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"golang.org/x/crypto/bcrypt"
 )
+
+// validatePasswordStrength 校验密码复杂度。
+// 规则（KISS）：
+//   - 长度 >= 8
+//   - 至少包含 1 个字母（Unicode 字母，含中文/CJK）
+//   - 至少包含 1 个数字
+//
+// 调用方：EditUser 用户主动改密时使用。
+// 注意：SignUp() 当前直接用邮箱作为初始密码，绕过此校验；如未来允许自选密码请同步加上。
+// 错误信息使用中文，前端会直接把 err.response.data.error 展示给用户。
+func validatePasswordStrength(pwd string) error {
+	if len(pwd) < 8 {
+		return errors.New("密码长度至少需要 8 个字符")
+	}
+	var hasLetter, hasDigit bool
+	for _, r := range pwd {
+		switch {
+		case unicode.IsLetter(r):
+			hasLetter = true
+		case unicode.IsDigit(r):
+			hasDigit = true
+		}
+	}
+	if !hasLetter || !hasDigit {
+		return errors.New("密码必须同时包含字母和数字")
+	}
+	return nil
+}
 
 var (
 	validate = validator.New()
@@ -242,49 +273,63 @@ func SignUp() gin.HandlerFunc {
 	}
 }
 
-// Login is the api used to get a single user
+// Login 处理用户登录。
+// 安全要点：
+//  1. 失败信息统一为"用户名或密码错误"，避免账号枚举。
+//  2. IP 维度限流由路由层中间件完成；这里再做账号维度限流。
+//  3. 不再把 mongo 错误原文返回给客户端。
+//  4. 仅返回 access token，不再回写整个用户对象。
+const genericLoginFailMsg = "invalid username or password"
+
 func Login() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var ctx, cancel = context.WithTimeout(context.Background(), 60*time.Second)
 		defer cancel()
-		var boundUser, foundUser, finalUser UserTrafficLogs
+		var boundUser, foundUser UserTrafficLogs
 
 		if err := c.BindJSON(&boundUser); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			log.Printf("error: %v", err)
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
+			log.Printf("login bind error: %v", err)
 			return
 		}
 
-		sanitized_email := helper.SanitizeStr(boundUser.Email_As_Id)
-		err := database.GetCollection(model.UserTrafficLogs{}).FindOne(ctx, bson.M{"email_as_id": sanitized_email}).Decode(&foundUser)
+		sanitizedEmail := helper.SanitizeStr(boundUser.Email_As_Id)
+
+		// 账号维度限流：撞库防护。即便攻击者更换 IP，也会卡在这里。
+		if !middleware.LoginAccountAllow(sanitizedEmail) {
+			c.Header("Retry-After", "300")
+			c.JSON(http.StatusTooManyRequests, gin.H{"error": "too many login attempts, please try later"})
+			return
+		}
+
+		err := database.GetCollection(model.UserTrafficLogs{}).
+			FindOne(ctx, bson.M{"email_as_id": sanitizedEmail}).
+			Decode(&foundUser)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			log.Printf("error: %v", err)
+			// 不区分"用户不存在"与"密码错误"，避免账号枚举攻击。
+			c.JSON(http.StatusUnauthorized, gin.H{"error": genericLoginFailMsg})
+			log.Printf("login lookup error for %s: %v", sanitizedEmail, err)
 			return
 		}
 
-		passwordIsValid, msg := VerifyPassword(boundUser.Password, foundUser.Password)
+		passwordIsValid, _ := VerifyPassword(boundUser.Password, foundUser.Password)
 		if !passwordIsValid {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
-			log.Printf("password is not valid: %s", msg)
+			c.JSON(http.StatusUnauthorized, gin.H{"error": genericLoginFailMsg})
+			log.Printf("password mismatch for %s", sanitizedEmail)
 			return
 		}
 
-		token, refreshToken, _ := helper.GenerateAllTokens(sanitized_email, foundUser.UUID, foundUser.Name, foundUser.Role, foundUser.User_id)
+		token, refreshToken, err := helper.GenerateAllTokens(sanitizedEmail, foundUser.UUID, foundUser.Name, foundUser.Role, foundUser.User_id)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to issue token"})
+			log.Printf("token generation failed: %v", err)
+			return
+		}
 
 		UpdateAllTokens(token, refreshToken, foundUser.User_id)
-		var projections = bson.D{
-			{Key: "token", Value: 1},
-		}
 
-		err = database.GetCollection(model.UserTrafficLogs{}).FindOne(ctx, bson.M{"email_as_id": sanitized_email}, options.FindOne().SetProjection(projections)).Decode(&finalUser)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			log.Printf("error: %v", err)
-			return
-		}
-
-		c.JSON(http.StatusOK, finalUser)
+		// 仅回写 token 字段，不暴露 refresh_token / 用户其他字段。
+		c.JSON(http.StatusOK, gin.H{"token": token})
 	}
 }
 
@@ -342,8 +387,16 @@ func EditUser() gin.HandlerFunc {
 			log.Printf("Updating remark from '%s' to '%s'", foundUser.Remark, user.Remark)
 		}
 
-		// 添加密码更新支持
-		if user.Password != "" && len(user.Password) >= 6 {
+		// 密码更新支持：
+		//   - 仅当 user.Password 非空时才尝试更新。
+		//   - 走统一的密码复杂度校验（>= 8 位、字母+数字），不达标直接 400。
+		//   - 之前的实现是 len >= 6 才更新、否则静默忽略，会导致用户以为改了密码实际没改，这里一并修复。
+		if user.Password != "" {
+			if err := validatePasswordStrength(user.Password); err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+				log.Printf("EditUser password strength check failed for %s: %v", foundUser.Email_As_Id, err)
+				return
+			}
 			hashedPassword := HashPassword(user.Password)
 			newFoundUser["password"] = hashedPassword
 			log.Printf("Updating password for user %s", foundUser.Email_As_Id)
