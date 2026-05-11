@@ -13,34 +13,58 @@ func getGINMode() string {
 	return os.Getenv("GIN_MODE")
 }
 
-// AuthorizedRoutes MongoDB版本的授权路由
+// AuthorizedRoutes 安装所有需要鉴权的路由。
+//
+// 安全模型分两层：
+//  1. 全部路由先经过 middleware.Authentication() 校验 JWT。
+//  2. 仅管理员可访问的路由再叠加 middleware.AdminOnly() 做角色检查；
+//     "本人或管理员"类（如查询自身用户信息）使用 SelfOrAdmin。
+//
+// controller 内部原有的 helper.CheckUserType("admin") 保留作为
+// defense-in-depth：即便有人在路由层漏挂中间件，业务函数本身仍能拦下。
 func AuthorizedRoutes(incomingRoutes *gin.Engine) {
 
 	if getGINMode() != "test" {
 		incomingRoutes.Use(middleware.Authentication())
 	}
 
-	// MongoDB版本的路由
-	incomingRoutes.POST("/v1/signup", controller.SignUp())
-	incomingRoutes.POST("/v1/edit/:name", controller.EditUser())
-	incomingRoutes.GET("/v1/n778cf", controller.GetAllUsers())
-	incomingRoutes.GET("/v1/user/:name", controller.GetUserByName())
-	incomingRoutes.GET("/v1/deluser/:name", controller.DeleteUserByUserName())
-	incomingRoutes.PUT("/v1/disableuser/:name", controller.DisableUser())
-	incomingRoutes.PUT("/v1/enableuser/:name", controller.EnableUser())
-	incomingRoutes.PUT("/v1/upsert-nodes", controller.UpsertNodes())
-	incomingRoutes.GET("/v1/c47kr8", controller.GetSingboxNodes())
+	// WebSocket 票据签发：任何已登录用户都可以为自己拿一张，5 秒一次性 ticket。
+	incomingRoutes.POST("/v1/ws-ticket", controller.IssueWebSocketTicket())
+
+	// =============== 管理员专属路由 ===============
+	admin := incomingRoutes.Group("/v1")
+	if getGINMode() != "test" {
+		admin.Use(middleware.AdminOnly())
+	}
+	{
+		admin.POST("/signup", controller.SignUp())
+		admin.POST("/edit/:name", controller.EditUser())
+		admin.GET("/n778cf", controller.GetAllUsers())
+		admin.GET("/deluser/:name", controller.DeleteUserByUserName())
+		admin.PUT("/disableuser/:name", controller.DisableUser())
+		admin.PUT("/enableuser/:name", controller.EnableUser())
+		admin.PUT("/upsert-nodes", controller.UpsertNodes())
+		admin.GET("/c47kr8", controller.GetSingboxNodes())
+
+		admin.PUT("/custom-date", controller.SaveCustomDate())
+		admin.GET("/custom-dates", controller.GetCustomDates())
+
+		admin.POST("/payment", controller.AddPaymentRecord())
+		admin.GET("/payment/statistics", controller.GetPaymentStatistics())
+		admin.GET("/payment/records", controller.GetPaymentRecords())
+		admin.DELETE("/payment/:id", controller.DeletePaymentRecord())
+		admin.PUT("/payment/:id", controller.UpdatePaymentRecord())
+	}
+
+	// =============== 本人或管理员可访问 ===============
+	// 路径中的 :name / :email 是用户自身标识，普通用户只能访问与自己匹配的资源。
+	incomingRoutes.GET("/v1/user/:name",
+		middleware.SelfOrAdmin("name"),
+		controller.GetUserByName())
+	incomingRoutes.GET("/v1/payment/user/:email",
+		middleware.SelfOrAdmin("email"),
+		controller.GetUserPayments())
+
+	// =============== 任意已登录用户 ===============
 	incomingRoutes.GET("/v1/subscription-nodes", controller.GetSubscriptionNodes())
-
-	// 自定义日期管理相关路由 - MongoDB版本
-	incomingRoutes.PUT("/v1/custom-date", controller.SaveCustomDate())
-	incomingRoutes.GET("/v1/custom-dates", controller.GetCustomDates())
-
-	// 费用管理相关路由 - MongoDB版本
-	incomingRoutes.POST("/v1/payment", controller.AddPaymentRecord())
-	incomingRoutes.GET("/v1/payment/user/:email", controller.GetUserPayments())
-	incomingRoutes.GET("/v1/payment/statistics", controller.GetPaymentStatistics())
-	incomingRoutes.GET("/v1/payment/records", controller.GetPaymentRecords())
-	incomingRoutes.DELETE("/v1/payment/:id", controller.DeletePaymentRecord())
-	incomingRoutes.PUT("/v1/payment/:id", controller.UpdatePaymentRecord())
 }

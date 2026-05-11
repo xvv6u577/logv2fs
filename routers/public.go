@@ -3,6 +3,7 @@ package routers
 import (
 	"github.com/gin-contrib/static"
 	controller "github.com/xvv6u577/logv2fs/controllers"
+	"github.com/xvv6u577/logv2fs/middleware"
 
 	"github.com/gin-gonic/gin"
 )
@@ -32,8 +33,9 @@ func PublicRoutes(incomingRoutes *gin.Engine) {
 	}
 
 	// MongoDB版本的路由
-	// login
-	incomingRoutes.POST("/v1/login", controller.Login())
+	// login —— 叠加按 IP 维度的登录限流，防暴力破解；
+	// 账号维度的限流在 controller 内通过 LoginAccountAllow 触发。
+	incomingRoutes.POST("/v1/login", middleware.LoginRateLimit(), controller.Login())
 
 	// shadowrocket config
 	incomingRoutes.GET("/static/:name", controller.GetSubscripionURL())
