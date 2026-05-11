@@ -4,6 +4,9 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"net/url"
+	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -140,21 +143,61 @@ func (h *Hub) BroadcastToUser(userID string, msg Message) {
 // 全局 Hub 实例
 var GlobalHub = NewHub()
 
-// WebSocket 升级器配置
+// loadAllowedOrigins 解析 ALLOWED_ORIGINS 环境变量，返回允许跨域 WebSocket 的 Origin 集合。
+// 与 HTTP 中间件保持一致，避免出现"HTTP 严格、WS 任意"的安全错位。
+func loadAllowedOrigins() map[string]struct{} {
+	out := map[string]struct{}{}
+	raw := strings.TrimSpace(os.Getenv("ALLOWED_ORIGINS"))
+	if raw == "" {
+		return out
+	}
+	for _, item := range strings.Split(raw, ",") {
+		item = strings.TrimSpace(item)
+		if item != "" {
+			out[item] = struct{}{}
+		}
+	}
+	return out
+}
+
+// WebSocket 升级器配置：
+//   - 严格 CheckOrigin：只允许 ALLOWED_ORIGINS 白名单内的 Origin；
+//   - 同源请求(Origin == Host)默认放行，方便前后端打包同域部署的常见场景。
 var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
 	CheckOrigin: func(r *http.Request) bool {
-		// 在生产环境中应该检查 Origin
-		return true
+		origin := r.Header.Get("Origin")
+		if origin == "" {
+			// 非浏览器客户端（如自家命令行工具）不带 Origin，按需放行。
+			return true
+		}
+
+		if u, err := url.Parse(origin); err == nil && u.Host == r.Host {
+			return true
+		}
+
+		allowed := loadAllowedOrigins()
+		if _, ok := allowed["*"]; ok {
+			return true
+		}
+		_, ok := allowed[origin]
+		return ok
 	},
 }
 
-// HandleWebSocket 处理 WebSocket 连接
+// HandleWebSocket 处理 WebSocket 连接握手。
+// 安全模型：
+//   - 不再相信 query 中的 user_id / is_admin；
+//   - 客户端必须先调 POST /v1/ws-ticket 用 JWT 换取一次性 ticket；
+//   - 这里仅用 ticket 做最终入场校验，命中后从 ticket 中获取真实身份。
 func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
-	// 从查询参数获取用户信息
-	userID := r.URL.Query().Get("user_id")
-	isAdmin := r.URL.Query().Get("is_admin") == "true"
+	ticketStr := r.URL.Query().Get("ticket")
+	tk := ConsumeTicket(ticketStr)
+	if tk == nil {
+		http.Error(w, "invalid or expired ticket", http.StatusUnauthorized)
+		return
+	}
 
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -167,8 +210,8 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 		Conn:    conn,
 		Send:    make(chan []byte, 256),
 		Hub:     GlobalHub,
-		UserID:  userID,
-		IsAdmin: isAdmin,
+		UserID:  tk.UserID,
+		IsAdmin: tk.IsAdmin,
 	}
 
 	client.Hub.register <- client
