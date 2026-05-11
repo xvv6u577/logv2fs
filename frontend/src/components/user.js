@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { alert, reset, success } from "../store/message";
-import axios from "axios";
+import api from "../lib/axios";
 import Alert from "./alert";
 import AddUser from "./adduser";
 import { formatBytes, formatDate, getCurrentMonthTraffic, getTrafficOfTodayFromArray } from "../service/service";
@@ -201,10 +201,19 @@ const User = () => {
 			return;
 		}
 
-		// 验证密码（如果输入了密码）
+		// 验证密码（如果输入了密码）：
+		//   - 必须 ≥ 8 个字符
+		//   - 必须同时包含字母和数字
+		//   - 两次输入必须一致
+		// 该规则需与后端 controllers.validatePasswordStrength 保持一致；
+		// 前端校验仅作为"准入门槛"，最终以后端校验为准（防止绕过）。
 		if (editForm.password) {
-			if (editForm.password.length < 6) {
-				dispatch(alert({ show: true, content: "密码至少需要6个字符" }));
+			if (editForm.password.length < 8) {
+				dispatch(alert({ show: true, content: "密码长度至少需要 8 个字符" }));
+				return;
+			}
+			if (!/[A-Za-z]/.test(editForm.password) || !/[0-9]/.test(editForm.password)) {
+				dispatch(alert({ show: true, content: "密码必须同时包含字母和数字" }));
 				return;
 			}
 			if (editForm.password !== editForm.confirmPassword) {
@@ -289,10 +298,8 @@ const User = () => {
 	// 获取用户缴费记录
 	const fetchUserPayments = (userEmail) => {
 		setPaymentLoading(true);
-		axios
-			.get(`${process.env.REACT_APP_API_HOST}payment/user/${userEmail}`, {
-				headers: { token: loginState.token },
-			})
+		api
+			.get(`payment/user/${userEmail}`)
 			.then((response) => {
 				setUserPayments(response.data.payments || []);
 			})
@@ -417,12 +424,9 @@ const User = () => {
 			remark: paymentForm.remark,
 		};
 
-		axios
-			.post(process.env.REACT_APP_API_HOST + "payment", paymentData, {
-				headers: {
-					token: loginState.token,
-					'Content-Type': 'application/json',
-				},
+		api
+			.post("payment", paymentData, {
+				headers: { 'Content-Type': 'application/json' },
 			})
 			.then((response) => {
 				dispatch(success({ show: true, content: response.data.message || "缴费记录添加成功" }));
@@ -999,7 +1003,7 @@ const User = () => {
 								{/* 新密码 */}
 								<div className="mb-4">
 									<label className="block text-sm font-medium text-gray-300 mb-2">
-										新密码（至少6个字符）
+										新密码（≥ 8 位，且需同时包含字母和数字）
 									</label>
 									<input
 										type="password"
@@ -1025,8 +1029,11 @@ const User = () => {
 									{editForm.password && editForm.confirmPassword && editForm.password !== editForm.confirmPassword && (
 										<p className="mt-1 text-sm text-red-400">密码不一致</p>
 									)}
-									{editForm.password && editForm.password.length > 0 && editForm.password.length < 6 && (
-										<p className="mt-1 text-sm text-red-400">密码至少需要6个字符</p>
+									{editForm.password && editForm.password.length > 0 && editForm.password.length < 8 && (
+										<p className="mt-1 text-sm text-red-400">密码长度至少需要 8 个字符</p>
+									)}
+									{editForm.password && editForm.password.length >= 8 && (!/[A-Za-z]/.test(editForm.password) || !/[0-9]/.test(editForm.password)) && (
+										<p className="mt-1 text-sm text-red-400">密码必须同时包含字母和数字</p>
 									)}
 								</div>
 							</div>
@@ -1209,7 +1216,7 @@ const User = () => {
 						</span>
 					</div>
 				</div>
-				{loginState.jwt.Role === "admin" && (
+				{loginState.jwt.role === "admin" && (
 					<div className="mt-4 md:mt-0">
 						<AddUser btnName="添加用户" />
 					</div>

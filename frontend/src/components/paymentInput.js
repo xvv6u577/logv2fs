@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { useSelector, useDispatch } from 'react-redux';
+import { useDispatch } from 'react-redux';
 import { alert, success } from '../store/message';
-import axios from 'axios';
+import api from '../lib/axios';
 
 const PaymentInput = () => {
 	const [users, setUsers] = useState([]);
@@ -14,7 +14,6 @@ const PaymentInput = () => {
 	const [searchTerm, setSearchTerm] = useState('');
 
 	const dispatch = useDispatch();
-	const loginState = useSelector((state) => state.login);
 
 	// 通用样式类
 	const styles = {
@@ -47,10 +46,8 @@ const PaymentInput = () => {
 	}, [startDate]);
 
 	const fetchUsers = () => {
-		axios
-			.get(process.env.REACT_APP_API_HOST + "n778cf", {
-				headers: { token: loginState.token },
-			})
+		api
+			.get("n778cf")
 			.then((response) => {
 				setUsers(response.data);
 			})
@@ -129,12 +126,9 @@ const PaymentInput = () => {
 			remark: remark,
 		};
 
-		axios
-			.post(process.env.REACT_APP_API_HOST + "payment", paymentData, {
-				headers: {
-					token: loginState.token,
-					'Content-Type': 'application/json',
-				},
+		api
+			.post("payment", paymentData, {
+				headers: { 'Content-Type': 'application/json' },
 			})
 			.then((response) => {
 				dispatch(success({ show: true, content: response.data.message || "缴费记录添加成功" }));

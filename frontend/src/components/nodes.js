@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { alert, reset } from "../store/message";
-import axios from "axios";
+import api from "../lib/axios";
 import Alert from "./alert";
 import { formatBytes, getCurrentMonthTraffic, getCurrentYearTraffic, getTrafficOfTodayFromArray } from "../service/service";
 import { useNodes } from "../hooks/useQueries";
@@ -17,7 +17,6 @@ function Nodes() {
 	const { status: wsStatus } = useWebSocket();
 
 	const dispatch = useDispatch();
-	const loginState = useSelector((state) => state.login);
 	const message = useSelector((state) => state.message);
 
 	// 通用样式类
@@ -66,10 +65,7 @@ function Nodes() {
 		const initialize = async () => {
 			try {
 				// 先尝试从后端拉取已保存的自定义日期映射
-				const response = await axios.get(
-					process.env.REACT_APP_API_HOST + "custom-dates",
-					{ headers: { token: loginState.token } }
-				);
+				const response = await api.get("custom-dates");
 
 				const defaultDate = getDefaultDate();
 				const indexMapping = {};
@@ -99,7 +95,7 @@ function Nodes() {
 		};
 
 		initialize();
-	}, [singboxNodes, loginState.token]);
+	}, [singboxNodes]);
 
 	// 计算自定义日期流量
 	const calculateCustomDateTraffic = (node, customDate) => {
@@ -144,16 +140,10 @@ function Nodes() {
 			const node = singboxNodes[nodeIndex];
 			if (!node) return;
 
-			await axios.put(
-				process.env.REACT_APP_API_HOST + "custom-date",
-				{
-					domain_as_id: node.domain_as_id,
-					custom_date: date
-				},
-				{
-					headers: { token: loginState.token }
-				}
-			);
+			await api.put("custom-date", {
+				domain_as_id: node.domain_as_id,
+				custom_date: date
+			});
 		} catch (error) {
 			console.error('保存自定义日期失败:', error);
 			dispatch(alert({ show: true, content: "保存自定义日期失败" }));

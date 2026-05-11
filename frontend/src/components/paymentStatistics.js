@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { useSelector, useDispatch } from 'react-redux';
+import { useDispatch } from 'react-redux';
 import { alert } from '../store/message';
-import axios from 'axios';
+import api from '../lib/axios';
 
 // 计费统计页（仅按月 / 按年 / 综合）
 //
@@ -17,7 +17,6 @@ const PaymentStatistics = () => {
 	});
 
 	const dispatch = useDispatch();
-	const loginState = useSelector((state) => state.login);
 
 	const styles = {
 		container: "min-h-screen bg-gray-900 text-white p-6",
@@ -63,11 +62,8 @@ const PaymentStatistics = () => {
 			end_date: dateRange.endDate,
 		};
 
-		axios
-			.get(process.env.REACT_APP_API_HOST + "payment/statistics", {
-				headers: { token: loginState.token },
-				params: params,
-			})
+		api
+			.get("payment/statistics", { params })
 			.then((response) => {
 				setStatistics(response.data);
 			})

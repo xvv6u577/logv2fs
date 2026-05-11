@@ -31,25 +31,33 @@ const Login = () => {
 		e.preventDefault();
 		setIsLoading(true);
 
+		// 登录请求不走全局 axios 单例，避免响应拦截器与登录态形成竞态；
+		// 这里直接用原生 axios，并对所有失败情形给出统一的友好提示。
 		axios
 			.post(process.env.REACT_APP_API_HOST + "login", {
 				email_as_id: name,
 				password: password,
 			})
 			.then((response) => {
-				if (response.data) {
+				if (response.data && response.data.token) {
 					localStorage.setItem("token", JSON.stringify(response.data.token));
 					dispatch(login({ token: response.data.token }));
 					dispatch(success({ show: true, content: "登录成功！" }));
+				} else {
+					dispatch(alert({ show: true, content: "登录失败，请稍后再试" }));
 				}
 			})
 			.catch((err) => {
-				if (err.response) {
-					dispatch(alert({ show: true, content: err.response.data.error || "登录失败" }));
-				} else {
-					dispatch(alert({ show: true, content: "用户名或密码错误！" }));
+				const status = err?.response?.status;
+				let content = "登录失败，请稍后再试";
+				if (status === 429) {
+					content = "尝试次数过多，请稍后再试";
+				} else if (status === 400 || status === 401) {
+					content = "用户名或密码错误";
+				} else if (!err.response) {
+					content = "网络异常，请检查连接";
 				}
-				console.log(err.toString());
+				dispatch(alert({ show: true, content }));
 			})
 			.finally(() => {
 				setIsLoading(false);
