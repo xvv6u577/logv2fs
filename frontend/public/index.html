@@ -2,9 +2,20 @@
 <html lang="en" class="dark">
 	<head>
 		<meta charset="utf-8" />
+		<!--
+			CSP（Content Security Policy）：浏览器侧的"最后一道墙"。
+			- default-src 'self' 仅允许同源资源
+			- script-src 'self' 禁止任何外联/内联脚本（CRA 生产构建产物全部同源）
+			- style-src 自身 + 'unsafe-inline' 兼容 Tailwind 与组件库内联样式
+			- font-src 自身 + Google Fonts（首页 LandingPage 使用）
+			- connect-src 自身 + ws/wss 同源 WebSocket
+			- frame-ancestors 'none' 与后端 X-Frame-Options 双重防点击劫持
+		-->
+		<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' ws: wss:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self';" />
 		<link rel="icon" type="image/x-icon" href="%PUBLIC_URL%/favicon.ico?v=2.0" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<meta name="theme-color" content="#000000" />
+		<meta name="referrer" content="strict-origin-when-cross-origin" />
 		<meta
 			name="description"
 			content="Logv2 App"
