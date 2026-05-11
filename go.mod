@@ -1,6 +1,6 @@
 module github.com/xvv6u577/logv2fs
 
-go 1.20
+go 1.21
 
 require (
 	github.com/gin-gonic/gin v1.7.7
@@ -10,9 +10,9 @@ require (
 )
 
 require (
-	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/gin-contrib/static v0.0.1
 	github.com/go-playground/validator/v10 v10.9.0
+	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/gorilla/websocket v1.5.3
 	github.com/joho/godotenv v1.4.0
 	github.com/mrz1836/go-sanitize v1.1.5
@@ -21,6 +21,7 @@ require (
 	github.com/sagernet/sing-box v1.8.1
 	github.com/spf13/cobra v1.8.0
 	golang.org/x/crypto v0.31.0
+	golang.org/x/time v0.5.0
 	google.golang.org/protobuf v1.32.0
 	gopkg.in/yaml.v2 v2.4.0
 )
@@ -111,7 +112,6 @@ require (
 	golang.org/x/sync v0.10.0 // indirect
 	golang.org/x/sys v0.28.0 // indirect
 	golang.org/x/text v0.21.0 // indirect
-	golang.org/x/time v0.5.0 // indirect
 	golang.org/x/tools v0.21.1-0.20240508182429-e35e4ccd0d2d // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20231002182017-d307bd883b97 // indirect
 	lukechampine.com/blake3 v1.2.1 // indirect
