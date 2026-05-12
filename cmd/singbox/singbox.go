@@ -76,6 +76,22 @@ func NewSingboxCmd() *cobra.Command {
 				}
 
 				jobs.Cron_loggingJobs(cronInstance, instance)
+
+				// 启动 loopback 控制端口，让 httpserver 进程能在运行时增/禁/删用户。
+				// 没配 token 视作显式关闭该能力，只打 WARN 不影响主链路。
+				ctrlAddr := os.Getenv("SINGBOX_CONTROL_LISTEN")
+				ctrlToken := os.Getenv("SINGBOX_CONTROL_TOKEN")
+				if ctrlToken == "" {
+					log.Printf("WARN: SINGBOX_CONTROL_TOKEN not set; runtime user management disabled. " +
+						"HTTP server cannot push add/disable/enable/delete to this sing-box process.")
+				} else {
+					go func() {
+						if err := singboxlib.RunControlServer(ctx, ctrlAddr, ctrlToken, instance); err != nil {
+							log.Printf("control server exited with error: %v", err)
+						}
+					}()
+				}
+
 				for {
 					osSignal := <-osSignals
 					if osSignal == syscall.SIGINT || osSignal == syscall.SIGTERM || osSignal == syscall.SIGTSTP {

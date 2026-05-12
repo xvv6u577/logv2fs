@@ -24,6 +24,7 @@ import (
 	"github.com/xvv6u577/logv2fs/middleware"
 
 	"github.com/xvv6u577/logv2fs/model"
+	singboxctl "github.com/xvv6u577/logv2fs/singbox"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -269,6 +270,15 @@ func SignUp() gin.HandlerFunc {
 			return
 		}
 
+		// 异步把新用户推到 sing-box 控制端口，不阻塞 HTTP 响应。
+		// 即便推送失败（控制端口未配/网络异常），DB 仍是事实源，singbox 重启时
+		// 会通过 UpdateOptionsFromMongoDB 自动重建状态。
+		go singboxctl.SafeAddUser(singboxctl.AddUserRequest{
+			EmailAsId: user.Email_As_Id,
+			UUID:      user.UUID,
+			UserId:    user.User_id,
+		})
+
 		c.JSON(http.StatusOK, gin.H{"message": "user " + user.Name + " created successfully"})
 	}
 }
@@ -479,6 +489,9 @@ func DeleteUserByUserName() gin.HandlerFunc {
 		); err != nil {
 			log.Printf("DeleteUserByUserName - cleanup user_traffic_periods failed: %s", err.Error())
 		}
+
+		// 异步通知 sing-box 把该用户从认证列表彻底移除
+		go singboxctl.SafeRemoveUser(user.Email_As_Id)
 
 		log.Printf("Delete user %s successfully!", user.Name)
 		c.JSON(http.StatusOK, gin.H{"message": "Delete user " + user.Name + " successfully!"})
@@ -1152,6 +1165,9 @@ func DisableUser() gin.HandlerFunc {
 			return
 		}
 
+		// 异步通知 sing-box 把该用户从认证列表中移除
+		go singboxctl.SafeDisableUser(updatedUser.Email_As_Id)
+
 		log.Printf("User %s disabled successfully", updatedUser.Name)
 		c.JSON(http.StatusOK, gin.H{"message": "User " + updatedUser.Name + " disabled successfully"})
 	}
@@ -1200,6 +1216,13 @@ func EnableUser() gin.HandlerFunc {
 			log.Printf("error enabling user: %v", err)
 			return
 		}
+
+		// 异步通知 sing-box 把该用户重新注册到认证列表
+		go singboxctl.SafeEnableUser(singboxctl.AddUserRequest{
+			EmailAsId: updatedUser.Email_As_Id,
+			UUID:      updatedUser.UUID,
+			UserId:    updatedUser.User_id,
+		})
 
 		log.Printf("User %s enabled successfully", updatedUser.Name)
 		c.JSON(http.StatusOK, gin.H{"message": "User " + updatedUser.Name + " enabled successfully"})

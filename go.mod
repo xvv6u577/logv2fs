@@ -9,6 +9,10 @@ require (
 	google.golang.org/grpc v1.60.1
 )
 
+// 本地 fork sing-box，新增运行时 AddUser / RemoveUser 导出方法。
+// 详见 third_party/sing-box/README_PATCHES.md
+replace github.com/sagernet/sing-box => ./third_party/sing-box
+
 require (
 	github.com/gin-contrib/static v0.0.1
 	github.com/go-playground/validator/v10 v10.9.0

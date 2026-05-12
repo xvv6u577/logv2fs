@@ -33,7 +33,7 @@ Avoid building functionality on speculation. Implement features only when they a
 ./main singbox     # sing-box 代理服务（含定时流量统计）
 
 # 开发态
-make backend       # 等价于 go run ./ httpserver
+make httpserver       # 等价于 go run ./ httpserver
 make singbox       # 带完整 build tags 的 sing-box
 
 # 生产构建（需要完整 build tags）
@@ -60,12 +60,13 @@ make web                # 开发态，自动代理到后端 API
 | `database/` | MongoDB 连接与集合获取 |
 | `model/` | 业务模型（含 BSON 标签） |
 | `jobs/` | 定时任务（每 15 分钟拉取 sing-box 流量并写库） |
-| `singbox/` | sing-box 集成层（从 MongoDB 加载用户配置、读取流量统计） |
+| `singbox/` | sing-box 集成层（从 MongoDB 加载用户配置、读取流量统计、loopback 控制端口与 client） |
 | `websocket/` | WebSocket 实时推送 |
 | `middleware/` | JWT 鉴权、CORS |
 | `helpers/` | 通用工具（输入清洗、IP 格式化等） |
 | `config/` | sing-box / Clash / 错误页等配置模板 |
 | `frontend/` | React + Tailwind 前端 |
+| `third_party/sing-box/` | sing-box v1.8.1 本地 fork，加导出的运行时 AddUser/RemoveUser API；`go.mod` 用 `replace` 指向 |
 
 ### 核心组件
 
@@ -150,7 +151,17 @@ SERVER_PORT=8079
 GIN_MODE=release    # debug / release / test
 
 SING_BOX_TEMPLATE_CONFIG=./config/template_singbox.json
+
+# === sing-box 运行时用户管理（runtime user mgmt） ===
+# 仅监听 loopback，不要暴露公网。httpserver 与 singbox 两个进程
+# 必须配置相同的 token，否则联动失败（DB 仍为事实源不影响业务）。
+SINGBOX_CONTROL_LISTEN=127.0.0.1:8479
+SINGBOX_CONTROL_TOKEN=please-change-me-to-a-long-random-string
 ```
+
+### Runtime User Management（sing-box 运行时增/禁/删用户）
+
+httpserver 与 singbox 是两个独立进程，原本通过 MongoDB 单向同步，DB 改动需要重启 singbox 才生效。现在通过 fork sing-box（`third_party/sing-box/`）暴露 `AddUser/RemoveUser` 导出 API，并在 singbox 进程上跑一个 loopback 控制 HTTP 服务，httpserver 在四条用户路径（SignUp / DisableUser / EnableUser / DeleteUserByUserName）成功落库后异步推送变更。失败软降级，DB 仍是唯一事实源，详见 `singbox/control_server.go`、`singbox/control_client.go`、`singbox/usermgr.go`、`third_party/sing-box/`。
 
 ### Build Tags
 生产构建必须带：
