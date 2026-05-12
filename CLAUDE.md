@@ -78,13 +78,19 @@ make web                # 开发态，自动代理到后端 API
 
 ### MongoDB 集合
 
-- `USER_TRAFFIC_LOGS` —— 用户信息及小时/日/月/年流量日志
-- `NODE_TRAFFIC_LOGS` —— 节点流量统计
-- `subscription_nodes` —— 代理节点配置
-- `payment_records` —— 缴费记录（费用领域唯一事实表，月/年统计在接口里实时分摊算出，不再物化每日分摊集合）
-- `CUSTOM_DATES` —— 节点自定义日期
+按 `model.X.CollectionName()` 与代码实际落库为准（括号内为模型文件与说明）：
 
-集合名通过 `model.X.CollectionName()` 暴露，避免硬编码。
+| 集合名 | 说明 |
+|--------|------|
+| `USER_TRAFFIC_LOGS` | 用户主文档：账号、鉴权、状态、`used` 累计用量等（`model/types.go`）。按日/月/年的明细**不存本集合**。 |
+| `user_traffic_periods` | 用户周期流量：`kind` 为 `daily` / `monthly` / `yearly`，`period` 为 `yyyymmdd` / `yyyymm` / `yyyy`，字段 `traffic` 累加（`model/types.go`）。 |
+| `NODE_TRAFFIC_LOGS` | 节点主文档：域名、状态、时间戳等（`model/node.go`）。周期明细同样**不存本集合**。 |
+| `node_traffic_periods` | 节点周期流量：结构与用户侧类似，(owner 键为 `domain_as_id`)（`model/node.go`）。 |
+| `subscription_nodes` | 订阅用代理节点配置（类型、IP、端口、REALITY/Hysteria2/VLESS CDN 等）（`model/node.go`）。 |
+| `payment_records` | 缴费事实表；月/年等费用统计在查询接口中实时聚合，不单独物化日摊集合（`model/payment.go`）。 |
+| `CUSTOM_DATES` | 节点自定义日期（`model/types.go`）。 |
+
+读用户/节点接口可通过 `$lookup` 把 `user_traffic_periods` / `node_traffic_periods` 拼回响应里的 `daily_logs`、`monthly_logs`、`yearly_logs`，仅为 API 兼容形态，持久化以周期集合为准。
 
 ### 关键文件
 
@@ -102,14 +108,19 @@ make web                # 开发态，自动代理到后端 API
 
 ## Development Patterns
 
-### Traffic Logging
-sing-box 的 v2ray API stats 每 15 分钟被 `jobs.Cron_loggingJobs` 抓一次，按用户/节点维度增量写入 MongoDB 的 `hourly_logs / daily_logs / monthly_logs / yearly_logs`，同时累加 `used` 字段。
+### Traffic Logging（流量统计）
+
+1. **采样**：`jobs.Cron_loggingJobs` 以 cron 表达式 `0 */15 * * * *` **每 15 分钟**执行一次（`jobs/cron.go`）。
+2. **数据来源**：`singbox.UsageDataOfAll` 调用 sing-box 启用的 **V2Ray Stats API**，带 `Reset_: true` 查询并重置计数器；用正则匹配形如 `user>>>…>>>traffic>>>…` 的统计名，按用户名（tag 里 `-` 前缀）汇总本轮字节数（`singbox/singbox_common.go`）。
+3. **写库（用户）**：`LogUserTraffic` 对用户主文档 `USER_TRAFFIC_LOGS` 做 `$inc used`，并在 `user_traffic_periods` 上对当日、当月、当年三条 `(email_as_id, kind, period)` 记录 **upsert 累加 `traffic`**（`jobs/cron.go`）。
+4. **写库（节点）**：`LogNodeTraffic` 用环境变量 `CURRENT_DOMAIN` 作为 `domain_as_id`，在已存在节点文档时刷新 `NODE_TRAFFIC_LOGS` 的 `updated_at`；周期增量写入 `node_traffic_periods`（同上按日/月/年 upsert）。
+5. **无小时粒度**：代码中没有 `hourly_logs` 集合或小时周期；API 中的 `daily_logs` / `monthly_logs` / `yearly_logs` 来自周期集合或 `$lookup` 拼装。
 
 ### Configuration Generation
 针对不同客户端生成订阅配置：
-- **sing-box**：JSON（基于 `config/template_singbox.json`）
-- **Clash Verge rev**：YAML（基于 `config/template_verge.yaml`）
-- **Shadowrocket**：Base64 订阅 URL
+- **sing-box**：JSON（基于 `config/template_singbox.json`），路由 `GET /singbox/:name`
+- **Clash Verge rev**：YAML（基于 `config/template_verge.yaml`），路由 `GET /verge/:name`
+- **Shadowrocket / Surge / v2rayN 等**：**同一路由、同一格式** —— `GET /static/:name` 返回 **Base64** 编码的纯文本，内容为多行分享链接（`vless://…`、`hysteria2://…` 等，由 `controllers/controller.go` 中 `GetSubscripionURL` 按节点类型拼接后 `StdEncoding.EncodeToString`）。客户端填入「订阅 URL」即可；v2rayN 与 Shadowrocket 共用该端点与编码方式。
 
 ### Real-time Features
 WebSocket 推送用户流量、节点状态、缴费、用户启停等事件。
@@ -134,7 +145,7 @@ POST   /v1/payment              录入缴费
 GET    /v1/payment/statistics   缴费统计
 GET    /singbox/:name           sing-box JSON 订阅
 GET    /verge/:name             Verge YAML 订阅
-GET    /static/:name            Shadowrocket Base64 订阅
+GET    /static/:name            Base64 多协议分享链接订阅（Shadowrocket / v2rayN 等）
 GET    /ws                      WebSocket
 ```
 
