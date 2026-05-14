@@ -62,21 +62,25 @@ type NodeAtPeriod struct {
 	UserTrafficAtPeriod map[string]int64 `json:"user_traffic_at_period" bson:"user_traffic_at_period"`
 }
 
-// Domain type: "work", "vmesstls", "vmessws", "reality", "hysteria2", "vlessCDN"
+// Domain type: "vmessws", "reality", "hysteria2", "vlessCDN"
 type SubscriptionNode struct {
-	Type         string `json:"type" bason:"type"`
-	Remark       string `json:"remark" bson:"remark"`
-	Domain       string `json:"domain" bson:"domain" validate:"required,min=2,max=100"`
-	IP           string `json:"ip" bason:"ip"`
-	SNI          string `json:"sni" bson:"sni"`
-	UUID         string `json:"uuid" bson:"uuid"`
-	PATH         string `json:"path" bson:"path"`
-	SERVER_PORT  string `json:"server_port" bson:"server_port"`
-	PASSWORD     string `json:"password" bson:"password"`
-	PUBLIC_KEY   string `json:"public_key" bson:"public_key"`
-	SHORT_ID     string `json:"short_id" bson:"short_id"`
-	EnableOpenai bool   `json:"enable_openai" bson:"enable_openai"`
-	Weight       int    `json:"weight" bson:"weight"` // 权重字段，用于节点排序，数值越小越靠前
+	ID           primitive.ObjectID `json:"_id,omitempty" bson:"_id,omitempty"`
+	Type         string             `json:"type" bson:"type"`
+	Remark       string             `json:"remark" bson:"remark"`
+	Domain       string             `json:"domain" bson:"domain" validate:"required,min=2,max=100"`
+	IP           string             `json:"ip" bson:"ip"`
+	SNI          string             `json:"sni" bson:"sni"`
+	UUID         string             `json:"uuid" bson:"uuid"`
+	PATH         string             `json:"path" bson:"path"`
+	SERVER_PORT  string             `json:"server_port" bson:"server_port"`
+	PASSWORD     string             `json:"password" bson:"password"`
+	PUBLIC_KEY   string             `json:"public_key" bson:"public_key"`
+	SHORT_ID     string             `json:"short_id" bson:"short_id"`
+	EnableOpenai bool               `json:"enable_openai" bson:"enable_openai"`
+	Weight       int                `json:"weight" bson:"weight"` // 权重字段，用于节点排序，数值越小越靠前
+	Status       string             `json:"status" bson:"status"` // status: "active", "inactive"
+	CreatedAt    time.Time          `json:"created_at" bson:"created_at"`
+	UpdatedAt    time.Time          `json:"updated_at" bson:"updated_at"`
 }
 
 // CollectionName 返回MongoDB集合名称

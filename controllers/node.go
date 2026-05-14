@@ -17,7 +17,7 @@ import (
 )
 
 // lookupNodePeriodStage 同 lookupUserPeriodStage，但作用于 node_traffic_periods 集合，
-// 关联键为 NODE_TRAFFIC_LOGS.domain_as_id == node_traffic_periods.domain_as_id。
+// 关联键为节点响应文档的 domain_as_id == node_traffic_periods.domain_as_id。
 //
 // 参数语义与 lookupUserPeriodStage 一致：
 //   - kind: "daily" | "monthly" | "yearly"
@@ -49,6 +49,14 @@ func lookupNodePeriodStage(kind, periodAlias, asField string, limit int) bson.D 
 		{Key: "pipeline", Value: pipeline},
 		{Key: "as", Value: asField},
 	}}}
+}
+
+func isTrafficCollectableNode(nodeType string) bool {
+	return nodeType == "reality" || nodeType == "hysteria2"
+}
+
+func subscriptionNodeKey(node SubscriptionNode) bson.M {
+	return bson.M{"type": node.Type, "remark": node.Remark}
 }
 
 // check if a domain is in a domain object list
@@ -96,7 +104,7 @@ func UpsertNodes() gin.HandlerFunc {
 		}
 
 		var current = time.Now().Local()
-		var rawFormData, dataCollectableNodes []SubscriptionNode
+		var rawFormData []SubscriptionNode
 
 		if err := c.BindJSON(&rawFormData); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -104,57 +112,60 @@ func UpsertNodes() gin.HandlerFunc {
 			return
 		}
 
-		// remove duplicated domains, also remove vlessCDN nodes.
-		dataCollectableNodes = sanitizeNodes(rawFormData)
+		nodeCol := database.GetCollection(model.SubscriptionNode{})
+		submittedKeys := make([]bson.M, 0, len(rawFormData))
 
-		// types: reality, hysteria2, vlessCDN! if type is reality, reassgin public_key and short_id.
-		// then, empty subscription_nodes collection, and insert rawFormData into it.
-		database.GetCollection(model.SubscriptionNode{}).DeleteMany(context.TODO(), bson.M{})
-		for i, domain := range rawFormData {
-			if domain.Type == "reality" {
-				rawFormData[i].PUBLIC_KEY = getPublicKey()
-				rawFormData[i].SHORT_ID = getShortID()
+		for _, domain := range rawFormData {
+			if domain.Remark == "" {
+				continue
 			}
-			database.GetCollection(model.SubscriptionNode{}).InsertOne(context.TODO(), domain)
-		}
-
-		// check if domain is in nodeTrafficLogsCol. if no, insert it. if yes, update it.
-		// 周期级流量字段已下沉到 node_traffic_periods 集合，主文档不再预置任何空数组。
-		for _, domain := range dataCollectableNodes {
-			filter := bson.M{"domain_as_id": domain.Domain}
+			if domain.Type == "reality" {
+				domain.PUBLIC_KEY = getPublicKey()
+				domain.SHORT_ID = getShortID()
+			}
+			filter := subscriptionNodeKey(domain)
 			update := bson.M{
 				"$set": bson.M{
-					"remark":     domain.Remark,
-					"status":     "active",
-					"updated_at": current,
+					"type":          domain.Type,
+					"remark":        domain.Remark,
+					"domain":        domain.Domain,
+					"ip":            domain.IP,
+					"sni":           domain.SNI,
+					"uuid":          domain.UUID,
+					"path":          domain.PATH,
+					"server_port":   domain.SERVER_PORT,
+					"password":      domain.PASSWORD,
+					"public_key":    domain.PUBLIC_KEY,
+					"short_id":      domain.SHORT_ID,
+					"enable_openai": domain.EnableOpenai,
+					"weight":        domain.Weight,
+					"status":        "active",
+					"updated_at":    current,
 				},
 				"$setOnInsert": bson.M{
-					"_id":          primitive.NewObjectID(),
-					"domain_as_id": domain.Domain,
-					"created_at":   current,
+					"_id":        primitive.NewObjectID(),
+					"created_at": current,
 				},
 			}
 			opts := options.Update().SetUpsert(true)
-			_, err := database.GetCollection(model.NodeTrafficLogs{}).UpdateOne(context.TODO(), filter, update, opts)
+			_, err := nodeCol.UpdateOne(context.TODO(), filter, update, opts)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-				log.Printf("UpdateOne in nodeTrafficLogsCol error: %v", err)
+				log.Printf("UpdateOne in subscription_nodes error: %v", err)
 				return
 			}
-
+			submittedKeys = append(submittedKeys, subscriptionNodeKey(domain))
 		}
 
-		// Set status to "inactive" for NodeTrafficLogs entries not in dataCollectableNodes
-		domainAsIds := make([]string, len(dataCollectableNodes))
-		for i, domain := range dataCollectableNodes {
-			domainAsIds[i] = domain.Domain
+		inactiveFilter := bson.M{"type": bson.M{"$in": []string{"reality", "hysteria2", "vlessCDN"}}}
+		if len(submittedKeys) > 0 {
+			inactiveFilter["$nor"] = submittedKeys
 		}
-		inactiveFilter := bson.M{"domain_as_id": bson.M{"$nin": domainAsIds}}
-		inactiveUpdate := bson.M{"$set": bson.M{"status": "inactive"}}
-		_, err := database.GetCollection(model.NodeTrafficLogs{}).UpdateMany(context.TODO(), inactiveFilter, inactiveUpdate)
+		inactiveUpdate := bson.M{"$set": bson.M{"status": "inactive", "updated_at": current}}
+		_, err := nodeCol.UpdateMany(context.TODO(), inactiveFilter, inactiveUpdate)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			log.Printf("UpdateMany in nodeTrafficLogsCol error: %v", err)
+			log.Printf("UpdateMany in subscription_nodes error: %v", err)
 			return
 		}
 
@@ -171,8 +182,10 @@ func GetSubscriptionNodes() gin.HandlerFunc {
 		}
 
 		var activeNodes []SubscriptionNode
-		// type is not "work"
-		var filter = bson.D{{Key: "type", Value: bson.D{{Key: "$ne", Value: "work"}}}}
+		var filter = bson.D{
+			{Key: "type", Value: bson.D{{Key: "$ne", Value: "work"}}},
+			{Key: "status", Value: bson.D{{Key: "$ne", Value: "inactive"}}},
+		}
 		cur, err := database.GetCollection(model.SubscriptionNode{}).Find(context.TODO(), filter)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -198,16 +211,37 @@ func GetSingboxNodes() gin.HandlerFunc {
 			return
 		}
 
+		// subscription_nodes 是节点主集合；监控页只展示可统计类型，并按 domain 合并。
 		// 通过聚合管道把 node_traffic_periods 里对应粒度的数据注入回 daily/monthly/yearly_logs，
-		// 保持给前端的 JSON 结构与拆表前完全一致。前端 nodes.js 仍按原字段名访问。
+		// 保持给前端的 JSON 结构与拆表前兼容。
 		pipeline := mongo.Pipeline{
-			{{Key: "$match", Value: bson.D{{Key: "status", Value: "active"}}}},
+			{{Key: "$match", Value: bson.D{
+				{Key: "status", Value: "active"},
+				{Key: "type", Value: bson.D{{Key: "$in", Value: bson.A{"reality", "hysteria2"}}}},
+				{Key: "domain", Value: bson.D{{Key: "$ne", Value: ""}}},
+			}}},
+			{{Key: "$sort", Value: bson.D{{Key: "weight", Value: 1}, {Key: "updated_at", Value: -1}}}},
+			{{Key: "$group", Value: bson.D{
+				{Key: "_id", Value: "$domain"},
+				{Key: "remark", Value: bson.D{{Key: "$first", Value: "$remark"}}},
+				{Key: "status", Value: bson.D{{Key: "$first", Value: "$status"}}},
+				{Key: "created_at", Value: bson.D{{Key: "$min", Value: "$created_at"}}},
+				{Key: "updated_at", Value: bson.D{{Key: "$max", Value: "$updated_at"}}},
+			}}},
+			{{Key: "$project", Value: bson.D{
+				{Key: "_id", Value: 0},
+				{Key: "domain_as_id", Value: "$_id"},
+				{Key: "remark", Value: 1},
+				{Key: "status", Value: 1},
+				{Key: "created_at", Value: 1},
+				{Key: "updated_at", Value: 1},
+			}}},
 			lookupNodePeriodStage("daily", "date", "daily_logs", 0),
 			lookupNodePeriodStage("monthly", "month", "monthly_logs", 0),
 			lookupNodePeriodStage("yearly", "year", "yearly_logs", 0),
 		}
 
-		cur, err := database.GetCollection(model.NodeTrafficLogs{}).Aggregate(context.TODO(), pipeline)
+		cur, err := database.GetCollection(model.SubscriptionNode{}).Aggregate(context.TODO(), pipeline)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			log.Printf("GetSingboxNodes aggregate error: %v", err)

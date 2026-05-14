@@ -614,7 +614,7 @@ func GetSubscripionURL() gin.HandlerFunc {
 		// 查询所有节点并按权重升序排序
 		cur, err := database.GetCollection(model.SubscriptionNode{}).Find(
 			context.TODO(),
-			bson.D{},
+			bson.D{{Key: "status", Value: bson.D{{Key: "$ne", Value: "inactive"}}}},
 			options.Find().SetSort(bson.D{{Key: "weight", Value: 1}}), // 按权重升序排序
 		)
 		if err != nil {
@@ -714,7 +714,7 @@ func ReturnSingboxJson() gin.HandlerFunc {
 		// 查询所有节点并按权重升序排序
 		cur, err := database.GetCollection(model.SubscriptionNode{}).Find(
 			context.TODO(),
-			bson.D{},
+			bson.D{{Key: "status", Value: bson.D{{Key: "$ne", Value: "inactive"}}}},
 			options.Find().SetSort(bson.D{{Key: "weight", Value: 1}}), // 按权重升序排序
 		)
 		if err != nil {
@@ -965,7 +965,7 @@ func ReturnVergeYAML() gin.HandlerFunc {
 		// 查询所有节点并按权重升序排序
 		cur, err := database.GetCollection(model.SubscriptionNode{}).Find(
 			context.TODO(),
-			bson.D{},
+			bson.D{{Key: "status", Value: bson.D{{Key: "$ne", Value: "inactive"}}}},
 			options.Find().SetSort(bson.D{{Key: "weight", Value: 1}}), // 按权重升序排序
 		)
 		if err != nil {

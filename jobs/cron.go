@@ -103,6 +103,7 @@ func LogUserTraffic(collection *mongo.Collection, email string, timestamp time.T
 
 // LogNodeTraffic 写入单个节点的本次采样流量。
 //
+// subscription_nodes 是节点主集合；只有 active 的 reality/hysteria2 节点会记录流量。
 // 与 LogUserTraffic 同理：节点主文档仅更新 updated_at，
 // 周期数据全部下沉到 node_traffic_periods 集合。
 func LogNodeTraffic(collection *mongo.Collection, domain string, timestamp time.Time, traffic int64) error {
@@ -110,19 +111,33 @@ func LogNodeTraffic(collection *mongo.Collection, domain string, timestamp time.
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
+	if domain == "" {
+		log.Printf("跳过节点流量记录: CURRENT_DOMAIN 为空")
+		return nil
+	}
+
 	now := time.Now()
 	date := timestamp.Format("20060102")
 	month := timestamp.Format("200601")
 	year := timestamp.Format("2006")
 
-	// 1) 节点主文档：刷新 updated_at（只在已存在时更新；不在则跳过，避免凭空创建节点）
-	if _, err := collection.UpdateOne(
+	// 1) 节点主文档：刷新 updated_at（只在已存在的 active 可统计节点时更新）
+	res, err := collection.UpdateMany(
 		ctx,
-		bson.M{"domain_as_id": domain},
+		bson.M{
+			"domain": domain,
+			"status": "active",
+			"type":   bson.M{"$in": []string{"reality", "hysteria2"}},
+		},
 		bson.M{"$set": bson.M{"updated_at": now}},
-	); err != nil {
+	)
+	if err != nil {
 		log.Printf("更新节点主文档 updated_at 失败: %v", err)
 		return err
+	}
+	if res.MatchedCount == 0 {
+		log.Printf("跳过节点流量记录: domain=%s 未找到 active 的 reality/hysteria2 节点", domain)
+		return nil
 	}
 
 	// 2) 周期集合：按日/月/年分别 upsert
@@ -169,7 +184,7 @@ func Cron_loggingJobs(c *cron.Cron, instance *box.Box) {
 				log.Printf("用户流量记录失败: %v\n", err)
 			}
 
-			if err := LogNodeTraffic(database.GetCollection(model.NodeTrafficLogs{}), getCurrentDomain(), timesteamp, perUser.Total); err != nil {
+			if err := LogNodeTraffic(database.GetCollection(model.SubscriptionNode{}), getCurrentDomain(), timesteamp, perUser.Total); err != nil {
 				log.Printf("节点流量记录失败: %v\n", err)
 			}
 		}
