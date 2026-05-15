@@ -1,13 +1,13 @@
 package singbox
 
-// control_client.go：httpserver 进程侧调用 singbox 控制端口的小客户端。
+// control_client.go：httpserver 进程侧调用各 singbox 节点控制端口的小客户端。
 //
 // 设计要点：
-//   - 提供 package 级单例 DefaultControlClient，由 init() 根据环境变量决定是否启用。
-//   - 未配置（token 为空）时 client 为 nil，所有方法转为 no-op，HTTP 业务接口不报错。
+//   - Safe* 方法从 subscription_nodes 发现 active 的 logv2fs 节点 IP，并广播控制指令。
+//   - 未配置 SINGBOX_CONTROL_TOKEN 时转为 no-op，HTTP 业务接口不报错。
 //   - 所有方法都设计为 soft-fail：网络失败只打日志，不冒泡。理由：MongoDB 是
 //     事实源，sing-box 是缓存；缓存丢一次不影响业务正确性，singbox 重启会全量重建。
-//   - 默认超时 3 秒；loopback 调用通常 < 5ms，3 秒已极宽松。
+//   - 默认单节点请求超时 3 秒；广播发现节点的总超时为 10 秒。
 
 import (
 	"bytes"
@@ -16,11 +16,17 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
+	"strings"
 	"sync"
 	"time"
+
+	"github.com/xvv6u577/logv2fs/database"
+	"github.com/xvv6u577/logv2fs/model"
+	"go.mongodb.org/mongo-driver/bson"
 )
 
 // ControlClient 把 ApplyAddUser/ApplyRemoveUser 的语义封装成跨进程 HTTP 调用。
@@ -28,6 +34,12 @@ type ControlClient struct {
 	baseURL string
 	token   string
 	http    *http.Client
+}
+
+type controlTarget struct {
+	Domain string
+	IP     string
+	Addr   string
 }
 
 // NewControlClient 显式构造 client。一般业务代码无需调用，请用 DefaultControlClient。
@@ -141,51 +153,135 @@ func (c *ControlClient) doJSON(method, path string, body any) error {
 	return nil
 }
 
+func controlBroadcastPort() string {
+	if port := strings.TrimSpace(os.Getenv("SINGBOX_CONTROL_PORT")); port != "" {
+		return port
+	}
+	if addr := strings.TrimSpace(os.Getenv("SINGBOX_CONTROL_LISTEN")); addr != "" {
+		if _, port, err := net.SplitHostPort(addr); err == nil && port != "" {
+			return port
+		}
+	}
+	_, port, err := net.SplitHostPort(DefaultControlListen)
+	if err != nil || port == "" {
+		return "8479"
+	}
+	return port
+}
+
+func controlAddrForIP(ip, port string) string {
+	host := strings.TrimSpace(ip)
+	host = strings.TrimPrefix(strings.TrimSuffix(host, "]"), "[")
+	if parsedHost, parsedPort, err := net.SplitHostPort(host); err == nil && parsedHost != "" && parsedPort != "" {
+		return net.JoinHostPort(parsedHost, parsedPort)
+	}
+	return net.JoinHostPort(host, port)
+}
+
+func listBroadcastTargets(ctx context.Context) ([]controlTarget, error) {
+	filter := bson.M{
+		"status": "active",
+		"ip":     bson.M{"$ne": ""},
+		"type":   bson.M{"$nin": []string{"vlessCDN", "work"}},
+	}
+	cur, err := database.GetCollection(model.SubscriptionNode{}).Find(ctx, filter)
+	if err != nil {
+		return nil, err
+	}
+	defer cur.Close(ctx)
+
+	var nodes []model.SubscriptionNode
+	if err := cur.All(ctx, &nodes); err != nil {
+		return nil, err
+	}
+
+	port := controlBroadcastPort()
+	seen := make(map[string]bool)
+	targets := make([]controlTarget, 0, len(nodes))
+	for _, node := range nodes {
+		ip := strings.TrimSpace(node.IP)
+		if ip == "" {
+			continue
+		}
+		nodePort := strings.TrimSpace(node.ControlPort)
+		if nodePort == "" {
+			nodePort = port
+		}
+		addr := controlAddrForIP(ip, nodePort)
+		if seen[addr] {
+			continue
+		}
+		seen[addr] = true
+		targets = append(targets, controlTarget{
+			Domain: node.Domain,
+			IP:     ip,
+			Addr:   addr,
+		})
+	}
+	return targets, nil
+}
+
+func broadcastControl(action, emailAsId string, call func(*ControlClient) error) {
+	token := os.Getenv("SINGBOX_CONTROL_TOKEN")
+	if token == "" {
+		log.Printf("[singbox.control_client] SINGBOX_CONTROL_TOKEN not set, broadcast disabled")
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	targets, err := listBroadcastTargets(ctx)
+	if err != nil {
+		log.Printf("[singbox.control_client] list broadcast targets for %s %s failed: %v", action, emailAsId, err)
+		return
+	}
+	if len(targets) == 0 {
+		log.Printf("[singbox.control_client] no active subscription_nodes targets for %s %s", action, emailAsId)
+		return
+	}
+
+	for _, target := range targets {
+		client := NewControlClient(target.Addr, token)
+		if err := call(client); err != nil {
+			log.Printf("[singbox.control_client] %s %s target=%s domain=%s ip=%s failed: %v",
+				action, emailAsId, target.Addr, target.Domain, target.IP, err)
+			continue
+		}
+		log.Printf("[singbox.control_client] %s %s target=%s domain=%s ok",
+			action, emailAsId, target.Addr, target.Domain)
+	}
+}
+
 // SafeAddUser / SafeRemoveUser / SafeEnableUser 是给业务路径调用的"防御性"包装：
-// client 为 nil 直接 no-op，错误只打日志不冒泡，确保 HTTP 业务永远不被同步阻塞。
+// 按 subscription_nodes 广播，错误只打日志不冒泡，确保 HTTP 业务永远不被同步阻塞。
 //
 // 调用方建议在 goroutine 里再包一层，让 HTTP 响应立刻返回。
 
 // SafeAddUser 软失败地新增用户。
 func SafeAddUser(req AddUserRequest) {
-	c := DefaultControlClient()
-	if c == nil {
-		return
-	}
-	if err := c.AddUser(req); err != nil {
-		log.Printf("[singbox.control_client] AddUser %s failed: %v", req.EmailAsId, err)
-	}
+	broadcastControl("AddUser", req.EmailAsId, func(c *ControlClient) error {
+		return c.AddUser(req)
+	})
 }
 
 // SafeRemoveUser 软失败地删除用户。
 func SafeRemoveUser(emailAsId string) {
-	c := DefaultControlClient()
-	if c == nil {
-		return
-	}
-	if err := c.RemoveUser(emailAsId); err != nil {
-		log.Printf("[singbox.control_client] RemoveUser %s failed: %v", emailAsId, err)
-	}
+	broadcastControl("RemoveUser", emailAsId, func(c *ControlClient) error {
+		return c.RemoveUser(emailAsId)
+	})
 }
 
 // SafeDisableUser 软失败地禁用用户。
 func SafeDisableUser(emailAsId string) {
-	c := DefaultControlClient()
-	if c == nil {
-		return
-	}
-	if err := c.DisableUser(emailAsId); err != nil {
-		log.Printf("[singbox.control_client] DisableUser %s failed: %v", emailAsId, err)
-	}
+	broadcastControl("DisableUser", emailAsId, func(c *ControlClient) error {
+		return c.DisableUser(emailAsId)
+	})
 }
 
 // SafeEnableUser 软失败地启用用户。
 func SafeEnableUser(req AddUserRequest) {
-	c := DefaultControlClient()
-	if c == nil {
-		return
-	}
-	if err := c.EnableUser(req); err != nil {
-		log.Printf("[singbox.control_client] EnableUser %s failed: %v", req.EmailAsId, err)
-	}
+	broadcastControl("EnableUser", req.EmailAsId, func(c *ControlClient) error {
+		return c.EnableUser(req)
+	})
 }

@@ -23,6 +23,7 @@ CA
 
 logv2fs
 .env
+.env*
 *.sh
 *.log
 .DS_Store

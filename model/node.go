@@ -78,6 +78,7 @@ type SubscriptionNode struct {
 	SHORT_ID     string             `json:"short_id" bson:"short_id"`
 	EnableOpenai bool               `json:"enable_openai" bson:"enable_openai"`
 	Weight       int                `json:"weight" bson:"weight"` // 权重字段，用于节点排序，数值越小越靠前
+	ControlPort  string             `json:"control_port" bson:"control_port"`
 	Status       string             `json:"status" bson:"status"` // status: "active", "inactive"
 	CreatedAt    time.Time          `json:"created_at" bson:"created_at"`
 	UpdatedAt    time.Time          `json:"updated_at" bson:"updated_at"`
