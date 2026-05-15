@@ -6,6 +6,7 @@ package cmd
 import (
 	"log"
 	"os"
+	"path/filepath"
 
 	"github.com/joho/godotenv"
 	"github.com/spf13/cobra"
@@ -26,14 +27,16 @@ type (
 	NodeTrafficLogs = model.NodeTrafficLogs
 )
 
+var envFile string
+
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "cmd",
 	Short: "root command",
 	Long:  `root command, which is the entry of this program.`,
-	// Uncomment the following line if your bare application
-	// has an action associated with it:
-	// Run: func(cmd *cobra.Command, args []string) { },
+	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		loadEnvFile()
+	},
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
@@ -46,17 +49,7 @@ func Execute() {
 }
 
 func init() {
-	// 在任何子命令执行之前，先加载 .env 文件
-	// 这样确保所有环境变量都能被正确读取
-	pwd, err := os.Getwd()
-	if err != nil {
-		log.Printf("警告: 无法获取当前工作目录: %v", err)
-	} else {
-		// 尝试加载 .env 文件，如果文件不存在也不会报错
-		if err := godotenv.Load(pwd + "/.env"); err != nil {
-			log.Printf("提示: 未找到 .env 文件或加载失败: %v", err)
-		}
-	}
+	rootCmd.PersistentFlags().StringVarP(&envFile, "env", "e", "", "path to .env file; defaults to .env in the current directory")
 
 	// 添加子命令
 	rootCmd.AddCommand(singbox.NewSingboxCmd())
@@ -65,4 +58,24 @@ func init() {
 	rootCmd.AddCommand(migratetrafficlogs.NewMigrateTrafficLogsCmd())
 	rootCmd.AddCommand(dropdailyallocations.NewDropDailyAllocationsCmd())
 
+}
+
+func loadEnvFile() {
+	envPath := envFile
+	if envPath == "" {
+		envPath = defaultEnvFile()
+	}
+
+	if err := godotenv.Load(envPath); err != nil {
+		log.Printf("提示: 未找到 .env 文件或加载失败 path=%s err=%v", envPath, err)
+	}
+}
+
+func defaultEnvFile() string {
+	pwd, err := os.Getwd()
+	if err != nil {
+		log.Printf("警告: 无法获取当前工作目录: %v", err)
+		return ".env"
+	}
+	return filepath.Join(pwd, ".env")
 }
