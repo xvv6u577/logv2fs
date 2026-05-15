@@ -24,17 +24,24 @@ var (
 
 // NewSingboxCmd 返回 singbox 命令
 func NewSingboxCmd() *cobra.Command {
-	return &cobra.Command{
+	var configFile string
+
+	cmd := &cobra.Command{
+
 		Use:   "singbox",
 		Short: "short  - singbox start here",
 		Long:  `long - singbox start here`,
 		Run: func(cmd *cobra.Command, args []string) {
 
+			if configFile != "" {
+				os.Setenv("SING_BOX_TEMPLATE_CONFIG", configFile)
+			}
+
 			// if SING_BOX_TEMPLATE_CONFIG is not set, exit with error
-			if os.Getenv("SING_BOX_TEMPLATE_CONFIG") == "" {
+			configFile := os.Getenv("SING_BOX_TEMPLATE_CONFIG")
+			if configFile == "" {
 				log.Fatal("SING_BOX_TEMPLATE_CONFIG is not set")
 			}
-			configFile := os.Getenv("SING_BOX_TEMPLATE_CONFIG")
 
 			osSignals := make(chan os.Signal, 1)
 			signal.Notify(osSignals, os.Interrupt, syscall.SIGTERM, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTSTP)
@@ -81,6 +88,8 @@ func NewSingboxCmd() *cobra.Command {
 				// 没配 token 视作显式关闭该能力，只打 WARN 不影响主链路。
 				ctrlAddr := os.Getenv("SINGBOX_CONTROL_LISTEN")
 				ctrlToken := os.Getenv("SINGBOX_CONTROL_TOKEN")
+				singboxlib.RegisterControlPortFromEnv()
+
 				if ctrlToken == "" {
 					log.Printf("WARN: SINGBOX_CONTROL_TOKEN not set; runtime user management disabled. " +
 						"HTTP server cannot push add/disable/enable/delete to this sing-box process.")
@@ -106,6 +115,9 @@ func NewSingboxCmd() *cobra.Command {
 			select {}
 		},
 	}
+
+	cmd.Flags().StringVarP(&configFile, "config", "c", "", "set SING_BOX_TEMPLATE_CONFIG and override .env")
+	return cmd
 }
 
 func init() {
