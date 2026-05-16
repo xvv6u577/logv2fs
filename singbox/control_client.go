@@ -154,9 +154,6 @@ func (c *ControlClient) doJSON(method, path string, body any) error {
 }
 
 func controlBroadcastPort() string {
-	if port := strings.TrimSpace(os.Getenv("SINGBOX_CONTROL_PORT")); port != "" {
-		return port
-	}
 	if addr := strings.TrimSpace(os.Getenv("SINGBOX_CONTROL_LISTEN")); addr != "" {
 		if _, port, err := net.SplitHostPort(addr); err == nil && port != "" {
 			return port
