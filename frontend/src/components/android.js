@@ -24,9 +24,16 @@ function Android() {
 			<ol class="space-y-8">
 				<li>
 					<h2 class="text-xl font-semibold text-gray-800 dark:text-white mb-2">下载客户端 Sing-box</h2>
-					<p class="text-gray-700 dark:text-gray-300">下载链接：
-						<TapToCopied>{process.env.REACT_APP_FILE_AND_SUB_URL + "/dl/Singbox-for-Android-1.11.8-universal.apk"}</TapToCopied>
-					</p>
+					<a
+						href="https://lllinter.oss-cn-hangzhou.aliyuncs.com/geo/SFA-1.11.4-universal.apk"
+						class="inline-block bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded transition-colors duration-200"
+						download
+						target="_blank"
+						rel="noopener noreferrer"
+					>
+						下载客户端
+					</a>
+
 				</li>
 
 				<li>

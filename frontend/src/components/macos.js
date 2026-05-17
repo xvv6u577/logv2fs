@@ -1,15 +1,8 @@
 import { useSelector } from "react-redux";
 import TapToCopied from "./tapToCopied";
-// import ClashxMac1 from "../images/clashx-mac-1.png";
-// import ClashxMac2 from "../images/clashx-mac-2.png";
-// import ClashxMac3 from "../images/clashx-mac-3.png";
-// import MyLightbox from "./MyLightbox";
 
 function Macos() {
 	const loginState = useSelector((state) => state.login);
-	// const img1 = [ClashxMac1];
-	// const img2 = [ClashxMac2];
-	// const img3 = [ClashxMac3];
 
 
 	return (
@@ -63,31 +56,6 @@ function Macos() {
 					</ul>
 				</li>
 				<li>点击 "Dashboard" 标签页，打开 "Enable" 开关以启用 VPN。</li>
-			</ol>
-
-			<h2 className="text-2xl font-semibold mb-4 text-gray-700 dark:text-gray-300">
-				安装 Clash Verge 客户端
-			</h2>
-
-			<ol className="list-decimal list-inside space-y-4 mb-6">
-				<li>
-					下载客户端：
-					<TapToCopied>{process.env.REACT_APP_FILE_AND_SUB_URL + "/dl/Clash.Verge_2.2.3_x64.dmg"}</TapToCopied>
-				</li>
-				<li>运行 DMG 文件并将应用程序拖入「应用程序」文件夹。</li>
-				<li>首次运行时，允许来自未知开发者的应用打开。</li>
-				<li>安装帮助程序（Helper）以设置系统代理。</li>
-				<li>
-					添加配置：
-					<ul className="list-disc list-inside ml-4 mt-2 space-y-2">
-						<li>点击标题栏 Clash Verge 图标，选择"订阅"</li>
-						<li>
-							填入地址：
-							<TapToCopied>{process.env.REACT_APP_FILE_AND_SUB_URL + "/verge/" + loginState.jwt.email}</TapToCopied>
-						</li>
-					</ul>
-				</li>
-				<li>点击左边栏"设置"，然后打开"系统代理"开关。</li>
 			</ol>
 
 			<p className="text-gray-600 dark:text-gray-400">
