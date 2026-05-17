@@ -10,10 +10,8 @@ import (
 
 	"github.com/joho/godotenv"
 	"github.com/spf13/cobra"
-	dropdailyallocations "github.com/xvv6u577/logv2fs/cmd/dropdailyallocations"
 	httpserver "github.com/xvv6u577/logv2fs/cmd/httpserver"
 	migratenodes "github.com/xvv6u577/logv2fs/cmd/migratenodes"
-	migratetrafficlogs "github.com/xvv6u577/logv2fs/cmd/migratetrafficlogs"
 	singbox "github.com/xvv6u577/logv2fs/cmd/singbox"
 	"github.com/xvv6u577/logv2fs/model"
 )
@@ -55,8 +53,6 @@ func init() {
 	rootCmd.AddCommand(singbox.NewSingboxCmd())
 	rootCmd.AddCommand(httpserver.NewHTTPServerCmd())
 	rootCmd.AddCommand(migratenodes.NewMigrateNodesCmd())
-	rootCmd.AddCommand(migratetrafficlogs.NewMigrateTrafficLogsCmd())
-	rootCmd.AddCommand(dropdailyallocations.NewDropDailyAllocationsCmd())
 
 }
 
