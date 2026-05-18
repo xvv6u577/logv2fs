@@ -101,46 +101,31 @@ func LogUserTraffic(collection *mongo.Collection, email string, timestamp time.T
 	return nil
 }
 
-// LogNodeTraffic 写入单个节点的本次采样流量。
-//
-// subscription_nodes 是节点主集合；只有 active 的 reality/hysteria2 节点会记录流量。
-// 与 LogUserTraffic 同理：节点主文档仅更新 updated_at，
-// 周期数据全部下沉到 node_traffic_periods 集合。
-func LogNodeTraffic(collection *mongo.Collection, domain string, timestamp time.Time, traffic int64) error {
+// LogNodeTraffic 将本采样窗口内该节点上的总流量（各 sing-box 用户统计之和）写入
+// node_traffic_periods；若 NODE_TRAFFIC_LOGS 中已有 domain_as_id 对应文档，则仅刷新 updated_at。
+func LogNodeTraffic(nodeCol *mongo.Collection, domain string, timestamp time.Time, traffic int64) error {
+	if domain == "" || traffic <= 0 {
+		return nil
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
-
-	if domain == "" {
-		log.Printf("跳过节点流量记录: CURRENT_DOMAIN 为空")
-		return nil
-	}
 
 	now := time.Now()
 	date := timestamp.Format("20060102")
 	month := timestamp.Format("200601")
 	year := timestamp.Format("2006")
 
-	// 1) 节点主文档：刷新 updated_at（只在已存在的 active 可统计节点时更新）
-	res, err := collection.UpdateMany(
+	// 节点主文档：不创建、不累加汇总字段；仅在已存在时刷新心跳时间
+	if _, err := nodeCol.UpdateOne(
 		ctx,
-		bson.M{
-			"domain": domain,
-			"status": "active",
-			"type":   bson.M{"$in": []string{"reality", "hysteria2"}},
-		},
+		bson.M{"domain_as_id": domain},
 		bson.M{"$set": bson.M{"updated_at": now}},
-	)
-	if err != nil {
+	); err != nil {
 		log.Printf("更新节点主文档 updated_at 失败: %v", err)
 		return err
 	}
-	if res.MatchedCount == 0 {
-		log.Printf("跳过节点流量记录: domain=%s 未找到 active 的 reality/hysteria2 节点", domain)
-		return nil
-	}
 
-	// 2) 周期集合：按日/月/年分别 upsert
 	periodCol := database.GetCollection(model.NodeTrafficPeriod{})
 	for _, item := range []struct {
 		kind   string
@@ -177,17 +162,25 @@ func Cron_loggingJobs(c *cron.Cron, instance *box.Box) {
 			return
 		}
 
+		var nodeTotal int64
 		for _, perUser := range usageData {
 			// perUser = traffic: {Name: "tom", Total: 100}
+			nodeTotal += perUser.Total
 			log.Printf("用户流量记录: %v %v", perUser.Name, perUser.Total)
 			if err := LogUserTraffic(database.GetCollection(model.UserTrafficLogs{}), perUser.Name, timesteamp, perUser.Total); err != nil {
 				log.Printf("用户流量记录失败: %v\n", err)
 			}
-
-			if err := LogNodeTraffic(database.GetCollection(model.SubscriptionNode{}), getCurrentDomain(), timesteamp, perUser.Total); err != nil {
-				log.Printf("节点流量记录失败: %v\n", err)
-			}
 		}
+
+		domain := getCurrentDomain()
+		if domain == "" {
+			log.Printf("CURRENT_DOMAIN 未设置，跳过 node_traffic_periods 写入")
+		} else if err := LogNodeTraffic(database.GetCollection(model.NodeTrafficLogs{}), domain, timesteamp, nodeTotal); err != nil {
+			log.Printf("节点流量记录失败: %v\n", err)
+		} else if nodeTotal > 0 {
+			log.Printf("节点流量记录: domain=%s total=%d", domain, nodeTotal)
+		}
+
 		log.Printf("流量记录完成: %v 用户=%d", timesteamp.Format("20060102 15:04:05"), len(usageData))
 
 	})

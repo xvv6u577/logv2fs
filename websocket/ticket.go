@@ -16,7 +16,7 @@ import (
 //  3. 服务端校验 ticket 命中 → 取出绑定的 user_id/role → 立即从 store 删除（一次性）。
 //
 // 安全特性：
-//   - TTL 5 秒：重放窗口极小。
+//   - TTL 30 秒：覆盖 Cloudflare 边缘转发抖动，同时保持较小重放窗口。
 //   - 一次性消费：成功换连接后立即失效。
 //   - 32 字节随机 base64：不可被预测。
 type Ticket struct {
@@ -29,8 +29,8 @@ type Ticket struct {
 var (
 	ticketStore sync.Map // ticket(string) -> *Ticket
 
-	// ticketTTL 控制 ticket 有效期。设为 5 秒既覆盖网络抖动，又最小化暴露。
-	ticketTTL = 5 * time.Second
+	// ticketTTL 控制 ticket 有效期。Cloudflare Worker 反代链路下 5 秒容易被边缘延迟吃掉。
+	ticketTTL = 30 * time.Second
 )
 
 // IssueTicket 签发新 ticket 并写入内存 store。

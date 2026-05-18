@@ -3,7 +3,8 @@ package singbox
 // control_client.go：httpserver 进程侧调用各 singbox 节点控制端口的小客户端。
 //
 // 设计要点：
-//   - Safe* 方法从 subscription_nodes 发现 active 的 logv2fs 节点 IP，并广播控制指令。
+//   - Safe* 方法从 subscription_nodes 发现 active 的 logv2fs 节点 IP，并广播控制指令；
+//     控制面仅向 IPv4 目标发送（纯 IPv6 节点跳过，依赖 singbox 重启从 DB 同步）。
 //   - 未配置 SINGBOX_CONTROL_TOKEN 时转为 no-op，HTTP 业务接口不报错。
 //   - 所有方法都设计为 soft-fail：网络失败只打日志，不冒泡。理由：MongoDB 是
 //     事实源，sing-box 是缓存；缓存丢一次不影响业务正确性，singbox 重启会全量重建。
@@ -25,6 +26,7 @@ import (
 	"time"
 
 	"github.com/xvv6u577/logv2fs/database"
+	helper "github.com/xvv6u577/logv2fs/helpers"
 	"github.com/xvv6u577/logv2fs/model"
 	"go.mongodb.org/mongo-driver/bson"
 )
@@ -198,6 +200,16 @@ func listBroadcastTargets(ctx context.Context) ([]controlTarget, error) {
 	for _, node := range nodes {
 		ip := strings.TrimSpace(node.IP)
 		if ip == "" {
+			continue
+		}
+		// 控制 HTTP 仅广播到 IPv4，避免向 IPv6 地址发请求（与运维网络策略一致）。
+		hostForKind := ip
+		if h, _, err := net.SplitHostPort(hostForKind); err == nil {
+			hostForKind = h
+		} else {
+			hostForKind = strings.TrimPrefix(strings.TrimSuffix(hostForKind, "]"), "[")
+		}
+		if helper.IsIPv6(hostForKind) {
 			continue
 		}
 		nodePort := strings.TrimSpace(node.ControlPort)

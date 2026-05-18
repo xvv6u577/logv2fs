@@ -41,3 +41,13 @@ func SecurityHeaders() gin.HandlerFunc {
 		c.Next()
 	}
 }
+
+// NoStore 禁止浏览器和 CDN 缓存管理类 API 响应。
+func NoStore() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		h := c.Writer.Header()
+		h.Set("Cache-Control", "no-store")
+		h.Set("Pragma", "no-cache")
+		c.Next()
+	}
+}

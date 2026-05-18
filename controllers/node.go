@@ -51,10 +51,6 @@ func lookupNodePeriodStage(kind, periodAlias, asField string, limit int) bson.D 
 	}}}
 }
 
-func isTrafficCollectableNode(nodeType string) bool {
-	return nodeType == "reality" || nodeType == "hysteria2"
-}
-
 func subscriptionNodeKey(node SubscriptionNode) bson.M {
 	return bson.M{"type": node.Type, "remark": node.Remark}
 }
@@ -77,22 +73,6 @@ func IsRemarkInDomainList(remark string, domainList []SubscriptionNode) bool {
 		}
 	}
 	return false
-}
-
-// Function to remove duplicated domains, also remove vlessCDN nodes.
-func sanitizeNodes(domains []SubscriptionNode) []SubscriptionNode {
-	seen := make(map[string]bool)
-	var result []SubscriptionNode
-	for _, domain := range domains {
-		if domain.Type == "vlessCDN" {
-			continue
-		}
-		if _, exists := seen[domain.Domain]; !exists {
-			seen[domain.Domain] = true
-			result = append(result, domain)
-		}
-	}
-	return result
 }
 
 func UpsertNodes() gin.HandlerFunc {

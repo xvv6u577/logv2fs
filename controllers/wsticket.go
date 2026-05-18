@@ -14,7 +14,7 @@ import (
 //
 //	{
 //	  "ticket":  "<32B random>",
-//	  "ttl_sec": 5
+//	  "ttl_sec": 30
 //	}
 //
 // 客户端拿到 ticket 后立刻用它建立 WebSocket（ws://host/ws?ticket=xxx）。
@@ -36,7 +36,7 @@ func IssueWebSocketTicket() gin.HandlerFunc {
 
 		c.JSON(http.StatusOK, gin.H{
 			"ticket":  ticket,
-			"ttl_sec": 5,
+			"ttl_sec": 30,
 		})
 	}
 }

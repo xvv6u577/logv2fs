@@ -35,7 +35,7 @@ func PublicRoutes(incomingRoutes *gin.Engine) {
 	// MongoDB版本的路由
 	// login —— 叠加按 IP 维度的登录限流，防暴力破解；
 	// 账号维度的限流在 controller 内通过 LoginAccountAllow 触发。
-	incomingRoutes.POST("/v1/login", middleware.LoginRateLimit(), controller.Login())
+	incomingRoutes.POST("/v1/login", middleware.NoStore(), middleware.LoginRateLimit(), controller.Login())
 
 	// shadowrocket config
 	incomingRoutes.GET("/static/:name", controller.GetSubscripionURL())

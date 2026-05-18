@@ -19,6 +19,7 @@ protoc --go_out=. --go_opt=paths=source_relative \
 - golang v1.20
 - v2ray v4.23.4
 - sing-box v1.18.1
+- `ALLOWED_ORIGINS` 需要包含实际访问前端/API 的 Worker 域名和直连上游域名，例如：`https://worker.example.com,https://main.undervineyard.com`
 
 #### 编译
 
