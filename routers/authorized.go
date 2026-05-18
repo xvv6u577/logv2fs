@@ -27,8 +27,9 @@ func AuthorizedRoutes(incomingRoutes *gin.Engine) {
 	if getGINMode() != "test" {
 		incomingRoutes.Use(middleware.Authentication())
 	}
+	incomingRoutes.Use(middleware.NoStore())
 
-	// WebSocket 票据签发：任何已登录用户都可以为自己拿一张，5 秒一次性 ticket。
+	// WebSocket 票据签发：任何已登录用户都可以为自己拿一张，30 秒一次性 ticket。
 	incomingRoutes.POST("/v1/ws-ticket", controller.IssueWebSocketTicket())
 
 	// =============== 管理员专属路由 ===============
@@ -39,12 +40,12 @@ func AuthorizedRoutes(incomingRoutes *gin.Engine) {
 	{
 		admin.POST("/signup", controller.SignUp())
 		admin.POST("/edit/:name", controller.EditUser())
-		admin.GET("/n778cf", controller.GetAllUsers())
-		admin.GET("/deluser/:name", controller.DeleteUserByUserName())
+		admin.GET("/users", controller.GetAllUsers())
+		admin.DELETE("/user/:name", controller.DeleteUserByUserName())
 		admin.PUT("/disableuser/:name", controller.DisableUser())
 		admin.PUT("/enableuser/:name", controller.EnableUser())
 		admin.PUT("/upsert-nodes", controller.UpsertNodes())
-		admin.GET("/c47kr8", controller.GetSingboxNodes())
+		admin.GET("/singbox-nodes", controller.GetSingboxNodes())
 
 		admin.PUT("/custom-date", controller.SaveCustomDate())
 		admin.GET("/custom-dates", controller.GetCustomDates())

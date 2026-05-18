@@ -13,7 +13,7 @@ import api from '../lib/axios';
 // ==================== 用户相关 ====================
 
 export const fetchUsers = async () => {
-	const { data } = await api.get('n778cf');
+	const { data } = await api.get('users');
 	return data;
 };
 
@@ -25,7 +25,7 @@ export const fetchCurrentUser = async (email) => {
 // ==================== 节点相关 ====================
 
 export const fetchNodes = async () => {
-	const { data } = await api.get('c47kr8');
+	const { data } = await api.get('singbox-nodes');
 	return data;
 };
 
@@ -54,10 +54,10 @@ export const updateUser = async ({ userData }) => {
 
 /**
  * 删除用户
- * 后端真实路由：GET /v1/deluser/:name
+ * 后端真实路由：DELETE /v1/user/:name
  */
 export const deleteUser = async ({ userData }) => {
-	const { data } = await api.get(`deluser/${userData.email_as_id}`);
+	const { data } = await api.delete(`user/${userData.email_as_id}`);
 	return data;
 };
 

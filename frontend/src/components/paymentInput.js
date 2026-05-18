@@ -47,7 +47,7 @@ const PaymentInput = () => {
 
 	const fetchUsers = () => {
 		api
-			.get("n778cf")
+			.get("users")
 			.then((response) => {
 				setUsers(response.data);
 			})

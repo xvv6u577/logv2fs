@@ -26,6 +26,7 @@ const Login = () => {
 	};
 
 	const year = new Date().getFullYear();
+	const apiBaseURL = (process.env.REACT_APP_API_HOST || "/v1/").replace(/\/?$/, "/");
 
 	const handleSubmit = (e) => {
 		e.preventDefault();
@@ -34,10 +35,10 @@ const Login = () => {
 		// 登录请求不走全局 axios 单例，避免响应拦截器与登录态形成竞态；
 		// 这里直接用原生 axios，并对所有失败情形给出统一的友好提示。
 		axios
-			.post(process.env.REACT_APP_API_HOST + "login", {
+			.post(`${apiBaseURL}login`, {
 				email_as_id: name,
 				password: password,
-			})
+			}, { timeout: 30000 })
 			.then((response) => {
 				if (response.data && response.data.token) {
 					localStorage.setItem("token", JSON.stringify(response.data.token));

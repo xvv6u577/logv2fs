@@ -13,11 +13,11 @@ import axios from 'axios';
  *   const { data } = await api.get('user/me');
  */
 
-const baseURL = process.env.REACT_APP_API_HOST || '/v1/';
+const baseURL = (process.env.REACT_APP_API_HOST || '/v1/').replace(/\/?$/, '/');
 
 const api = axios.create({
 	baseURL,
-	timeout: 15000,
+	timeout: 30000,
 });
 
 /**

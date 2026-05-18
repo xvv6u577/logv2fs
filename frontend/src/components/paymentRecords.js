@@ -96,7 +96,7 @@ const PaymentRecords = () => {
 	// 获取用户列表
 	const fetchUsers = () => {
 		api
-			.get("n778cf")
+			.get("users")
 			.then((response) => {
 				setUsers(response.data);
 			})

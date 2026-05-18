@@ -11,7 +11,7 @@
 ### 用户相关
 | 功能 | 方法 | 端点 | 文件位置 |
 |------|------|------|----------|
-| 获取所有用户 | GET | `n778cf` | `fetchUsers` |
+| 获取所有用户 | GET | `users` | `fetchUsers` |
 | 获取当前用户 | GET | `user/{email}` | `fetchCurrentUser` |
 | 添加用户 | POST | `signup` | `addUser` |
 | 更新用户 | PUT | `edit` | `updateUser` |
@@ -20,7 +20,7 @@
 ### 节点相关
 | 功能 | 方法 | 端点 | 文件位置 |
 |------|------|------|----------|
-| 获取所有节点 | GET | `c47kr8` | `fetchNodes` |
+| 获取所有节点 | GET | `singbox-nodes` | `fetchNodes` |
 | 更新节点 | PUT | `759b0v` | `updateNodes` |
 
 ## 🔍 需要验证的端点
@@ -30,8 +30,8 @@
 如果在旧代码中发现了以下端点，可能需要更新 `src/api/queries.js`：
 
 ```javascript
-// 旧代码中可能使用的端点
-"c47kr8"  // 可能是获取节点的另一个端点？
+// 旧代码中可能使用的混淆端点（已迁移为描述性路径）
+// "n778cf" -> users，"c47kr8" -> singbox-nodes
 "t7k033"  // 可能是另一个节点相关端点？
 ```
 
@@ -61,13 +61,10 @@ grep -r "7tpxya\|09j2ts\|759b0v" frontend/src/components/
 如果发现端点不正确，修改 `src/api/queries.js` 文件：
 
 ```javascript
-// 例如，如果节点端点应该是 "c47kr8" 而不是 "7tpxya"
-export const fetchNodes = async (token) => {
-    const response = await axios.get(
-        `${process.env.REACT_APP_API_HOST}c47kr8`,  // 修改这里
-        { headers: { token } }
-    );
-    return response.data;
+// axios baseURL 默认含 /v1/；路径写相对片段即可，例如 singbox-nodes
+export const fetchNodes = async () => {
+    const { data } = await api.get('singbox-nodes');
+    return data;
 };
 ```
 
