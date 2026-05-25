@@ -73,9 +73,37 @@ const User = () => {
 		badge: "px-2 py-1 rounded-full text-xs font-medium",
 		badgeAdmin: "bg-purple-900 text-purple-300",
 		badgeUser: "bg-blue-900 text-blue-300",
-		badgeOnline: "bg-green-900 text-green-300",
-		badgeOffline: "bg-red-900 text-red-300",
-		badgeDisabled: "bg-gray-900 text-gray-300",
+		badgePlain: "bg-green-900 text-green-300",
+		badgeDisabled: "bg-gray-700 text-gray-400",
+		badgeOverdue: "bg-orange-900 text-orange-300",
+	};
+
+	// 根据用户状态获取卡片样式
+	const getCardStyle = (status) => {
+		if (status === "disabled") {
+			return "bg-gray-800 bg-opacity-60 border border-gray-700 rounded-lg shadow opacity-70 hover:opacity-90 transition-opacity";
+		}
+		if (status === "overdue") {
+			return "bg-gray-800 border-l-4 border-orange-500 rounded-lg shadow-lg hover:shadow-xl transition-shadow";
+		}
+		// plain
+		return "bg-gray-800 border-l-4 border-green-500 rounded-lg shadow-lg hover:shadow-xl transition-shadow";
+	};
+
+	// 状态文字
+	const getStatusLabel = (status) => {
+		if (status === "plain") return "在用";
+		if (status === "disabled") return "已禁用";
+		if (status === "overdue") return "欠费停用";
+		return status;
+	};
+
+	// 状态 badge 样式
+	const getStatusBadgeClass = (status) => {
+		if (status === "plain") return styles.badgePlain;
+		if (status === "disabled") return styles.badgeDisabled;
+		if (status === "overdue") return styles.badgeOverdue;
+		return styles.badgeDisabled;
 	};
 
 	// 排序函数
@@ -134,12 +162,7 @@ const User = () => {
 
 		// 状态过滤
 		if (filterStatus !== "all") {
-			if (filterStatus === "offline") {
-				// 离线状态包括所有非"plain"和非"deleted"的状态
-				filtered = filtered.filter(user => user.status !== "plain" && user.status !== "deleted");
-			} else {
-				filtered = filtered.filter(user => user.status === filterStatus);
-			}
+			filtered = filtered.filter(user => user.status === filterStatus);
 		}
 
 		// 搜索过滤
@@ -463,26 +486,52 @@ const User = () => {
 
 	// 用户卡片组件
 	const UserCard = ({ user, index }) => {
-		// 根据用户状态确定卡片背景色
-		const cardBgClass = user.status === "deleted" 
-			? "bg-red-900 bg-opacity-50 border border-red-800 rounded-lg shadow-lg hover:shadow-xl transition-shadow" 
-			: styles.card;
+		const isDisabled = user.status === "disabled";
+		const isOverdue = user.status === "overdue";
+		const isPlain = user.status === "plain";
+
+		// 头像颜色：在用绿色、欠费橙色、禁用灰色
+		const avatarClass = isPlain
+			? "w-10 h-10 bg-gradient-to-br from-green-500 to-teal-600 rounded-full flex items-center justify-center text-white font-bold text-sm"
+			: isOverdue
+				? "w-10 h-10 bg-gradient-to-br from-orange-500 to-amber-600 rounded-full flex items-center justify-center text-white font-bold text-sm"
+				: "w-10 h-10 bg-gray-600 rounded-full flex items-center justify-center text-gray-400 font-bold text-sm";
 
 		return (
-			<div className={`${cardBgClass} overflow-hidden`}>
+			<div className={`${getCardStyle(user.status)} overflow-hidden`}>
+				{/* 欠费停用顶部警告横条 */}
+				{isOverdue && (
+					<div className="bg-orange-900 bg-opacity-60 px-4 py-1.5 flex items-center space-x-2">
+						<svg className="w-3.5 h-3.5 text-orange-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+							<path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+						</svg>
+						<span className="text-orange-300 text-xs font-medium">欠费停用</span>
+					</div>
+				)}
+
+				{/* 已禁用顶部灰色横条 */}
+				{isDisabled && (
+					<div className="bg-gray-700 px-4 py-1.5 flex items-center space-x-2">
+						<svg className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+							<path fillRule="evenodd" d="M13.477 14.89A6 6 0 015.11 6.524l8.367 8.368zm1.414-1.414L6.524 5.11a6 6 0 018.367 8.367zM18 10a8 8 0 11-16 0 8 8 0 0116 0z" clipRule="evenodd" />
+						</svg>
+						<span className="text-gray-400 text-xs font-medium">已禁用</span>
+					</div>
+				)}
+
 				{/* 用户基本信息 */}
 				<div className="p-4">
 					{/* 用户头像和基本信息 */}
 					<div className="flex items-center space-x-3 mb-3">
-						<div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
+						<div className={avatarClass}>
 							{index + 1}
 						</div>
 						<div className="flex-1 min-w-0">
-							<h3 className="text-sm font-semibold text-white truncate">
+							<h3 className={`text-sm font-semibold truncate ${isDisabled ? "text-gray-400" : "text-white"}`}>
 								{user.name || user.email_as_id || "未知用户"}
 							</h3>
 							<div className="flex items-center space-x-2">
-								<p className="text-gray-400 text-xs truncate flex-1">
+								<p className="text-gray-500 text-xs truncate flex-1">
 									{user.email_as_id || "无邮箱"}
 								</p>
 								{user.email_as_id && (
@@ -505,26 +554,22 @@ const User = () => {
 						<span className={`${styles.badge} ${user.role === "admin" ? styles.badgeAdmin : styles.badgeUser}`}>
 							{user.role === "admin" ? "管理员" : "用户"}
 						</span>
-						<span className={`${styles.badge} ${
-							user.status === "plain" ? styles.badgeOnline : 
-							user.status === "deleted" ? styles.badgeDisabled : 
-							styles.badgeOffline
-						}`}>
-							{user.status === "plain" ? "在线" : user.status === "deleted" ? "已禁用" : "离线"}
+						<span className={`${styles.badge} ${getStatusBadgeClass(user.status)}`}>
+							{getStatusLabel(user.status)}
 						</span>
 					</div>
 
 					{/* 流量统计 */}
 					<div className="space-y-3 mb-3">
 						<div className="flex justify-between items-center">
-							<span className="text-sm font-bold text-blue-200">今日</span>
-							<span className="text-sm text-blue-400 font-bold">
+							<span className={`text-sm font-bold ${isDisabled ? "text-gray-600" : "text-blue-200"}`}>今日</span>
+							<span className={`text-sm font-bold ${isDisabled ? "text-gray-600" : "text-blue-400"}`}>
 								{getTrafficOfTodayFromArray(user.daily_logs)}
 							</span>
 						</div>
 						<div className="flex justify-between items-center">
-							<span className="text-sm font-bold text-green-200">本月</span>
-							<span className="text-sm text-green-400 font-bold">
+							<span className={`text-sm font-bold ${isDisabled ? "text-gray-600" : "text-green-200"}`}>本月</span>
+							<span className={`text-sm font-bold ${isDisabled ? "text-gray-600" : "text-green-400"}`}>
 								{getCurrentMonthTraffic(user.monthly_logs)}
 							</span>
 						</div>
@@ -641,13 +686,11 @@ const User = () => {
 									<div>
 										<span className="text-gray-400">状态: </span>
 										<span className={
-											modalUser.status === "plain" ? "text-green-400" : 
-											modalUser.status === "deleted" ? "text-gray-400" : 
-											"text-red-400"
+											modalUser.status === "plain" ? "text-green-400" :
+											modalUser.status === "overdue" ? "text-orange-400" :
+											"text-gray-400"
 										}>
-											{modalUser.status === "plain" ? "活跃" : 
-											 modalUser.status === "deleted" ? "已禁用" : 
-											 "非活跃"}
+											{getStatusLabel(modalUser.status)}
 										</span>
 									</div>
 									<div>
@@ -880,8 +923,8 @@ const User = () => {
 								</button>
 								{modalUser.role !== "admin" && (
 									<>
-										{modalUser.status === "deleted" ? (
-											<button 
+										{modalUser.status === "disabled" || modalUser.status === "overdue" ? (
+											<button
 												className={`${styles.button} ${styles.buttonSuccess}`}
 												onClick={() => {
 													closeUserModal();
@@ -891,7 +934,7 @@ const User = () => {
 												启用用户
 											</button>
 										) : (
-											<button 
+											<button
 												className={`${styles.button} ${styles.buttonWarning}`}
 												onClick={() => {
 													closeUserModal();
@@ -1263,9 +1306,9 @@ const User = () => {
 					className={styles.select}
 				>
 					<option value="all">所有状态</option>
-					<option value="plain">在线</option>
-					<option value="deleted">已禁用</option>
-					<option value="offline">离线</option>
+					<option value="plain">在用</option>
+					<option value="disabled">已禁用</option>
+					<option value="overdue">欠费停用</option>
 				</select>
 
 				{/* 清空过滤按钮 */}
