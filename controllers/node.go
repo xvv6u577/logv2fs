@@ -51,8 +51,9 @@ func lookupNodePeriodStage(kind, periodAlias, asField string, limit int) bson.D 
 	}}}
 }
 
+// subscriptionNodeKey 订阅节点业务唯一键：(remark, ip)。
 func subscriptionNodeKey(node SubscriptionNode) bson.M {
-	return bson.M{"type": node.Type, "remark": node.Remark}
+	return bson.M{"remark": node.Remark, "ip": node.IP}
 }
 
 // check if a domain is in a domain object list

@@ -87,6 +87,10 @@ const AddNode = () => {
 		}
 	};
 
+	// 与后端 subscriptionNodeKey 一致：(remark, ip) 唯一
+	const isSameSubscriptionNode = (a, b) =>
+		a.remark === b.remark && (a.ip || "") === (b.ip || "");
+
 	// 当现有节点数据加载完成后，初始化 nodes 状态
 	useEffect(() => {
 		if (subscriptionNodes.length > 0) {
@@ -115,7 +119,7 @@ const AddNode = () => {
 	};
 
 	const addNodeToList = () => {
-		// 以 remark 为唯一标识，如果存在则更新，否则添加;随后清空表单 
+		// 以 (remark, ip) 为唯一标识，如果存在则更新，否则添加；随后清空表单
 		if (remark.length > 0) {
 			const newNode = {
 				type,
@@ -130,13 +134,13 @@ const AddNode = () => {
 				weight: parseInt(weight) || 0, // 确保 weight 是整数	
 			};
 			setNodes((prevState) => {
-				const index = prevState.findIndex((n) => n.remark === remark); 
+				const index = prevState.findIndex((n) => isSameSubscriptionNode(n, newNode));
 				if (index !== -1) {
-					prevState[index] = newNode;
-				} else {
-					prevState.push(newNode);
+					const next = [...prevState];
+					next[index] = newNode;
+					return next;
 				}
-				return prevState;
+				return [...prevState, newNode];
 			});
 			clearState();
 		} else {
@@ -144,8 +148,8 @@ const AddNode = () => {
 		}
 	};
 
-	const removeNode = (remarkToRemove) => {
-		setNodes((prevState) => (prevState.filter((n) => n.remark !== remarkToRemove)));
+	const removeNode = (nodeToRemove) => {
+		setNodes((prevState) => prevState.filter((n) => !isSameSubscriptionNode(n, nodeToRemove)));
 	};
 
 	const handleCopyNode = (nodeToCopy) => {
@@ -180,7 +184,7 @@ const AddNode = () => {
 					</svg>
 				</button>
 				<button
-					onClick={() => removeNode(node.remark)}
+					onClick={() => removeNode(node)}
 					className="p-1 rounded-full text-gray-400 hover:bg-gray-700 hover:text-red-400 transition-all duration-200"
 					title="删除节点"
 				>
