@@ -81,7 +81,7 @@ const User = () => {
 	// 根据用户状态获取卡片样式
 	const getCardStyle = (status) => {
 		if (status === "disabled") {
-			return "bg-gray-800 bg-opacity-60 border border-gray-700 rounded-lg shadow opacity-70 hover:opacity-90 transition-opacity";
+			return "bg-red-950 bg-opacity-60 border border-red-900 rounded-lg shadow opacity-80 hover:opacity-100 transition-opacity";
 		}
 		if (status === "overdue") {
 			return "bg-gray-800 border-l-4 border-orange-500 rounded-lg shadow-lg hover:shadow-xl transition-shadow";
@@ -509,13 +509,13 @@ const User = () => {
 					</div>
 				)}
 
-				{/* 已禁用顶部灰色横条 */}
+				{/* 已禁用顶部红色横条 */}
 				{isDisabled && (
-					<div className="bg-gray-700 px-4 py-1.5 flex items-center space-x-2">
-						<svg className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+					<div className="bg-red-900 bg-opacity-70 px-4 py-1.5 flex items-center space-x-2">
+						<svg className="w-3.5 h-3.5 text-red-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
 							<path fillRule="evenodd" d="M13.477 14.89A6 6 0 015.11 6.524l8.367 8.368zm1.414-1.414L6.524 5.11a6 6 0 018.367 8.367zM18 10a8 8 0 11-16 0 8 8 0 0116 0z" clipRule="evenodd" />
 						</svg>
-						<span className="text-gray-400 text-xs font-medium">已禁用</span>
+						<span className="text-red-400 text-xs font-medium">已禁用</span>
 					</div>
 				)}
 

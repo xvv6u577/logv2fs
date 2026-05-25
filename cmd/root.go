@@ -12,6 +12,7 @@ import (
 	"github.com/spf13/cobra"
 	httpserver "github.com/xvv6u577/logv2fs/cmd/httpserver"
 	migratenodes "github.com/xvv6u577/logv2fs/cmd/migratenodes"
+	migrateuserstatus "github.com/xvv6u577/logv2fs/cmd/migrateuserstatus"
 	singbox "github.com/xvv6u577/logv2fs/cmd/singbox"
 	"github.com/xvv6u577/logv2fs/model"
 )
@@ -53,6 +54,7 @@ func init() {
 	rootCmd.AddCommand(singbox.NewSingboxCmd())
 	rootCmd.AddCommand(httpserver.NewHTTPServerCmd())
 	rootCmd.AddCommand(migratenodes.NewMigrateNodesCmd())
+	rootCmd.AddCommand(migrateuserstatus.NewMigrateUserStatusCmd())
 
 }
 

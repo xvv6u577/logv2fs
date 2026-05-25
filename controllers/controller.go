@@ -25,6 +25,7 @@ import (
 
 	"github.com/xvv6u577/logv2fs/model"
 	singboxctl "github.com/xvv6u577/logv2fs/singbox"
+	"github.com/xvv6u577/logv2fs/services/userstatus"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -542,6 +543,10 @@ func GetAllUsers() gin.HandlerFunc {
 			return
 		}
 
+		for i := range results {
+			results[i].Status = userstatus.NormalizeStatus(results[i].Status)
+		}
+
 		c.JSON(http.StatusOK, results)
 
 	}
@@ -597,6 +602,8 @@ func GetUserByName() gin.HandlerFunc {
 			log.Printf("GetUserByName: user %s not found", name)
 			return
 		}
+
+		users[0].Status = userstatus.NormalizeStatus(users[0].Status)
 
 		c.JSON(http.StatusOK, users[0])
 	}
@@ -1114,7 +1121,7 @@ func ReturnVergeYAML() gin.HandlerFunc {
 	}
 }
 
-// DisableUser 禁用用户 - 将用户状态设为deleted
+// DisableUser 禁用用户 - 将用户状态设为 disabled
 func DisableUser() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if err := helper.CheckUserType(c, "admin"); err != nil {
@@ -1131,49 +1138,23 @@ func DisableUser() gin.HandlerFunc {
 			return
 		}
 
-		var foundUser UserTrafficLogs
-		err := database.GetCollection(model.UserTrafficLogs{}).FindOne(ctx, bson.M{"email_as_id": helper.SanitizeStr(name)}).Decode(&foundUser)
+		updatedUser, err := userstatus.SetUserDisabled(ctx, helper.SanitizeStr(name))
 		if err != nil {
+			if userstatus.IsAdminDisableError(err) {
+				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+				log.Printf("attempted to disable admin user: %s", name)
+				return
+			}
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "user not found"})
-			log.Printf("user not found: %s", name)
+			log.Printf("error disabling user %s: %v", name, err)
 			return
 		}
 
-		// 不允许禁用管理员账户
-		if foundUser.Role == "admin" {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "cannot disable admin user"})
-			log.Printf("attempted to disable admin user: %s", name)
-			return
-		}
-
-		// 更新用户状态为deleted
-		updateData := bson.M{
-			"status":     "deleted",
-			"updated_at": time.Now(),
-		}
-
-		var updatedUser UserTrafficLogs
-		err = database.GetCollection(model.UserTrafficLogs{}).FindOneAndUpdate(
-			ctx,
-			bson.M{"email_as_id": helper.SanitizeStr(name)},
-			bson.M{"$set": updateData},
-			options.FindOneAndUpdate().SetReturnDocument(options.After),
-		).Decode(&updatedUser)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			log.Printf("error disabling user: %v", err)
-			return
-		}
-
-		// 异步通知 sing-box 把该用户从认证列表中移除
-		go singboxctl.SafeDisableUser(updatedUser.Email_As_Id)
-
-		log.Printf("User %s disabled successfully", updatedUser.Name)
 		c.JSON(http.StatusOK, gin.H{"message": "User " + updatedUser.Name + " disabled successfully"})
 	}
 }
 
-// EnableUser 启用用户 - 将用户状态设为plain
+// EnableUser 启用用户 - 将用户状态设为 plain
 func EnableUser() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if err := helper.CheckUserType(c, "admin"); err != nil {
@@ -1190,41 +1171,13 @@ func EnableUser() gin.HandlerFunc {
 			return
 		}
 
-		var foundUser UserTrafficLogs
-		err := database.GetCollection(model.UserTrafficLogs{}).FindOne(ctx, bson.M{"email_as_id": helper.SanitizeStr(name)}).Decode(&foundUser)
+		updatedUser, err := userstatus.SetUserEnabled(ctx, helper.SanitizeStr(name))
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "user not found"})
-			log.Printf("user not found: %s", name)
+			log.Printf("error enabling user %s: %v", name, err)
 			return
 		}
 
-		// 更新用户状态为plain
-		updateData := bson.M{
-			"status":     "plain",
-			"updated_at": time.Now(),
-		}
-
-		var updatedUser UserTrafficLogs
-		err = database.GetCollection(model.UserTrafficLogs{}).FindOneAndUpdate(
-			ctx,
-			bson.M{"email_as_id": helper.SanitizeStr(name)},
-			bson.M{"$set": updateData},
-			options.FindOneAndUpdate().SetReturnDocument(options.After),
-		).Decode(&updatedUser)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			log.Printf("error enabling user: %v", err)
-			return
-		}
-
-		// 异步通知 sing-box 把该用户重新注册到认证列表
-		go singboxctl.SafeEnableUser(singboxctl.AddUserRequest{
-			EmailAsId: updatedUser.Email_As_Id,
-			UUID:      updatedUser.UUID,
-			UserId:    updatedUser.User_id,
-		})
-
-		log.Printf("User %s enabled successfully", updatedUser.Name)
 		c.JSON(http.StatusOK, gin.H{"message": "User " + updatedUser.Name + " enabled successfully"})
 	}
 }

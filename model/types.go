@@ -15,7 +15,7 @@ type UserTrafficLogs struct {
 	Password      string             `json:"password" validate:"required,min=6"`
 	UUID          string             `json:"uuid" bson:"uuid"`
 	Role          string             `json:"role" bson:"role" validate:"required,eq=admin|eq=normal"`                 // role: "admin", "normal"
-	Status        string             `json:"status" bson:"status" validate:"required,eq=plain|eq=deleted|eq=overdue"` // status: "plain", "deleted", "overdue"
+	Status        string             `json:"status" bson:"status" validate:"required,eq=plain|eq=disabled|eq=overdue"` // status: "plain", "disabled", "overdue"
 	Name          string             `json:"name" bson:"name"`
 	Remark        string             `json:"remark" bson:"remark"` // 用户备注
 	Token         *string            `json:"token"`

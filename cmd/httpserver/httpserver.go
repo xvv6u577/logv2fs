@@ -98,7 +98,6 @@ func NewHTTPServerCmd() *cobra.Command {
 			if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 				log.Panic("Start API Server Error: ", err)
 			}
-
 		},
 	}
 }

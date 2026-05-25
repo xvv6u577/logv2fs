@@ -192,8 +192,15 @@ function Mypanel() {
 						)}
 						<div className="flex items-center justify-between">
 							<span className="text-gray-400">状态:</span>
-							<span className={`${styles.badge} ${user.status === "plain" ? styles.badgeOnline : styles.badgeOffline}`}>
-								{user.status === "plain" ? "正常" : "异常"}
+							<span className={`${styles.badge} ${
+								user.status === "plain" ? styles.badgeOnline :
+								user.status === "disabled" ? styles.badgeOffline :
+								user.status === "overdue" ? "bg-orange-900 text-orange-300 px-2 py-1 rounded-full text-xs font-medium" :
+								styles.badgeOffline
+							}`}>
+								{user.status === "plain" ? "正常" :
+								 user.status === "disabled" ? "已禁用" :
+								 user.status === "overdue" ? "欠费停用" : "异常"}
 							</span>
 						</div>
 						<div className="flex items-center justify-between">
