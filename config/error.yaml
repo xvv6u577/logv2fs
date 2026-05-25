@@ -1,64 +1,26 @@
-port: 7890
-allow-lan: true
+mixed-port: 7890
+allow-lan: false
 mode: rule
-log-level: info
-unified-delay: true
-global-client-fingerprint: chrome
-ipv6: true
-dns:
-  enable: true
-  listen: :53
-  ipv6: true
-  enhanced-mode: fake-ip
-  fake-ip-range: 198.18.0.1/16
-  default-nameserver:
-    - 223.5.5.5
-    - 8.8.8.8
-  nameserver:
-    - https://dns.alidns.com/dns-query
-    - https://doh.pub/dns-query
-  fallback:
-    - https://1.0.0.1/dns-query
-    - tls://dns.google
-  fallback-filter:
-    geoip: true
-    geoip-code: CN
-    ipcidr:
-      - 240.0.0.0/4
+log-level: silent
 
 proxies:
-  - name: 你的账号已停用
-    type: vless
-    server: 193.123.210.188
-    port: 7443
-    uuid: ac7bc61e-f5cd-4d66-ad95-faf5cd3b2775
-    network: tcp
-    udp: true
-    tls: true
-    flow: xtls-rprx-vision
-    servername: www.microsoft.com
-    client-fingerprint: chrome
-    reality-opts:
-      public-key: txAhCYEz70FRNazyf0echZco6QrkUblGuJBiOTXWXHA
-      short-id: de5d15ce1eb1981f
+  - name: "📵 账号已停用，无法连接"
+    type: ss
+    server: 192.0.2.1
+    port: 1080
+    cipher: aes-128-gcm
+    password: expired
 
 proxy-groups:
-  - name: 节点选择
+  - name: "🔴 你的账号已经到期！"
     type: select
     proxies:
-      - 自动选择
-      - 你的账号已停用
-      - DIRECT
+      - "⚠️ 请联系管理员续费"
 
-  - name: 自动选择
-    type: url-test #选出延迟最低的机场节点
+  - name: "⚠️ 请联系管理员续费"
+    type: select
     proxies:
-      - 你的账号已停用
-    url: "http://www.gstatic.com/generate_204"
-    interval: 300
-    tolerance: 50
+      - "📵 账号已停用，无法连接"
 
 rules:
-  - GEOIP,LAN,DIRECT
-  - GEOIP,CN,DIRECT
-  - MATCH,节点选择
+  - MATCH,REJECT
