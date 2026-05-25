@@ -22,7 +22,6 @@ import (
 	"net/url"
 	"os"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/xvv6u577/logv2fs/database"
@@ -44,7 +43,7 @@ type controlTarget struct {
 	Addr   string
 }
 
-// NewControlClient 显式构造 client。一般业务代码无需调用，请用 DefaultControlClient。
+// NewControlClient 构造指向单个 singbox 控制端点的 HTTP client。
 func NewControlClient(addr, token string) *ControlClient {
 	return &ControlClient{
 		baseURL: "http://" + addr,
@@ -53,30 +52,6 @@ func NewControlClient(addr, token string) *ControlClient {
 			Timeout: 3 * time.Second,
 		},
 	}
-}
-
-var (
-	defaultControlClientOnce sync.Once
-	defaultControlClient     *ControlClient
-)
-
-// DefaultControlClient 返回懒加载初始化的全局 client。
-// 当 SINGBOX_CONTROL_TOKEN 为空时返回 nil，调用方需自行判空（或使用 Safe* 包装）。
-func DefaultControlClient() *ControlClient {
-	defaultControlClientOnce.Do(func() {
-		token := os.Getenv("SINGBOX_CONTROL_TOKEN")
-		if token == "" {
-			log.Printf("[singbox.control_client] SINGBOX_CONTROL_TOKEN not set, control client disabled")
-			return
-		}
-		addr := os.Getenv("SINGBOX_CONTROL_LISTEN")
-		if addr == "" {
-			addr = DefaultControlListen
-		}
-		defaultControlClient = NewControlClient(addr, token)
-		log.Printf("[singbox.control_client] enabled, target=%s", addr)
-	})
-	return defaultControlClient
 }
 
 // AddUser 同步调用控制端添加用户。任意错误只返回，不阻塞调用方。
@@ -104,24 +79,6 @@ func (c *ControlClient) EnableUser(req AddUserRequest) error {
 	}
 	path := "/control/users/" + url.PathEscape(req.EmailAsId) + "/enable"
 	return c.doJSON(http.MethodPut, path, req)
-}
-
-// HealthCheck 用于启动期快速验证控制端可达。
-func (c *ControlClient) HealthCheck(ctx context.Context) error {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+"/control/healthz", nil)
-	if err != nil {
-		return err
-	}
-	req.Header.Set("X-Control-Token", c.token)
-	resp, err := c.http.Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("healthz: %s", resp.Status)
-	}
-	return nil
 }
 
 // doJSON 通用 JSON 请求工具。body 为 nil 时不写请求体。

@@ -56,26 +56,6 @@ func subscriptionNodeKey(node SubscriptionNode) bson.M {
 	return bson.M{"remark": node.Remark, "ip": node.IP}
 }
 
-// check if a domain is in a domain object list
-func IsDomainInDomainList(domain string, domainList []SubscriptionNode) bool {
-	for _, domainObj := range domainList {
-		if domainObj.Domain == domain {
-			return true
-		}
-	}
-	return false
-}
-
-// check if domain's remark is in a domain object list
-func IsRemarkInDomainList(remark string, domainList []SubscriptionNode) bool {
-	for _, domainObj := range domainList {
-		if domainObj.Remark == remark {
-			return true
-		}
-	}
-	return false
-}
-
 func UpsertNodes() gin.HandlerFunc {
 	return func(c *gin.Context) {
 

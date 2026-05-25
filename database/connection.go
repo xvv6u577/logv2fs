@@ -134,24 +134,9 @@ func GetMongoDBClient() *mongo.Client {
 	return Client
 }
 
-// Client Database instance
-// var Client *mongo.Client = DBinstance()
-
-// OpenCollection is a  function makes a connection with a collection in the database
-func OpenCollection(client *mongo.Client, collectionName string) *mongo.Collection {
-
-	var collection *mongo.Collection = GetMongoDBClient().Database("logV2rayTrafficDB").Collection(collectionName)
-
-	return collection
-}
-
-// OpenCollectionByModel 通过模型获取MongoDB集合，使用模型的CollectionName方法
-func OpenCollectionByModel(client *mongo.Client, model CollectionNamer) *mongo.Collection {
-	collectionName := model.CollectionName()
-	return GetMongoDBClient().Database("logV2rayTrafficDB").Collection(collectionName)
-}
-
-// GetCollection 获取指定模型的MongoDB集合的便捷方法
+// GetCollection 通过模型的 CollectionName 获取 MongoDB 集合。
 func GetCollection(model CollectionNamer) *mongo.Collection {
-	return OpenCollectionByModel(GetMongoDBClient(), model)
+	return GetMongoDBClient().
+		Database("logV2rayTrafficDB").
+		Collection(model.CollectionName())
 }

@@ -84,62 +84,6 @@ func (h *Hub) Run() {
 	}
 }
 
-// BroadcastMessage 广播消息给所有客户端
-func (h *Hub) BroadcastMessage(msg Message) {
-	data, err := json.Marshal(msg)
-	if err != nil {
-		log.Printf("序列化消息失败: %v", err)
-		return
-	}
-	h.broadcast <- data
-}
-
-// BroadcastToAdmins 只向管理员广播消息
-func (h *Hub) BroadcastToAdmins(msg Message) {
-	data, err := json.Marshal(msg)
-	if err != nil {
-		log.Printf("序列化消息失败: %v", err)
-		return
-	}
-
-	h.mutex.RLock()
-	defer h.mutex.RUnlock()
-
-	for client := range h.clients {
-		if client.IsAdmin {
-			select {
-			case client.Send <- data:
-			default:
-				close(client.Send)
-				delete(h.clients, client)
-			}
-		}
-	}
-}
-
-// BroadcastToUser 向特定用户广播消息
-func (h *Hub) BroadcastToUser(userID string, msg Message) {
-	data, err := json.Marshal(msg)
-	if err != nil {
-		log.Printf("序列化消息失败: %v", err)
-		return
-	}
-
-	h.mutex.RLock()
-	defer h.mutex.RUnlock()
-
-	for client := range h.clients {
-		if client.UserID == userID {
-			select {
-			case client.Send <- data:
-			default:
-				close(client.Send)
-				delete(h.clients, client)
-			}
-		}
-	}
-}
-
 // 全局 Hub 实例
 var GlobalHub = NewHub()
 
