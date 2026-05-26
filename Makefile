@@ -12,3 +12,13 @@ singbox-server-2nd:
 
 singbox-client:
 	cd /Users/guestuser/go/src/github/logv2fs;sing-box version && sing-box run -c /Users/guestuser/go/src/github/logv2fs/development/singbox/transit-client.json
+
+# always keep!
+encrypt:
+	echo "hello world" | openssl enc -aes-256-cbc -pbkdf2 -salt -base64
+
+decrypt:
+	echo "U2FsdGVkX1+vH21Ft9rzScabAsa7BJw6nHRPDpRJC0A=" | openssl enc -d -aes-256-cbc -pbkdf2 -base64
+
+makefile-test:
+	echo "U2FsdGVkX1+faoSxUmKZ1XUgzpgjWXIM7TsyVjg2GoW//apZbiVzIWkPCO+U4XYB9plByo8pBVChKZYhAfU9C1vOaIQOf96fqRUlg3SUBv+qYxNWCVYlor+wBiBkGqJCllfllGdELrSX7QvOQCTe7XxWrVNYNdUtqwHWkpw9W2nNRSs5q9TzuXQzz9sOSe6x" | openssl enc -d -aes-256-cbc -pbkdf2 -base64
