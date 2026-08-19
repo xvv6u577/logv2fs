@@ -11,6 +11,7 @@ import (
 	"unicode"
 
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -24,8 +25,8 @@ import (
 	"github.com/xvv6u577/logv2fs/middleware"
 
 	"github.com/xvv6u577/logv2fs/model"
-	singboxctl "github.com/xvv6u577/logv2fs/singbox"
 	"github.com/xvv6u577/logv2fs/services/userstatus"
+	singboxctl "github.com/xvv6u577/logv2fs/singbox"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -656,9 +657,9 @@ func GetSubscripionURL() gin.HandlerFunc {
 
 				if node.Type == "reality" {
 					if len(sub) == 0 {
-						sub = "vless://" + user.UUID + "@" + formattedIP + ":" + node.SERVER_PORT + "?encryption=none&flow=xtls-rprx-vision&security=reality&sni=www.microsoft.com&fp=chrome&pbk=" + getPublicKey() + "&sid=" + getShortID() + "&type=tcp&headerType=none#" + node.Remark
+						sub = "vless://" + user.UUID + "@" + formattedIP + ":" + node.SERVER_PORT + "?encryption=none&flow=xtls-rprx-vision&security=reality&sni=www.visa.com&fp=chrome&pbk=" + getPublicKey() + "&sid=" + getShortID() + "&type=tcp&headerType=none#" + node.Remark
 					} else {
-						sub = sub + "\n" + "vless://" + user.UUID + "@" + formattedIP + ":" + node.SERVER_PORT + "?encryption=none&flow=xtls-rprx-vision&security=reality&sni=www.microsoft.com&fp=chrome&pbk=" + getPublicKey() + "&sid=" + getShortID() + "&type=tcp&headerType=none#" + node.Remark
+						sub = sub + "\n" + "vless://" + user.UUID + "@" + formattedIP + ":" + node.SERVER_PORT + "?encryption=none&flow=xtls-rprx-vision&security=reality&sni=www.visa.com&fp=chrome&pbk=" + getPublicKey() + "&sid=" + getShortID() + "&type=tcp&headerType=none#" + node.Remark
 					}
 				}
 
@@ -671,10 +672,24 @@ func GetSubscripionURL() gin.HandlerFunc {
 				}
 
 				if node.Type == "vlessCDN" {
-					if len(sub) == 0 {
-						sub = "vless://" + node.UUID + "@" + formattedIP + ":" + node.SERVER_PORT + "?encryption=none&security=tls&sni=" + node.Domain + "&fp=randomized&type=ws&host=" + node.Domain + "&path=%2F%3Fed%3D2048#" + node.Remark
+					// 如果 node.PATH 有值，则用之；否则，用 /?ed=2048
+					path := node.PATH
+					if path == "" {
+						path = "/?ed=2048"
+					}
+					// url.QueryEscape 可以用来对 path 编码，但实际 "%2F%3Fed%3D2048" 是 "/?ed=2048" 的编码
+					// 为兼容旧客户端和配置，保持同样编码方式
+					escapedPath := path
+					if path == "/?ed=2048" {
+						escapedPath = "%2F%3Fed%3D2048"
 					} else {
-						sub = sub + "\n" + "vless://" + node.UUID + "@" + formattedIP + ":" + node.SERVER_PORT + "?encryption=none&security=tls&sni=" + node.Domain + "&fp=randomized&type=ws&host=" + node.Domain + "&path=%2F%3Fed%3D2048#" + node.Remark
+						// 其他自定义 path 保持原样或者按需编码
+						escapedPath = url.QueryEscape(path)
+					}
+					if len(sub) == 0 {
+						sub = "vless://" + node.UUID + "@" + formattedIP + ":" + node.SERVER_PORT + "?encryption=none&security=tls&sni=" + node.Domain + "&fp=chrome&type=ws&host=" + node.Domain + "&path=" + escapedPath + "#" + node.Remark
+					} else {
+						sub = sub + "\n" + "vless://" + node.UUID + "@" + formattedIP + ":" + node.SERVER_PORT + "?encryption=none&security=tls&sni=" + node.Domain + "&fp=chrome&type=ws&host=" + node.Domain + "&path=" + escapedPath + "#" + node.Remark
 					}
 				}
 			}
@@ -797,7 +812,7 @@ func ReturnSingboxJson() gin.HandlerFunc {
 							} `json:"reality"`
 						}{
 							Enabled:    true,
-							ServerName: "www.microsoft.com",
+							ServerName: "www.visa.com",
 							Utls: struct {
 								Enabled     bool   `json:"enabled"`
 								Fingerprint string `json:"fingerprint"`
@@ -913,7 +928,13 @@ func ReturnSingboxJson() gin.HandlerFunc {
 							} `json:"headers"`
 						}{
 							Type: "ws",
-							Path: "/?ed=2048",
+							Path: func() string {
+								if node.PATH != "" {
+									return node.PATH
+								}
+								return "/?ed=2048"
+							}(),
+
 							Headers: struct {
 								Host string `json:"Host"`
 							}{
@@ -1021,7 +1042,7 @@ func ReturnVergeYAML() gin.HandlerFunc {
 						UDP:               true,
 						TLS:               true,
 						Flow:              "xtls-rprx-vision",
-						Servername:        "www.microsoft.com",
+						Servername:        "www.visa.com",
 						ClientFingerprint: "chrome",
 						RealityOpts: struct {
 							PublicKey string `yaml:"public-key"`
