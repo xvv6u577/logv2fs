@@ -28,7 +28,7 @@ func FindSDK() {
 	}
 	for _, path := range searchPath {
 		path = os.ExpandEnv(path)
-		if rw.FileExists(path + "/licenses/android-sdk-license") {
+		if rw.IsFile(filepath.Join(path, "licenses", "android-sdk-license")) {
 			androidSDKPath = path
 			break
 		}
@@ -48,11 +48,17 @@ func FindSDK() {
 }
 
 func findNDK() bool {
-	if rw.FileExists(androidSDKPath + "/ndk/25.1.8937393") {
-		androidNDKPath = androidSDKPath + "/ndk/25.1.8937393"
+	const fixedVersion = "28.0.13004108"
+	const versionFile = "source.properties"
+	if fixedPath := filepath.Join(androidSDKPath, "ndk", fixedVersion); rw.IsFile(filepath.Join(fixedPath, versionFile)) {
+		androidNDKPath = fixedPath
 		return true
 	}
-	ndkVersions, err := os.ReadDir(androidSDKPath + "/ndk")
+	if ndkHomeEnv := os.Getenv("ANDROID_NDK_HOME"); rw.IsFile(filepath.Join(ndkHomeEnv, versionFile)) {
+		androidNDKPath = ndkHomeEnv
+		return true
+	}
+	ndkVersions, err := os.ReadDir(filepath.Join(androidSDKPath, "ndk"))
 	if err != nil {
 		return false
 	}
@@ -73,8 +79,10 @@ func findNDK() bool {
 		return true
 	})
 	for _, versionName := range versionNames {
-		if rw.FileExists(androidSDKPath + "/ndk/" + versionName) {
-			androidNDKPath = androidSDKPath + "/ndk/" + versionName
+		currentNDKPath := filepath.Join(androidSDKPath, "ndk", versionName)
+		if rw.IsFile(filepath.Join(currentNDKPath, versionFile)) {
+			androidNDKPath = currentNDKPath
+			log.Warn("reproducibility warning: using NDK version " + versionName + " instead of " + fixedVersion)
 			return true
 		}
 	}
@@ -85,8 +93,14 @@ var GoBinPath string
 
 func FindMobile() {
 	goBin := filepath.Join(build.Default.GOPATH, "bin")
-	if !rw.FileExists(goBin + "/" + "gobind") {
-		log.Fatal("missing gomobile installation")
+	if runtime.GOOS == "windows" {
+		if !rw.IsFile(filepath.Join(goBin, "gobind.exe")) {
+			log.Fatal("missing gomobile installation")
+		}
+	} else {
+		if !rw.IsFile(filepath.Join(goBin, "gobind")) {
+			log.Fatal("missing gomobile installation")
+		}
 	}
 	GoBinPath = goBin
 }

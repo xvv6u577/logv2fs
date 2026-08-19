@@ -7,11 +7,11 @@ import (
 	"runtime"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/sagernet/sing-box/adapter"
 	"github.com/sagernet/sing-box/option"
-	"github.com/sagernet/sing/common/atomic"
 	"github.com/sagernet/sing/common/bufio"
 	E "github.com/sagernet/sing/common/exceptions"
 	N "github.com/sagernet/sing/common/network"
@@ -22,7 +22,7 @@ func init() {
 }
 
 var (
-	_ adapter.V2RayStatsService = (*StatsService)(nil)
+	_ adapter.ConnectionTracker = (*StatsService)(nil)
 	_ StatsServiceServer        = (*StatsService)(nil)
 )
 
@@ -60,7 +60,10 @@ func NewStatsService(options option.V2RayStatsServiceOptions) *StatsService {
 	}
 }
 
-func (s *StatsService) RoutedConnection(inbound string, outbound string, user string, conn net.Conn) net.Conn {
+func (s *StatsService) RoutedConnection(ctx context.Context, conn net.Conn, metadata adapter.InboundContext, matchedRule adapter.Rule, matchOutbound adapter.Outbound) net.Conn {
+	inbound := metadata.Inbound
+	user := metadata.User
+	outbound := matchOutbound.Tag()
 	var readCounter []*atomic.Int64
 	var writeCounter []*atomic.Int64
 	countInbound := inbound != "" && s.inbounds[inbound]
@@ -86,7 +89,10 @@ func (s *StatsService) RoutedConnection(inbound string, outbound string, user st
 	return bufio.NewInt64CounterConn(conn, readCounter, writeCounter)
 }
 
-func (s *StatsService) RoutedPacketConnection(inbound string, outbound string, user string, conn N.PacketConn) N.PacketConn {
+func (s *StatsService) RoutedPacketConnection(ctx context.Context, conn N.PacketConn, metadata adapter.InboundContext, matchedRule adapter.Rule, matchOutbound adapter.Outbound) N.PacketConn {
+	inbound := metadata.Inbound
+	user := metadata.User
+	outbound := matchOutbound.Tag()
 	var readCounter []*atomic.Int64
 	var writeCounter []*atomic.Int64
 	countInbound := inbound != "" && s.inbounds[inbound]
@@ -109,7 +115,7 @@ func (s *StatsService) RoutedPacketConnection(inbound string, outbound string, u
 		writeCounter = append(writeCounter, s.loadOrCreateCounter("user>>>"+user+">>>traffic>>>downlink"))
 	}
 	s.access.Unlock()
-	return bufio.NewInt64CounterPacketConn(conn, readCounter, writeCounter)
+	return bufio.NewInt64CounterPacketConn(conn, readCounter, nil, writeCounter, nil)
 }
 
 func (s *StatsService) GetStats(ctx context.Context, request *GetStatsRequest) (*GetStatsResponse, error) {
@@ -186,7 +192,7 @@ func (s *StatsService) GetSysStats(ctx context.Context, request *SysStatsRequest
 	var rtm runtime.MemStats
 	runtime.ReadMemStats(&rtm)
 	response := &SysStatsResponse{
-		Uptime:       uint32(time.Now().Sub(s.createdAt).Seconds()),
+		Uptime:       uint32(time.Since(s.createdAt).Seconds()),
 		NumGoroutine: uint32(runtime.NumGoroutine()),
 		Alloc:        rtm.Alloc,
 		TotalAlloc:   rtm.TotalAlloc,
@@ -204,8 +210,8 @@ func (s *StatsService) GetSysStats(ctx context.Context, request *SysStatsRequest
 func (s *StatsService) mustEmbedUnimplementedStatsServiceServer() {
 }
 
-// AddUser 把一个用户名加入流量统计白名单（patch by logv2fs）。
-// 与 NewStatsService 阶段的 options.Users 等价，但允许在运行时动态扩展。
+// AddUser adds a user to the runtime traffic statistics allowlist.
+// It is safe to call repeatedly for the same user.
 func (s *StatsService) AddUser(name string) {
 	if name == "" {
 		return
@@ -215,8 +221,8 @@ func (s *StatsService) AddUser(name string) {
 	s.users[name] = true
 }
 
-// RemoveUser 将一个用户名从流量统计白名单移除（patch by logv2fs）。
-// 已经积累的计数器不会被清理，留待下次 QueryStats(Reset_=true) 一并回收。
+// RemoveUser removes a user from the runtime traffic statistics allowlist.
+// Existing counters are retained so the next reset query can collect them.
 func (s *StatsService) RemoveUser(name string) {
 	if name == "" {
 		return

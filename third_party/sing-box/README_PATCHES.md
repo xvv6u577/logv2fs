@@ -1,6 +1,6 @@
 # sing-box 本地 fork patch 说明
 
-本目录是 sing-box v1.8.1 的原样拷贝，仅追加了少量"运行时增/删用户"导出 API。
+本目录基于 sing-box v1.12.25，仅追加了少量“运行时增/删用户”导出 API。
 项目根 `go.mod` 通过 `replace github.com/sagernet/sing-box => ./third_party/sing-box`
 让所有依赖走这份 fork。
 
@@ -11,13 +11,12 @@
 
 | 文件 | 改动内容 |
 |---|---|
-| `box.go` | 新增 `Box.Inbounds()` 与 `Box.Inbound(tag)` 方法 |
-| `adapter/experimental.go` | 在 `V2RayStatsService` 接口上追加 `AddUser(name)` / `RemoveUser(name)` |
+| `box.go` | 保存并导出 `Box.V2RayServer()`，供业务侧访问流量统计服务 |
 | `experimental/v2rayapi/stats.go` | 在 `*StatsService` 上实现 `AddUser` / `RemoveUser` |
-| `inbound/vless.go` | 加 `usersAccess sync.RWMutex`；为 `newConnection/newPacketConnection` 中的 `h.users[i]` 读取加锁；新增 `AddUser` / `RemoveUser` / `rebuildServiceLocked`（append-only + 墓碑索引） |
-| `inbound/vmess.go` | 同 VLESS，对应 `option.VMessUser`（AlterId） |
-| `inbound/trojan.go` | 同 VLESS，墓碑用 `Password == ""` 标记 |
-| `inbound/hysteria2.go` | 增加 `users []option.Hysteria2User` 与 `usersAccess sync.RWMutex`；初始化时把 `options.Users` 复制一份保留；newConnection/newPacketConnection 对 `userNameList` 读取加锁；新增 `AddUser` / `RemoveUser` / `rebuildServiceLocked` |
+| `protocol/vless/inbound.go` | 加读写锁，并新增 `AddUser` / `RemoveUser` / 用户表重建逻辑（append-only + 墓碑索引） |
+| `protocol/vmess/inbound.go` | 同 VLESS，对应 `option.VMessUser`（AlterId） |
+| `protocol/trojan/inbound.go` | 同 VLESS，墓碑用 `Password == ""` 标记 |
+| `protocol/hysteria2/inbound.go` | 保存用户配置、保护用户名读取，并新增运行时增删与用户表重建逻辑 |
 
 ## 设计原则
 
@@ -30,11 +29,10 @@
    `adapter.Inbound` 加新接口（避免影响所有现有实现）。业务侧通过类型断言到具体类型
    （`*inbound.VLESS` 等）来调 AddUser/RemoveUser。
 
-3. **零删除原则**：原始 sing-box 代码全部保留，只增不改不删。这样下次跟随上游升级时
-   只需要把 patch 里的新增行重新 apply 到新版本即可。
+3. **最小侵入原则**：协议行为沿用上游实现，本地修改只覆盖运行时用户管理和统计服务访问。
 
 ## 验证
 
 ```bash
-go build -tags="with_gvisor,with_quic,with_wireguard,with_utls,with_reality_server,with_clash_api,with_v2ray_api,with_grpc" ./...
+go test -tags="with_quic with_v2ray_api" ./singbox ./cmd/...
 ```

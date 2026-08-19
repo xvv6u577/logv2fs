@@ -66,7 +66,7 @@ make web                # 开发态，自动代理到后端 API
 | `helpers/` | 通用工具（输入清洗、IP 格式化等） |
 | `config/` | sing-box / Clash / 错误页等配置模板 |
 | `frontend/` | React + Tailwind 前端 |
-| `third_party/sing-box/` | sing-box v1.8.1 本地 fork，加导出的运行时 AddUser/RemoveUser API；`go.mod` 用 `replace` 指向 |
+| `third_party/sing-box/` | sing-box v1.12.25 本地 fork，加导出的运行时 AddUser/RemoveUser API；`go.mod` 用 `replace` 指向 |
 
 ### 核心组件
 

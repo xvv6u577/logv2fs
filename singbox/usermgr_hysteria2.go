@@ -14,12 +14,12 @@ package singbox
 
 import (
 	"github.com/sagernet/sing-box/adapter"
-	"github.com/sagernet/sing-box/inbound"
 	"github.com/sagernet/sing-box/option"
+	"github.com/sagernet/sing-box/protocol/hysteria2"
 )
 
 func applyAddHysteria2(in adapter.Inbound, req AddUserRequest) error {
-	v, ok := in.(*inbound.Hysteria2)
+	v, ok := in.(*hysteria2.Inbound)
 	if !ok {
 		return nil
 	}
@@ -33,7 +33,7 @@ func applyAddHysteria2(in adapter.Inbound, req AddUserRequest) error {
 }
 
 func applyRemoveHysteria2(in adapter.Inbound, emailAsId string) error {
-	v, ok := in.(*inbound.Hysteria2)
+	v, ok := in.(*hysteria2.Inbound)
 	if !ok {
 		return nil
 	}

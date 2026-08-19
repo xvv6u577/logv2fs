@@ -13,7 +13,7 @@ import (
 	"github.com/sagernet/sing/common/baderror"
 	"github.com/sagernet/sing/common/buf"
 	M "github.com/sagernet/sing/common/metadata"
-	"github.com/sagernet/sing/common/rw"
+	"github.com/sagernet/sing/common/varbin"
 )
 
 // kanged from: https://github.com/Qv2ray/gun-lite
@@ -21,6 +21,7 @@ import (
 var _ net.Conn = (*GunConn)(nil)
 
 type GunConn struct {
+	rawReader     io.Reader
 	reader        *std_bufio.Reader
 	writer        io.Writer
 	flusher       http.Flusher
@@ -31,9 +32,10 @@ type GunConn struct {
 
 func newGunConn(reader io.Reader, writer io.Writer, flusher http.Flusher) *GunConn {
 	return &GunConn{
-		reader:  std_bufio.NewReader(reader),
-		writer:  writer,
-		flusher: flusher,
+		rawReader: reader,
+		reader:    std_bufio.NewReader(reader),
+		writer:    writer,
+		flusher:   flusher,
 	}
 }
 
@@ -46,6 +48,7 @@ func newLateGunConn(writer io.Writer) *GunConn {
 
 func (c *GunConn) setup(reader io.Reader, err error) {
 	if reader != nil {
+		c.rawReader = reader
 		c.reader = std_bufio.NewReader(reader)
 	}
 	c.err = err
@@ -96,7 +99,7 @@ func (c *GunConn) read(b []byte) (n int, err error) {
 }
 
 func (c *GunConn) Write(b []byte) (n int, err error) {
-	varLen := rw.UVariantLen(uint64(len(b)))
+	varLen := varbin.UvarintLen(uint64(len(b)))
 	buffer := buf.NewSize(6 + varLen + len(b))
 	header := buffer.Extend(6 + varLen)
 	header[0] = 0x00
@@ -117,13 +120,13 @@ func (c *GunConn) Write(b []byte) (n int, err error) {
 func (c *GunConn) WriteBuffer(buffer *buf.Buffer) error {
 	defer buffer.Release()
 	dataLen := buffer.Len()
-	varLen := rw.UVariantLen(uint64(dataLen))
+	varLen := varbin.UvarintLen(uint64(dataLen))
 	header := buffer.ExtendHeader(6 + varLen)
 	header[0] = 0x00
 	binary.BigEndian.PutUint32(header[1:5], uint32(1+varLen+dataLen))
 	header[5] = 0x0A
 	binary.PutUvarint(header[6:], uint64(dataLen))
-	err := rw.WriteBytes(c.writer, buffer.Bytes())
+	err := common.Error(c.writer.Write(buffer.Bytes()))
 	if err != nil {
 		return baderror.WrapH2(err)
 	}
@@ -138,7 +141,7 @@ func (c *GunConn) FrontHeadroom() int {
 }
 
 func (c *GunConn) Close() error {
-	return common.Close(c.reader, c.writer)
+	return common.Close(c.rawReader, c.writer)
 }
 
 func (c *GunConn) LocalAddr() net.Addr {

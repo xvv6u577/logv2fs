@@ -4,6 +4,7 @@ import (
 	"context"
 	"net"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/sagernet/sing-box/adapter"
@@ -29,7 +30,7 @@ type Client struct {
 	serverAddr  string
 	serviceName string
 	dialOptions []grpc.DialOption
-	conn        *grpc.ClientConn
+	conn        atomic.Pointer[grpc.ClientConn]
 	connAccess  sync.Mutex
 }
 
@@ -62,6 +63,7 @@ func NewClient(ctx context.Context, dialer N.Dialer, serverAddr M.Socksaddr, opt
 	dialOptions = append(dialOptions, grpc.WithContextDialer(func(ctx context.Context, server string) (net.Conn, error) {
 		return dialer.DialContext(ctx, N.NetworkTCP, M.ParseSocksaddr(server))
 	}))
+	//nolint:staticcheck
 	dialOptions = append(dialOptions, grpc.WithReturnConnectionError())
 	return &Client{
 		ctx:         ctx,
@@ -72,28 +74,23 @@ func NewClient(ctx context.Context, dialer N.Dialer, serverAddr M.Socksaddr, opt
 	}, nil
 }
 
-func (c *Client) Close() error {
-	return common.Close(
-		common.PtrOrNil(c.conn),
-	)
-}
-
 func (c *Client) connect() (*grpc.ClientConn, error) {
-	conn := c.conn
+	conn := c.conn.Load()
 	if conn != nil && conn.GetState() != connectivity.Shutdown {
 		return conn, nil
 	}
 	c.connAccess.Lock()
 	defer c.connAccess.Unlock()
-	conn = c.conn
+	conn = c.conn.Load()
 	if conn != nil && conn.GetState() != connectivity.Shutdown {
 		return conn, nil
 	}
+	//nolint:staticcheck
 	conn, err := grpc.DialContext(c.ctx, c.serverAddr, c.dialOptions...)
 	if err != nil {
 		return nil, err
 	}
-	c.conn = conn
+	c.conn.Store(conn)
 	return conn, nil
 }
 
@@ -109,5 +106,13 @@ func (c *Client) DialContext(ctx context.Context) (net.Conn, error) {
 		cancel(err)
 		return nil, err
 	}
-	return NewGRPCConn(stream, cancel), nil
+	return NewGRPCConn(stream), nil
+}
+
+func (c *Client) Close() error {
+	conn := c.conn.Swap(nil)
+	if conn != nil {
+		conn.Close()
+	}
+	return nil
 }

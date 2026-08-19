@@ -4,6 +4,7 @@ const (
 	CommandLog int32 = iota
 	CommandStatus
 	CommandServiceReload
+	CommandServiceClose
 	CommandCloseConnections
 	CommandGroup
 	CommandSelectOutbound
@@ -13,4 +14,7 @@ const (
 	CommandSetClashMode
 	CommandGetSystemProxyStatus
 	CommandSetSystemProxyEnabled
+	CommandConnections
+	CommandCloseConnection
+	CommandGetDeprecatedNotes
 )

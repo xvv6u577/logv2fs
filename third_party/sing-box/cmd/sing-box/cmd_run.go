@@ -57,7 +57,7 @@ func readConfigAt(path string) (*OptionsEntry, error) {
 	if err != nil {
 		return nil, E.Cause(err, "read config at ", path)
 	}
-	options, err := json.UnmarshalExtended[option.Options](configContent)
+	options, err := json.UnmarshalExtendedContext[option.Options](globalCtx, configContent)
 	if err != nil {
 		return nil, E.Cause(err, "decode config at ", path)
 	}
@@ -109,13 +109,13 @@ func readConfigAndMerge() (option.Options, error) {
 	}
 	var mergedMessage json.RawMessage
 	for _, options := range optionsList {
-		mergedMessage, err = badjson.MergeJSON(options.options.RawMessage, mergedMessage)
+		mergedMessage, err = badjson.MergeJSON(globalCtx, options.options.RawMessage, mergedMessage, false)
 		if err != nil {
 			return option.Options{}, E.Cause(err, "merge config at ", options.path)
 		}
 	}
 	var mergedOptions option.Options
-	err = mergedOptions.UnmarshalJSON(mergedMessage)
+	err = mergedOptions.UnmarshalJSONContext(globalCtx, mergedMessage)
 	if err != nil {
 		return option.Options{}, E.Cause(err, "unmarshal merged config")
 	}
@@ -188,9 +188,12 @@ func run() error {
 			cancel()
 			closeCtx, closed := context.WithCancel(context.Background())
 			go closeMonitor(closeCtx)
-			instance.Close()
+			err = instance.Close()
 			closed()
 			if osSignal != syscall.SIGHUP {
+				if err != nil {
+					log.Error(E.Cause(err, "sing-box did not closed properly"))
+				}
 				return nil
 			}
 			break
@@ -199,7 +202,7 @@ func run() error {
 }
 
 func closeMonitor(ctx context.Context) {
-	time.Sleep(C.DefaultStopFatalTimeout)
+	time.Sleep(C.FatalStopTimeout)
 	select {
 	case <-ctx.Done():
 		return

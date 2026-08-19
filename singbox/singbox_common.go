@@ -9,6 +9,7 @@ import (
 
 	box "github.com/sagernet/sing-box"
 	"github.com/sagernet/sing-box/experimental/v2rayapi"
+	"github.com/sagernet/sing-box/include"
 	"github.com/sagernet/sing-box/option"
 	"github.com/sagernet/sing/common/json"
 	"github.com/xvv6u577/logv2fs/model"
@@ -21,7 +22,7 @@ type (
 // UsageDataOfAll 获取所有用户的流量使用数据
 func UsageDataOfAll(instance *box.Box) ([]Traffic, error) {
 
-	statsService := instance.Router().V2RayServer().StatsService()
+	statsService := instance.V2RayServer().StatsService()
 
 	regEx := `(?P<tag>[\w]+)>>>(?P<name>[-\w]+)>>>traffic>>>(?P<direction>[\w]+)`
 	compRegEx := regexp.MustCompile(regEx)
@@ -92,7 +93,8 @@ func InitOptionsFromConfig(config string) (option.Options, error) {
 		return options, err
 	}
 
-	options, err = json.UnmarshalExtended[option.Options]([]byte(configContent))
+	ctx := include.Context(context.Background())
+	options, err = json.UnmarshalExtendedContext[option.Options](ctx, []byte(configContent))
 	if err != nil {
 		log.Printf("error unmarshalling config file: %v\n", err)
 		return options, err

@@ -7,6 +7,10 @@ icon: material/apple
 SFI/SFM/SFT allows users to manage and run local or remote sing-box configuration files, and provides
 platform-specific function implementation, such as TUN transparent proxy implementation.
 
+!!! failure ""
+
+    Due to non-technical reasons, we are temporarily unable to update the sing-box app on the App Store and release the standalone version of the macOS client (TestFlight users are not affected)
+
 ## :material-graph: Requirements
 
 * iOS 15.0+ / macOS 13.0+ / Apple tvOS 17.0+
@@ -14,18 +18,23 @@ platform-specific function implementation, such as TUN transparent proxy impleme
 
 ## :material-download: Download
 
-* [App Store](https://apps.apple.com/us/app/sing-box/id6451272673)
-* [TestFlight (Beta)](https://testflight.apple.com/join/AcqO44FH)
+* ~~[App Store](https://apps.apple.com/app/sing-box-vt/id6673731168)~~
+* TestFlight (Beta)
 
-## :material-file-download: Download (macOS standalone version)
+TestFlight quota is only available to [sponsors](https://github.com/sponsors/nekohasekai)
+(one-time sponsorships are accepted).
+Once you donate, you can get an invitation by join our Telegram group for sponsors from [@yet_another_sponsor_bot](https://t.me/yet_another_sponsor_bot)
+or sending us your Apple ID [via email](mailto:contact@sagernet.org).
 
-* [Homebrew Cask](https://formulae.brew.sh/cask/sfm)
+## ~~:material-file-download: Download (macOS standalone version)~~
+
+* ~~[Homebrew Cask](https://formulae.brew.sh/cask/sfm)~~
 
 ```bash
-brew install sfm
+# brew install sfm
 ```
 
-* [GitHub Releases](https://github.com/SagerNet/sing-box/releases)
+* ~~[GitHub Releases](https://github.com/SagerNet/sing-box/releases)~~
 
 ## :material-source-repository: Source code
 

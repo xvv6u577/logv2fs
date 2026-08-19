@@ -3,7 +3,6 @@ package singbox
 import (
 	"context"
 	"log"
-	"sync"
 
 	"github.com/sagernet/sing-box/option"
 	"github.com/xvv6u577/logv2fs/database"
@@ -40,41 +39,36 @@ func UpdateOptionsFromMongoDB(opt option.Options) (option.Options, error) {
 	}
 
 	if len(userTrafficLogsArr) > 0 {
-		var wg sync.WaitGroup
-
 		for _, user := range userTrafficLogsArr {
-			if user.Status == "plain" {
-				wg.Add(1)
-				go func(user UserTrafficLogs) {
-					defer wg.Done()
+			if user.Status != "plain" {
+				continue
+			}
 
-					// add VlessUser and Hysteria2User to opt.Inbounds
-					for inbound := range opt.Inbounds {
+			// sing-box 1.12 stores protocol-specific fields in Inbound.Options.
+			for inboundIndex := range opt.Inbounds {
+				switch inboundOptions := opt.Inbounds[inboundIndex].Options.(type) {
+				case *option.VLESSInboundOptions:
+					inboundOptions.Users = append(inboundOptions.Users, option.VLESSUser{
+						Name: user.Email_As_Id + "-reality",
+						UUID: user.UUID,
+						Flow: "xtls-rprx-vision",
+					})
+				case *option.Hysteria2InboundOptions:
+					inboundOptions.Users = append(inboundOptions.Users, option.Hysteria2User{
+						Name:     user.Email_As_Id + "-hysteria2",
+						Password: user.User_id,
+					})
+				}
+			}
 
-						var usersToAppend = []string{user.Email_As_Id + "-reality", user.Email_As_Id + "-hysteria2"}
-						opt.Experimental.V2RayAPI.Stats.Users = append(opt.Experimental.V2RayAPI.Stats.Users, usersToAppend...)
-
-						if opt.Inbounds[inbound].Type == "vless" {
-							opt.Inbounds[inbound].VLESSOptions.Users = append(opt.Inbounds[inbound].VLESSOptions.Users, option.VLESSUser{
-								Name: user.Email_As_Id + "-reality",
-								UUID: user.UUID,
-								Flow: "xtls-rprx-vision",
-							})
-						}
-
-						if opt.Inbounds[inbound].Type == "hysteria2" {
-							opt.Inbounds[inbound].Hysteria2Options.Users = append(opt.Inbounds[inbound].Hysteria2Options.Users, option.Hysteria2User{
-								Name:     user.Email_As_Id + "-hysteria2",
-								Password: user.User_id,
-							})
-						}
-					}
-
-				}(*user)
+			if opt.Experimental != nil && opt.Experimental.V2RayAPI != nil && opt.Experimental.V2RayAPI.Stats != nil {
+				opt.Experimental.V2RayAPI.Stats.Users = append(
+					opt.Experimental.V2RayAPI.Stats.Users,
+					user.Email_As_Id+"-reality",
+					user.Email_As_Id+"-hysteria2",
+				)
 			}
 		}
-
-		wg.Wait()
 		log.Printf("成功从 MongoDB 加载了 %d 个用户的配置", len(userTrafficLogsArr))
 	} else {
 		log.Println("MongoDB 中没有找到活跃用户")

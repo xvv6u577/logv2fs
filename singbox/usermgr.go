@@ -16,17 +16,19 @@ import (
 	"strings"
 
 	box "github.com/sagernet/sing-box"
-	"github.com/sagernet/sing-box/inbound"
 	"github.com/sagernet/sing-box/option"
+	"github.com/sagernet/sing-box/protocol/trojan"
+	"github.com/sagernet/sing-box/protocol/vless"
+	"github.com/sagernet/sing-box/protocol/vmess"
 )
 
 const (
 	// vlessUserSuffix / hy2UserSuffix 沿用 UpdateOptionsFromMongoDB 已有的命名约定。
 	// 同一个业务用户在不同协议 inbound 上会注册带不同后缀的 sing-box "用户"，
 	// 这样 V2RayAPI Stats 才能按 (email, 协议) 维度区分流量计数。
-	vlessUserSuffix = "-reality"
-	hy2UserSuffix   = "-hysteria2"
-	vmessUserSuffix = "-vmess"
+	vlessUserSuffix  = "-reality"
+	hy2UserSuffix    = "-hysteria2"
+	vmessUserSuffix  = "-vmess"
 	trojanUserSuffix = "-trojan"
 
 	// vlessDefaultFlow 与 singbox/singbox_mongodb.go 中初始化时使用的 Flow 保持一致。
@@ -45,7 +47,7 @@ type AddUserRequest struct {
 // V2RayAPI StatsService 的统计白名单。
 //
 // 实现细节：
-//   - 遍历 instance.Inbounds()，按 Type() 分派到具体 inbound 的 AddUser 方法。
+//   - 遍历 instance.Inbound().Inbounds()，按具体协议类型分派 AddUser 方法。
 //   - 任一 inbound 出错只记 warn 继续往下，最终错误聚合返回；保证整体尽量幂等。
 //   - StatsService 的 AddUser 在协议分派之前先做，确保即使后续 inbound 出错，
 //     重启 singbox 后初始化阶段也能把缺失的协议补齐。
@@ -67,9 +69,9 @@ func ApplyAddUser(instance *box.Box, req AddUserRequest) error {
 	}
 
 	var errs []string
-	for _, in := range instance.Inbounds() {
+	for _, in := range instance.Inbound().Inbounds() {
 		switch v := in.(type) {
-		case *inbound.VLESS:
+		case *vless.Inbound:
 			if req.UUID == "" {
 				log.Printf("[singbox.usermgr] skip VLESS inbound %q for %s: UUID empty",
 					in.Tag(), req.EmailAsId)
@@ -84,7 +86,7 @@ func ApplyAddUser(instance *box.Box, req AddUserRequest) error {
 				errs = append(errs, fmt.Sprintf("vless[%s]: %v", in.Tag(), err))
 			}
 
-		case *inbound.VMess:
+		case *vmess.Inbound:
 			if req.UUID == "" {
 				continue
 			}
@@ -96,7 +98,7 @@ func ApplyAddUser(instance *box.Box, req AddUserRequest) error {
 				errs = append(errs, fmt.Sprintf("vmess[%s]: %v", in.Tag(), err))
 			}
 
-		case *inbound.Trojan:
+		case *trojan.Inbound:
 			if req.UserId == "" {
 				continue
 			}
@@ -135,17 +137,17 @@ func ApplyRemoveUser(instance *box.Box, emailAsId string) error {
 	}
 
 	var errs []string
-	for _, in := range instance.Inbounds() {
+	for _, in := range instance.Inbound().Inbounds() {
 		switch v := in.(type) {
-		case *inbound.VLESS:
+		case *vless.Inbound:
 			if err := v.RemoveUser(emailAsId + vlessUserSuffix); err != nil {
 				errs = append(errs, fmt.Sprintf("vless[%s]: %v", in.Tag(), err))
 			}
-		case *inbound.VMess:
+		case *vmess.Inbound:
 			if err := v.RemoveUser(emailAsId + vmessUserSuffix); err != nil {
 				errs = append(errs, fmt.Sprintf("vmess[%s]: %v", in.Tag(), err))
 			}
-		case *inbound.Trojan:
+		case *trojan.Inbound:
 			if err := v.RemoveUser(emailAsId + trojanUserSuffix); err != nil {
 				errs = append(errs, fmt.Sprintf("trojan[%s]: %v", in.Tag(), err))
 			}
@@ -177,11 +179,7 @@ func getStatsService(instance *box.Box) interface {
 	AddUser(name string)
 	RemoveUser(name string)
 } {
-	router := instance.Router()
-	if router == nil {
-		return nil
-	}
-	v2rayServer := router.V2RayServer()
+	v2rayServer := instance.V2RayServer()
 	if v2rayServer == nil {
 		return nil
 	}
@@ -189,5 +187,12 @@ func getStatsService(instance *box.Box) interface {
 	if stats == nil {
 		return nil
 	}
-	return stats
+	dynamicStats, ok := stats.(interface {
+		AddUser(name string)
+		RemoveUser(name string)
+	})
+	if !ok {
+		return nil
+	}
+	return dynamicStats
 }

@@ -91,10 +91,7 @@ func (c *Client) dialContext(ctx context.Context, requestURL *url.URL, headers h
 	} else {
 		deadlineConn = conn
 	}
-	err = deadlineConn.SetDeadline(time.Now().Add(C.TCPTimeout))
-	if err != nil {
-		return nil, E.Cause(err, "set read deadline")
-	}
+	deadlineConn.SetDeadline(time.Now().Add(C.TCPTimeout))
 	var protocols []string
 	if protocolHeader := headers.Get("Sec-WebSocket-Protocol"); protocolHeader != "" {
 		protocols = []string{protocolHeader}
@@ -126,4 +123,8 @@ func (c *Client) DialContext(ctx context.Context) (net.Conn, error) {
 	} else {
 		return &EarlyWebsocketConn{Client: c, ctx: ctx, create: make(chan struct{})}, nil
 	}
+}
+
+func (c *Client) Close() error {
+	return nil
 }

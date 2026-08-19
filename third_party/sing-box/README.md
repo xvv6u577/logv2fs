@@ -1,3 +1,11 @@
+> Sponsored by [Warp](https://go.warp.dev/sing-box), built for coding with multiple AI agents
+
+<a href="https://go.warp.dev/sing-box">
+<img alt="Warp sponsorship" width="400" src="https://github.com/warpdotdev/brand-assets/raw/refs/heads/main/Github/Sponsor/Warp-Github-LG-02.png">
+</a>
+
+---
+
 # sing-box
 
 The universal proxy platform.
@@ -7,10 +15,6 @@ The universal proxy platform.
 ## Documentation
 
 https://sing-box.sagernet.org
-
-## Support
-
-https://community.sagernet.org/c/sing-box/
 
 ## License
 

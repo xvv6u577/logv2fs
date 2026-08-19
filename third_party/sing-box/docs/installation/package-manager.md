@@ -4,62 +4,115 @@ icon: material/package
 
 # Package Manager
 
+## :material-tram: Repository Installation
+
+=== ":material-debian: Debian / APT"
+
+    ```bash
+    sudo mkdir -p /etc/apt/keyrings &&
+       sudo curl -fsSL https://sing-box.app/gpg.key -o /etc/apt/keyrings/sagernet.asc &&
+       sudo chmod a+r /etc/apt/keyrings/sagernet.asc &&
+       echo '
+    Types: deb
+    URIs: https://deb.sagernet.org/
+    Suites: *
+    Components: *
+    Enabled: yes
+    Signed-By: /etc/apt/keyrings/sagernet.asc
+    ' | sudo tee /etc/apt/sources.list.d/sagernet.sources &&
+       sudo apt-get update &&
+       sudo apt-get install sing-box # or sing-box-beta
+    ```
+
+=== ":material-redhat: Redhat / DNF 5"
+
+    ```bash
+    sudo dnf config-manager addrepo --from-repofile=https://sing-box.app/sing-box.repo &&
+    sudo dnf install sing-box # or sing-box-beta
+    ```
+
+=== ":material-redhat: Redhat / DNF 4"
+
+    ```bash
+    sudo dnf config-manager --add-repo https://sing-box.app/sing-box.repo &&
+    sudo dnf -y install dnf-plugins-core &&
+    sudo dnf install sing-box # or sing-box-beta
+    ```
+
 ## :material-download-box: Manual Installation
 
-=== ":material-debian: Debian / DEB"
+The script download and install the latest package from GitHub releases
+for deb or rpm based Linux distributions, ArchLinux and OpenWrt.
 
-    ```bash
-    bash <(curl -fsSL https://sing-box.app/deb-install.sh)
-    ```
+```shell
+curl -fsSL https://sing-box.app/install.sh | sh
+```
 
-=== ":material-redhat: Redhat / RPM"
+or latest beta:
 
-    ```bash
-    bash <(curl -fsSL https://sing-box.app/rpm-install.sh)
-    ```
+```shell
+curl -fsSL https://sing-box.app/install.sh | sh -s -- --beta
+```
 
-=== ":simple-archlinux: Archlinux / PKG"
+or specific version:
 
-    ```bash
-    bash <(curl -fsSL https://sing-box.app/arch-install.sh)
-    ```
+```shell
+curl -fsSL https://sing-box.app/install.sh | sh -s -- --version <version>
+```
 
 ## :material-book-lock-open: Managed Installation
 
 === ":material-linux: Linux"
 
-    | Type     | Platform      | Link                    | Command                      | Actively maintained |
-    |----------|---------------|-------------------------|------------------------------|---------------------|
-    | APK      | Alpine        | [sing-box][alpine]      | `apk add sing-box`           | :material-check:    |
-    | AUR      | Arch Linux    | [sing-box][aur] ᴬᵁᴿ     | `? -S sing-box`              | :material-check:    |
-    | nixpkgs  | NixOS         | [sing-box][nixpkgs]     | `nix-env -iA nixos.sing-box` | :material-check:    |
-    | Homebrew | macOS / Linux | [sing-box][brew]        | `brew install sing-box`      | :material-check:    |
+    | Type     | Platform      | Command                      | Link                                                                                                          |
+    |----------|---------------|------------------------------|---------------------------------------------------------------------------------------------------------------|
+    | AUR      | Arch Linux    | `? -S sing-box`              | [![AUR package](https://repology.org/badge/version-for-repo/aur/sing-box.svg)][aur]                           |
+    | nixpkgs  | NixOS         | `nix-env -iA nixos.sing-box` | [![nixpkgs unstable package](https://repology.org/badge/version-for-repo/nix_unstable/sing-box.svg)][nixpkgs] |
+    | Homebrew | macOS / Linux | `brew install sing-box`      | [![Homebrew package](https://repology.org/badge/version-for-repo/homebrew/sing-box.svg)][brew]                |
+    | APK      | Alpine        | `apk add sing-box`           | [![Alpine Linux Edge package](https://repology.org/badge/version-for-repo/alpine_edge/sing-box.svg)][alpine]  |
+    | DEB      | AOSC          | `apt install sing-box`       | [![AOSC package](https://repology.org/badge/version-for-repo/aosc/sing-box.svg)][aosc]                        |
 
 === ":material-apple: macOS"
 
-    | Type     | Platform | Link             | Command                 | Actively maintained |
-    |----------|----------|------------------|-------------------------|---------------------|
-    | Homebrew | macOS    | [sing-box][brew] | `brew install sing-box` | :material-check:    |
+    | Type     | Platform | Command                 | Link                                                                                           |
+    |----------|----------|-------------------------|------------------------------------------------------------------------------------------------|
+    | Homebrew | macOS    | `brew install sing-box` | [![Homebrew package](https://repology.org/badge/version-for-repo/homebrew/sing-box.svg)][brew] |
 
 === ":material-microsoft-windows: Windows"
 
-    | Type       | Platform           | Link                | Command                      | Actively maintained |
-    |------------|--------------------|---------------------|------------------------------|---------------------|
-    | Scoop      | Windows            | [sing-box][scoop]   | `scoop install sing-box`     | :material-check:    |
-    | Chocolatey | Windows            | [sing-box][choco]   | `choco install sing-box`     | :material-check:    |
-    | winget     | Windows            | [sing-box][winget]  | `winget install sing-box`    | :material-alert:    |
+    | Type       | Platform | Command                   | Link                                                                                                |
+    |------------|----------|---------------------------|-----------------------------------------------------------------------------------------------------|
+    | Scoop      | Windows  | `scoop install sing-box`  | [![Scoop package](https://repology.org/badge/version-for-repo/scoop/sing-box.svg)][scoop]           |
+    | Chocolatey | Windows  | `choco install sing-box`  | [![Chocolatey package](https://repology.org/badge/version-for-repo/chocolatey/sing-box.svg)][choco] |
+    | winget     | Windows  | `winget install sing-box` | [![winget package](https://repology.org/badge/version-for-repo/winget/sing-box.svg)][winget]        |
 
 === ":material-android: Android"
 
-    | Type       | Platform           | Link                | Command                      | Actively maintained |
-    |------------|--------------------|---------------------|------------------------------|---------------------|
-    | Termux     | Android            | [sing-box][termux]  | `pkg add sing-box`           | :material-check:    |
+    | Type   | Platform | Command            | Link                                                                                         |
+    |--------|----------|--------------------|----------------------------------------------------------------------------------------------|
+    | Termux | Android  | `pkg add sing-box` | [![Termux package](https://repology.org/badge/version-for-repo/termux/sing-box.svg)][termux] |
 
 === ":material-freebsd: FreeBSD"
 
-    | Type       | Platform | Link              | Command                | Actively maintained |
-    |------------|----------|-------------------|------------------------|---------------------|
-    | FreshPorts | FreeBSD  | [sing-box][ports] | `pkg install sing-box` | :material-alert:    |
+    | Type       | Platform | Command                | Link                                                                                       |
+    |------------|----------|------------------------|--------------------------------------------------------------------------------------------|
+    | FreshPorts | FreeBSD  | `pkg install sing-box` | [![FreeBSD port](https://repology.org/badge/version-for-repo/freebsd/sing-box.svg)][ports] |
+
+## :material-alert: Problematic Sources
+
+| Type       | Platform | Link                                                                                      | Promblem(s)                             |
+|------------|----------|-------------------------------------------------------------------------------------------|-----------------------------------------|
+| DEB        | AOSC     | [aosc-os-abbs](https://github.com/AOSC-Dev/aosc-os-abbs/tree/stable/app-network/sing-box) | Problematic build tag list modification |
+| Homebrew   | /        | [homebrew-core][brew]                                                                     | Problematic build tag list modification |
+| Termux     | Android  | [termux-packages][termux]                                                                 | Problematic build tag list modification |
+| FreshPorts | FreeBSD  | [FreeBSD ports][ports]                                                                    | Old Go  (go1.20)                        |
+
+If you are a user of them, please report issues to them:
+
+1. Please do not modify release build tags without full understanding of the related functionality: enabling non-default
+   labels may result in decreased performance; the lack of default labels may cause user confusion.
+2. sing-box supports compiling with some older Go versions, but it is not recommended (especially versions that are no
+   longer supported by Go).
 
 ## :material-book-multiple: Service Management
 
@@ -98,5 +151,7 @@ you can manage the service using the following command:
 [termux]: https://github.com/termux/termux-packages/tree/master/packages/sing-box
 
 [ports]: https://www.freshports.org/net/sing-box
+
+[aosc]: https://packages.aosc.io/packages/sing-box
 
 [systemd]: https://systemd.io/

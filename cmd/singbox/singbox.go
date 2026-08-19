@@ -16,6 +16,7 @@ import (
 	singboxlib "github.com/xvv6u577/logv2fs/singbox"
 
 	box "github.com/sagernet/sing-box"
+	"github.com/sagernet/sing-box/include"
 )
 
 var (
@@ -58,7 +59,7 @@ func NewSingboxCmd() *cobra.Command {
 
 			go func() {
 				var instance *box.Box
-				ctx, cancel := context.WithCancel(context.Background())
+				ctx, cancel := context.WithCancel(include.Context(context.Background()))
 
 				options, err := singboxlib.InitOptionsFromConfig(configFile)
 				if err != nil {
