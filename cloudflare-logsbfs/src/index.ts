@@ -31,6 +31,7 @@ type CertStatus = 'valid' | 'expiring' | 'expired' | 'error' | 'pending';
 interface SSLCertificate {
   id?: number;
   domain: string;
+  port?: number; // 证书检查端口，默认 443
   expiry_date?: string;
   issuer?: string;
   tags?: string[];
@@ -380,11 +381,14 @@ function calcStatus(expiry: Date): CertStatus {
 }
 
 /**
- * 直接连接域名的 443 端口，完成 TLS 握手，
+ * 直接连接域名的指定端口（默认 443），完成 TLS 握手，
  * 从服务端证书中解析有效期和颁发者，写入数据库。
+ *
+ * 注意：SNI（TLS ClientHello 中携带的域名）始终只使用纯域名 `domain`，
+ * 不能包含端口号，否则服务端无法正确匹配证书。
  */
-async function checkSSLCertificate(domain: string, supabase: SupabaseClient): Promise<void> {
-  const socket = connect({ hostname: domain, port: 443 });
+async function checkSSLCertificate(domain: string, port: number, supabase: SupabaseClient): Promise<void> {
+  const socket = connect({ hostname: domain, port });
   const writer = socket.writable.getWriter();
   const reader = socket.readable.getReader();
 
@@ -415,7 +419,7 @@ async function checkSSLCertificate(domain: string, supabase: SupabaseClient): Pr
           .eq('domain', domain);
 
         if (error) throw error;
-        console.log(`[SSL] ${domain}: ${status} (${days}d remaining)`);
+        console.log(`[SSL] ${domain}:${port} -> ${status} (${days}d remaining)`);
       })(),
 
       // 15 秒超时，防止 Worker 挂起
@@ -424,7 +428,7 @@ async function checkSSLCertificate(domain: string, supabase: SupabaseClient): Pr
       ),
     ]);
   } catch (err: any) {
-    console.error(`[SSL] ${domain} failed: ${err.message}`);
+    console.error(`[SSL] ${domain}:${port} failed: ${err.message}`);
     await supabase
       .from('ssl_certificates')
       .update({
@@ -461,6 +465,32 @@ const server = (err: any) =>
 
 const DOMAIN_RE = /^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9][a-z0-9-]{0,61}[a-z0-9]$/i;
 
+/** 证书检查的默认端口（HTTPS 标准端口） */
+const DEFAULT_PORT = 443;
+
+/**
+ * 解析用户输入的域名，支持 "example.com" 或 "example.com:8443" 两种形式。
+ * 返回纯域名 + 端口号；输入不合法时返回 null（供上层给出友好错误提示）。
+ */
+function parseDomainInput(input: string): { domain: string; port: number } | null {
+  const trimmed = input.trim().toLowerCase();
+  const colonIndex = trimmed.lastIndexOf(':');
+
+  // 没有冒号，说明未指定端口，使用默认端口 443
+  if (colonIndex === -1) {
+    return DOMAIN_RE.test(trimmed) ? { domain: trimmed, port: DEFAULT_PORT } : null;
+  }
+
+  const domain    = trimmed.slice(0, colonIndex);
+  const portStr   = trimmed.slice(colonIndex + 1);
+  const port      = Number(portStr);
+
+  if (!DOMAIN_RE.test(domain)) return null;
+  if (!/^\d+$/.test(portStr) || port < 1 || port > 65535) return null;
+
+  return { domain, port };
+}
+
 // ─────────────────────────────────────────────────────────────
 // Route Handlers
 // ─────────────────────────────────────────────────────────────
@@ -486,30 +516,35 @@ async function handleCertificates(
   // POST /api/certificates
   if (path === '/api/certificates' && method === 'POST') {
     const body = await req.json() as SSLCertificate;
-    if (!body.domain)              return fail('域名不能为空');
-    if (!DOMAIN_RE.test(body.domain)) return fail('域名格式不正确');
+    if (!body.domain) return fail('域名不能为空');
 
+    // 支持 "example.com" 或 "example.com:8443" 两种输入形式
+    const parsed = parseDomainInput(body.domain);
+    if (!parsed) return fail('域名格式不正确，端口范围应为 1-65535');
+
+    // 同一域名重复添加时，视为“更新监控端口”，而不是报错阻止：
+    // 覆盖 port/tags，并重置为 pending 触发一次新的证书检查。
     const { data, error } = await supabase
       .from('ssl_certificates')
-      .insert([{ domain: body.domain.toLowerCase(), tags: body.tags ?? [], status: 'pending' }])
+      .upsert(
+        [{ domain: parsed.domain, port: parsed.port, tags: body.tags ?? [], status: 'pending' }],
+        { onConflict: 'domain' },
+      )
       .select();
 
-    if (error) {
-      if (error.code === '23505') return fail('该域名已存在', 409);
-      throw error;
-    }
+    if (error) throw error;
 
-    if (data?.[0]) ctx.waitUntil(checkSSLCertificate(data[0].domain, supabase));
+    if (data?.[0]) ctx.waitUntil(checkSSLCertificate(data[0].domain, data[0].port, supabase));
     return ok(data, 201);
   }
 
   // POST /api/certificates/check-all
   if (path === '/api/certificates/check-all' && method === 'POST') {
-    const { data, error } = await supabase.from('ssl_certificates').select('domain');
+    const { data, error } = await supabase.from('ssl_certificates').select('domain, port');
     if (error) throw error;
     if (data?.length) {
       ctx.waitUntil(
-        Promise.allSettled(data.map(c => checkSSLCertificate(c.domain, supabase)))
+        Promise.allSettled(data.map(c => checkSSLCertificate(c.domain, c.port, supabase)))
       );
     }
     return ok({ message: `正在检查 ${data?.length ?? 0} 个域名...` });
@@ -546,11 +581,11 @@ async function handleCertificates(
   if (subPath === '/check' && method === 'POST') {
     const { data: cert, error } = await supabase
       .from('ssl_certificates')
-      .select('domain')
+      .select('domain, port')
       .eq('id', id)
       .single();
     if (error || !cert) return fail('未找到该域名', 404);
-    ctx.waitUntil(checkSSLCertificate(cert.domain, supabase));
+    ctx.waitUntil(checkSSLCertificate(cert.domain, cert.port, supabase));
     return ok({ message: '正在检查证书...' });
   }
 
@@ -637,12 +672,12 @@ export default {
     console.log('[Cron] Starting scheduled SSL check...');
     const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_ANON_KEY);
 
-    const { data, error } = await supabase.from('ssl_certificates').select('domain');
+    const { data, error } = await supabase.from('ssl_certificates').select('domain, port');
     if (error) { console.error('[Cron] Failed to fetch domains:', error); return; }
     if (!data?.length) { console.log('[Cron] No domains to check'); return; }
 
     console.log(`[Cron] Checking ${data.length} domains...`);
-    await Promise.allSettled(data.map(c => checkSSLCertificate(c.domain, supabase)));
+    await Promise.allSettled(data.map(c => checkSSLCertificate(c.domain, c.port, supabase)));
     console.log('[Cron] Done');
   },
 

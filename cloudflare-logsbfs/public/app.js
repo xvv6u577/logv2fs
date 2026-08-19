@@ -468,7 +468,7 @@ function renderCertificates(certificates) {
       <div class="flex items-start justify-between mb-4">
         <div class="flex items-center space-x-2 flex-1 min-w-0">
           <i class="fas fa-globe ${statusClass.text} text-xl flex-shrink-0"></i>
-          <h3 class="font-bold text-gray-800 truncate">${escapeHtml(cert.domain)}</h3>
+          <h3 class="font-bold text-gray-800 truncate">${escapeHtml(cert.domain)}${cert.port && cert.port !== 443 ? `:${cert.port}` : ''}</h3>
         </div>
         <button 
           onclick="deleteCertificate(${cert.id})" 
