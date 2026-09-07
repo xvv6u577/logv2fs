@@ -12,22 +12,23 @@
     "dns": {
         "servers": [
             {
+                "type": "https",
                 "tag": "proxyDns",
-                "address": "https://8.8.8.8/dns-query",
+                "server": "8.8.8.8",
+                "path": "/dns-query",
                 "detour": "manual-select"
             },
             {
+                "type": "https",
                 "tag": "localDns",
-                "address": "https://223.5.5.5/dns-query",
-                "detour": "direct"
+                "server": "223.5.5.5",
+                "path": "/dns-query"
             },
             {
-                "tag": "block",
-                "address": "rcode://success"
-            },
-            {
+                "type": "fakeip",
                 "tag": "remote",
-                "address": "fakeip"
+                "inet4_range": "198.18.0.0/15",
+                "inet6_range": "fc00::/18"
             }
         ],
         "rules": [
@@ -41,12 +42,8 @@
             },
             {
                 "rule_set": "geosite-category-ads-all",
-                "server": "block"
-            },
-            {
-                "outbound": "any",
-                "server": "localDns",
-                "disable_cache": true
+                "action": "predefined",
+                "rcode": "NOERROR"
             },
             {
                 "rule_set": "geosite-cn",
@@ -64,11 +61,6 @@
                 "server": "remote"
             }
         ],
-        "fakeip": {
-            "enabled": true,
-            "inet4_range": "198.18.0.0/15",
-            "inet6_range": "fc00::/18"
-        },
         "independent_cache": true,
         "strategy": "ipv4_only"
     },
@@ -140,17 +132,18 @@
             ]
         },
         {
-            "interval": "1m",
-            "outbounds": [],
             "tag": "Openai",
-            "tolerance": 50,
             "type": "urltest",
-            "url": "http://www.gstatic.com/generate_204"
+            "outbounds": [],
+            "url": "http://www.gstatic.com/generate_204",
+            "interval": "1m",
+            "tolerance": 50
         }
     ],
     "route": {
         "auto_detect_interface": true,
         "final": "manual-select",
+        "default_domain_resolver": "localDns",
         "rules": [
             {
                 "action": "sniff"
@@ -204,8 +197,8 @@
                 "outbound": "Microsoft"
             },
             {
-                "outbound": "Openai",
-                "rule_set": "geosite-openai"
+                "rule_set": "geosite-openai",
+                "outbound": "Openai"
             }
         ],
         "rule_set": [
@@ -259,11 +252,11 @@
                 "download_detour": "direct"
             },
             {
-                "download_detour": "direct",
-                "format": "binary",
                 "tag": "geosite-openai",
                 "type": "remote",
-                "url": "https://lllinter.oss-cn-hangzhou.aliyuncs.com/geo/geosite/openai.srs"
+                "format": "binary",
+                "url": "https://lllinter.oss-cn-hangzhou.aliyuncs.com/geo/geosite/openai.srs",
+                "download_detour": "direct"
             }
         ]
     }
