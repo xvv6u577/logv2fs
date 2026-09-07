@@ -13,8 +13,6 @@ import Mypanel from "./components/mypanel";
 import Nodes from "./components/nodes";
 import AddNode from "./components/addNode";
 import PaymentInput from "./components/paymentInput";
-import PaymentStatistics from "./components/paymentStatistics";
-import PaymentRecords from "./components/paymentRecords";
 import { PrivateRoute, AdminRoute } from "./components/PrivateRoute";
 import ErrorBoundary from "./components/ErrorBoundary";
 import {logoBase64} from "./components/logoImage"
@@ -590,8 +588,6 @@ function App() {
 					<Route path="/addnode" element={adminLayout(AddNode)} />
 					<Route path="/nodes" element={adminLayout(Nodes)} />
 					<Route path="/paymentinput" element={adminLayout(PaymentInput)} />
-					<Route path="/paymentstatistics" element={adminLayout(PaymentStatistics)} />
-					<Route path="/paymentrecords" element={adminLayout(PaymentRecords)} />
 
 					<Route path="/" element={<LandingPage />} />
 				</Routes>

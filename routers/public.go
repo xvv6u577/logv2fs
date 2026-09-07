@@ -23,8 +23,6 @@ func PublicRoutes(incomingRoutes *gin.Engine) {
 		"/android",
 		"/nodes",
 		"/addnode",
-		"/paymentrecords",    // 添加缴费记录页面
-		"/paymentstatistics", // 费用统计页面
 		"/domain-monitor",
 		"/",
 	}
