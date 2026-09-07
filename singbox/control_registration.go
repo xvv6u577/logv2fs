@@ -36,7 +36,7 @@ func RegisterControlPortFromEnv() {
 	filter := bson.M{
 		"domain": domain,
 		"status": "active",
-		"type":   bson.M{"$in": []string{"reality", "hysteria2", "vmessws"}},
+		"type":   bson.M{"$in": []string{"reality", "hysteria2", "anytls", "vmessws"}},
 	}
 	update := bson.M{"$set": bson.M{"control_port": port}}
 

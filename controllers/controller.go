@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"log"
+	"net"
 	"os"
 	"strconv"
 	"unicode"
@@ -34,6 +35,23 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"golang.org/x/crypto/bcrypt"
 )
+
+// getGINMode 获取 GIN_MODE
+func getGINMode() string {
+	ginMode := os.Getenv("GIN_MODE")
+	if ginMode == "" {
+		return "debug"
+	}
+	return ginMode
+}
+
+// getSkipCertVerify 获取 SkipCertVerify
+func getSkipCertVerify() bool {
+	if getGINMode() == "release" {
+		return false
+	}
+	return true
+}
 
 // validatePasswordStrength 校验密码复杂度。
 // 规则（KISS）：
@@ -75,8 +93,10 @@ type (
 	SingboxJSON      = model.SingboxJSON
 	RealityJSON      = model.RealityJSON
 	Hysteria2JSON    = model.Hysteria2JSON
+	AnyTLSJSON       = model.AnyTLSJSON
 	RealityYAML      = model.RealityYAML
 	Hysteria2YAML    = model.Hysteria2YAML
+	AnyTLSYAML       = model.AnyTLSYAML
 	CFVlessJSON      = model.CFVlessJSON
 	CFVlessYAML      = model.CFVlessYAML
 	UserTrafficLogs  = model.UserTrafficLogs
@@ -94,6 +114,24 @@ func getShortID() string {
 func getCredit() int64 {
 	credit, _ := strconv.ParseInt(os.Getenv("CREDIT"), 10, 64)
 	return credit
+}
+
+// buildAnyTLSShareLink builds the AnyTLS URI consumed by Shadowrocket and v2rayN.
+func buildAnyTLSShareLink(node SubscriptionNode, password string) string {
+	peer := helper.TLSServerName(node.SNI, node.Domain)
+	rawQuery := "peer=" + url.QueryEscape(peer) +
+		"&udp=1" +
+		"&keepalive=30,30,5" +
+		"&fingerprint=Chrome"
+
+	shareURL := url.URL{
+		Scheme:   "anytls",
+		User:     url.User(password),
+		Host:     net.JoinHostPort(node.IP, node.SERVER_PORT),
+		RawQuery: rawQuery,
+		Fragment: node.Remark,
+	}
+	return shareURL.String()
 }
 
 // HashPassword is used to encrypt the password before it is stored in the DB
@@ -671,6 +709,16 @@ func GetSubscripionURL() gin.HandlerFunc {
 					}
 				}
 
+				// anytls:// 供 Shadowrocket / v2rayN（sing-box 核）；password 为 User_id。
+				if node.Type == "anytls" {
+					link := buildAnyTLSShareLink(node, user.User_id)
+					if len(sub) == 0 {
+						sub = link
+					} else {
+						sub = sub + "\n" + link
+					}
+				}
+
 				if node.Type == "vlessCDN" {
 					// 如果 node.PATH 有值，则用之；否则，用 /?ed=2048
 					path := node.PATH
@@ -865,6 +913,52 @@ func ReturnSingboxJson() gin.HandlerFunc {
 							ServerName: "bing.com",
 							Insecure:   true,
 							Alpn:       []string{"h3"},
+						},
+					})
+				}
+
+				if node.Type == "anytls" {
+
+					for i, outbound := range singboxJSON.Outbounds {
+						if outboundMap, ok := outbound.(map[string]interface{}); ok {
+							if Contains(outboundTags, outboundMap["tag"].(string)) || (node.EnableOpenai) && outboundMap["tag"] == "Openai" {
+								if outbounds, ok := singboxJSON.Outbounds[i].(map[string]interface{}); ok {
+									if outboundsList, ok := outbounds["outbounds"].([]interface{}); ok {
+										singboxJSON.Outbounds[i].(map[string]interface{})["outbounds"] = append(outboundsList, node.Remark)
+									}
+								}
+							}
+						}
+					}
+
+					singboxJSON.Outbounds = append(singboxJSON.Outbounds, AnyTLSJSON{
+						Tag:                      node.Remark,
+						Type:                     "anytls",
+						Server:                   helper.FormatIPForURL(node.IP),
+						ServerPort:               server_port,
+						Password:                 user.User_id,
+						IdleSessionCheckInterval: "30s",
+						IdleSessionTimeout:       "30s",
+						MinIdleSession:           5,
+						TLS: struct {
+							Enabled    bool   `json:"enabled"`
+							ServerName string `json:"server_name"`
+							Insecure   bool   `json:"insecure,omitempty"`
+							Utls       struct {
+								Enabled     bool   `json:"enabled"`
+								Fingerprint string `json:"fingerprint"`
+							} `json:"utls"`
+						}{
+							Enabled:    true,
+							ServerName: helper.TLSServerName(node.SNI, node.Domain),
+							Insecure:   getSkipCertVerify(),
+							Utls: struct {
+								Enabled     bool   `json:"enabled"`
+								Fingerprint string `json:"fingerprint"`
+							}{
+								Enabled:     true,
+								Fingerprint: "chrome",
+							},
 						},
 					})
 				}
@@ -1071,6 +1165,30 @@ func ReturnVergeYAML() gin.HandlerFunc {
 						Sni:            "bing.com",
 						SkipCertVerify: true,
 						Alpn:           []string{"h3"},
+					})
+				}
+
+				if node.Type == "anytls" {
+
+					for i, proxy := range singboxYAML.ProxyGroups {
+						if proxy.Type == "select" || proxy.Type == "url-test" {
+							singboxYAML.ProxyGroups[i].Proxies = append(singboxYAML.ProxyGroups[i].Proxies, node.Remark)
+						}
+					}
+
+					singboxYAML.Proxies = append(singboxYAML.Proxies, AnyTLSYAML{
+						Name:                     node.Remark,
+						Type:                     "anytls",
+						Server:                   helper.FormatIPForURL(node.IP),
+						Port:                     server_port,
+						Password:                 user.User_id,
+						Sni:                      helper.TLSServerName(node.SNI, node.Domain),
+						SkipCertVerify:           getSkipCertVerify(),
+						UDP:                      true,
+						ClientFingerprint:        "chrome",
+						IdleSessionCheckInterval: 30,
+						IdleSessionTimeout:       30,
+						MinIdleSession:           5,
 					})
 				}
 

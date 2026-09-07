@@ -39,6 +39,28 @@ type Hysteria2JSON struct {
 	} `json:"tls"`
 }
 
+// AnyTLSJSON 是发给 sing-box 原生客户端的 anytls outbound。
+// 自签证书场景 Insecure 为 true；SNI 来自节点 sni（空则 domain）。
+type AnyTLSJSON struct {
+	Tag                      string `json:"tag"`
+	Type                     string `json:"type"`
+	Server                   string `json:"server"`
+	ServerPort               int    `json:"server_port"`
+	Password                 string `json:"password"`
+	IdleSessionCheckInterval string `json:"idle_session_check_interval"`
+	IdleSessionTimeout       string `json:"idle_session_timeout"`
+	MinIdleSession           int    `json:"min_idle_session"`
+	TLS                      struct {
+		Enabled    bool   `json:"enabled"`
+		ServerName string `json:"server_name"`
+		Insecure   bool   `json:"insecure,omitempty"`
+		Utls       struct {
+			Enabled     bool   `json:"enabled"`
+			Fingerprint string `json:"fingerprint"`
+		} `json:"utls"`
+	} `json:"tls"`
+}
+
 type CFVlessJSON struct {
 	Tag        string `json:"tag"`
 	Type       string `json:"type"`
@@ -110,6 +132,22 @@ type Hysteria2YAML struct {
 	Sni            string   `yaml:"sni"`
 	SkipCertVerify bool     `yaml:"skip-cert-verify"`
 	Alpn           []string `yaml:"alpn"`
+}
+
+// AnyTLSYAML 是发给 Clash Meta / Mihomo（Verge）的 anytls 节点。
+type AnyTLSYAML struct {
+	Name                     string `yaml:"name"`
+	Type                     string `yaml:"type"`
+	Server                   string `yaml:"server"`
+	Port                     int    `yaml:"port"`
+	Password                 string `yaml:"password"`
+	Sni                      string `yaml:"sni"`
+	SkipCertVerify           bool   `yaml:"skip-cert-verify"`
+	UDP                      bool   `yaml:"udp"`
+	ClientFingerprint        string `yaml:"client-fingerprint"`
+	IdleSessionCheckInterval int    `yaml:"idle-session-check-interval"`
+	IdleSessionTimeout       int    `yaml:"idle-session-timeout"`
+	MinIdleSession           int    `yaml:"min-idle-session"`
 }
 
 type CFVlessYAML struct {

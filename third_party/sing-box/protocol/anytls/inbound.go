@@ -4,6 +4,7 @@ import (
 	"context"
 	"net"
 	"strings"
+	"sync"
 
 	"github.com/sagernet/sing-box/adapter"
 	"github.com/sagernet/sing-box/adapter/inbound"
@@ -30,11 +31,14 @@ func RegisterInbound(registry *inbound.Registry) {
 
 type Inbound struct {
 	inbound.Adapter
-	tlsConfig tls.ServerConfig
-	router    adapter.ConnectionRouterEx
-	logger    logger.ContextLogger
-	listener  *listener.Listener
-	service   *anytls.Service
+	tlsConfig     tls.ServerConfig
+	router        adapter.ConnectionRouterEx
+	logger        logger.ContextLogger
+	listener      *listener.Listener
+	service       *anytls.Service
+	paddingScheme []byte
+	users         []option.AnyTLSUser
+	usersAccess   sync.RWMutex
 }
 
 func NewInbound(ctx context.Context, router adapter.Router, logger log.ContextLogger, tag string, options option.AnyTLSInboundOptions) (adapter.Inbound, error) {
@@ -42,6 +46,7 @@ func NewInbound(ctx context.Context, router adapter.Router, logger log.ContextLo
 		Adapter: inbound.NewAdapter(C.TypeAnyTLS, tag),
 		router:  uot.NewRouter(router, logger),
 		logger:  logger,
+		users:   options.Users,
 	}
 
 	if options.TLS != nil && options.TLS.Enabled {
@@ -56,19 +61,11 @@ func NewInbound(ctx context.Context, router adapter.Router, logger log.ContextLo
 	if len(options.PaddingScheme) > 0 {
 		paddingScheme = []byte(strings.Join(options.PaddingScheme, "\n"))
 	}
+	inbound.paddingScheme = paddingScheme
 
-	service, err := anytls.NewService(anytls.ServiceConfig{
-		Users: common.Map(options.Users, func(it option.AnyTLSUser) anytls.User {
-			return (anytls.User)(it)
-		}),
-		PaddingScheme: paddingScheme,
-		Handler:       (*inboundHandler)(inbound),
-		Logger:        logger,
-	})
-	if err != nil {
+	if err := inbound.rebuildServiceLocked(); err != nil {
 		return nil, err
 	}
-	inbound.service = service
 	inbound.listener = listener.New(listener.Options{
 		Context:           ctx,
 		Logger:            logger,
@@ -106,11 +103,69 @@ func (h *Inbound) NewConnectionEx(ctx context.Context, conn net.Conn, metadata a
 		}
 		conn = tlsConn
 	}
-	err := h.service.NewConnection(adapter.WithContext(ctx, &metadata), conn, metadata.Source, onClose)
+	h.usersAccess.RLock()
+	service := h.service
+	h.usersAccess.RUnlock()
+	err := service.NewConnection(adapter.WithContext(ctx, &metadata), conn, metadata.Source, onClose)
 	if err != nil {
 		N.CloseOnHandshakeFailure(conn, onClose, err)
 		h.logger.ErrorContext(ctx, E.Cause(err, "process connection from ", metadata.Source))
 	}
+}
+
+// AddUser adds or restores an AnyTLS user. patch by logv2fs
+//
+// sing-anytls Service 没有 UpdateUsers；运行时增删通过重建 Service 完成。
+// 已建立的 session 仍走旧 Service，新连接使用新用户表。
+func (h *Inbound) AddUser(user option.AnyTLSUser) error {
+	h.usersAccess.Lock()
+	defer h.usersAccess.Unlock()
+	for index := range h.users {
+		if h.users[index].Name == user.Name && h.users[index].Password == "" {
+			h.users[index] = user
+			return h.rebuildServiceLocked()
+		}
+	}
+	h.users = append(h.users, user)
+	return h.rebuildServiceLocked()
+}
+
+// RemoveUser disables matching AnyTLS users while preserving slice indexes. patch by logv2fs
+func (h *Inbound) RemoveUser(name string) error {
+	h.usersAccess.Lock()
+	defer h.usersAccess.Unlock()
+	changed := false
+	for index := range h.users {
+		if h.users[index].Name == name && h.users[index].Password != "" {
+			h.users[index].Password = ""
+			changed = true
+		}
+	}
+	if !changed {
+		return nil
+	}
+	return h.rebuildServiceLocked()
+}
+
+func (h *Inbound) rebuildServiceLocked() error {
+	active := make([]anytls.User, 0, len(h.users))
+	for _, user := range h.users {
+		if user.Password == "" {
+			continue
+		}
+		active = append(active, anytls.User(user))
+	}
+	service, err := anytls.NewService(anytls.ServiceConfig{
+		Users:         active,
+		PaddingScheme: h.paddingScheme,
+		Handler:       (*inboundHandler)(h),
+		Logger:        h.logger,
+	})
+	if err != nil {
+		return err
+	}
+	h.service = service
+	return nil
 }
 
 type inboundHandler Inbound

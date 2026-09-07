@@ -58,6 +58,11 @@ func UpdateOptionsFromMongoDB(opt option.Options) (option.Options, error) {
 						Name:     user.Email_As_Id + "-hysteria2",
 						Password: user.User_id,
 					})
+				case *option.AnyTLSInboundOptions:
+					inboundOptions.Users = append(inboundOptions.Users, option.AnyTLSUser{
+						Name:     user.Email_As_Id + "-anytls",
+						Password: user.User_id,
+					})
 				}
 			}
 
@@ -66,6 +71,7 @@ func UpdateOptionsFromMongoDB(opt option.Options) (option.Options, error) {
 					opt.Experimental.V2RayAPI.Stats.Users,
 					user.Email_As_Id+"-reality",
 					user.Email_As_Id+"-hysteria2",
+					user.Email_As_Id+"-anytls",
 				)
 			}
 		}

@@ -62,7 +62,7 @@ type NodeAtPeriod struct {
 	UserTrafficAtPeriod map[string]int64 `json:"user_traffic_at_period" bson:"user_traffic_at_period"`
 }
 
-// Domain type: "vmessws", "reality", "hysteria2", "vlessCDN"
+// Domain type: "vmessws", "reality", "hysteria2", "vlessCDN", "anytls"
 type SubscriptionNode struct {
 	ID           primitive.ObjectID `json:"_id,omitempty" bson:"_id,omitempty"`
 	Type         string             `json:"type" bson:"type"`

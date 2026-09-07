@@ -1,14 +1,14 @@
 package singbox
 
 // usermgr.go：把数据库里的 model.UserTrafficLogs 翻译成对 *box.Box 上每个
-// VLESS / VMess / Trojan / Hysteria2 inbound 的 AddUser / RemoveUser 调用，
+// VLESS / VMess / Trojan / Hysteria2 / AnyTLS inbound 的 AddUser / RemoveUser 调用，
 // 同时维护 V2RayAPI StatsService 的流量统计白名单。
 //
 // 这是"业务模型 -> sing-box 运行时"的薄翻译层；本文件不感知 HTTP、不感知数据库，
 // 输入只来源于上层（control server 解析后的请求体）。
 //
 // 注意：Hysteria2 的分发被拆到 usermgr_hysteria2.go / usermgr_hysteria2_stub.go，
-// 这两个文件以 build tag 区分；本文件只处理与 build tag 无关的 VLESS / VMess / Trojan。
+// 这两个文件以 build tag 区分；本文件处理与 build tag 无关的 VLESS / VMess / Trojan / AnyTLS。
 
 import (
 	"fmt"
@@ -17,6 +17,7 @@ import (
 
 	box "github.com/sagernet/sing-box"
 	"github.com/sagernet/sing-box/option"
+	"github.com/sagernet/sing-box/protocol/anytls"
 	"github.com/sagernet/sing-box/protocol/trojan"
 	"github.com/sagernet/sing-box/protocol/vless"
 	"github.com/sagernet/sing-box/protocol/vmess"
@@ -28,6 +29,7 @@ const (
 	// 这样 V2RayAPI Stats 才能按 (email, 协议) 维度区分流量计数。
 	vlessUserSuffix  = "-reality"
 	hy2UserSuffix    = "-hysteria2"
+	anytlsUserSuffix = "-anytls"
 	vmessUserSuffix  = "-vmess"
 	trojanUserSuffix = "-trojan"
 
@@ -64,6 +66,7 @@ func ApplyAddUser(instance *box.Box, req AddUserRequest) error {
 	if stats := getStatsService(instance); stats != nil {
 		stats.AddUser(req.EmailAsId + vlessUserSuffix)
 		stats.AddUser(req.EmailAsId + hy2UserSuffix)
+		stats.AddUser(req.EmailAsId + anytlsUserSuffix)
 		stats.AddUser(req.EmailAsId + vmessUserSuffix)
 		stats.AddUser(req.EmailAsId + trojanUserSuffix)
 	}
@@ -110,6 +113,18 @@ func ApplyAddUser(instance *box.Box, req AddUserRequest) error {
 				errs = append(errs, fmt.Sprintf("trojan[%s]: %v", in.Tag(), err))
 			}
 
+		case *anytls.Inbound:
+			if req.UserId == "" {
+				continue
+			}
+			err := v.AddUser(option.AnyTLSUser{
+				Name:     req.EmailAsId + anytlsUserSuffix,
+				Password: req.UserId,
+			})
+			if err != nil {
+				errs = append(errs, fmt.Sprintf("anytls[%s]: %v", in.Tag(), err))
+			}
+
 		default:
 			// Hysteria2 由 hy2 build tag 文件兜底处理，避免无 with_quic 时编译失败。
 			if err := applyAddHysteria2(in, req); err != nil {
@@ -151,6 +166,10 @@ func ApplyRemoveUser(instance *box.Box, emailAsId string) error {
 			if err := v.RemoveUser(emailAsId + trojanUserSuffix); err != nil {
 				errs = append(errs, fmt.Sprintf("trojan[%s]: %v", in.Tag(), err))
 			}
+		case *anytls.Inbound:
+			if err := v.RemoveUser(emailAsId + anytlsUserSuffix); err != nil {
+				errs = append(errs, fmt.Sprintf("anytls[%s]: %v", in.Tag(), err))
+			}
 		default:
 			if err := applyRemoveHysteria2(in, emailAsId); err != nil {
 				errs = append(errs, fmt.Sprintf("hysteria2[%s]: %v", in.Tag(), err))
@@ -161,6 +180,7 @@ func ApplyRemoveUser(instance *box.Box, emailAsId string) error {
 	if stats := getStatsService(instance); stats != nil {
 		stats.RemoveUser(emailAsId + vlessUserSuffix)
 		stats.RemoveUser(emailAsId + hy2UserSuffix)
+		stats.RemoveUser(emailAsId + anytlsUserSuffix)
 		stats.RemoveUser(emailAsId + vmessUserSuffix)
 		stats.RemoveUser(emailAsId + trojanUserSuffix)
 	}

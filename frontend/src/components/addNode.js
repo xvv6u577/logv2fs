@@ -46,6 +46,7 @@ const AddNode = () => {
 		badgeReality: "bg-blue-900 text-blue-300",
 		badgeHysteria: "bg-purple-900 text-purple-300",
 		badgeVless: "bg-green-900 text-green-300",
+		badgeAnytls: "bg-amber-900 text-amber-300",
 	};
 
 	const clearState = () => {
@@ -74,6 +75,7 @@ const AddNode = () => {
 			case "reality": return "Reality";
 			case "hysteria2": return "Hysteria2";
 			case "vlessCDN": return "VLessCDN";
+			case "anytls": return "AnyTLS";
 			default: return type;
 		}
 	};
@@ -83,6 +85,7 @@ const AddNode = () => {
 			case "reality": return styles.badgeReality;
 			case "hysteria2": return styles.badgeHysteria;
 			case "vlessCDN": return styles.badgeVless;
+			case "anytls": return styles.badgeAnytls;
 			default: return styles.badgeReality;
 		}
 	};
@@ -283,6 +286,7 @@ const AddNode = () => {
 								<option value="reality">Reality</option>
 								<option value="hysteria2">Hysteria2</option>
 								<option value="vlessCDN">VLessCDN</option>
+								<option value="anytls">AnyTLS</option>
 							</select>
 						</div>
 

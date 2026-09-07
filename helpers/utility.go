@@ -43,3 +43,11 @@ func FormatIPForURL(ip string) string {
 
 	return ip
 }
+
+// TLSServerName 订阅/客户端 TLS SNI：优先用节点 sni，为空则退回 domain。
+func TLSServerName(sni, domain string) string {
+	if strings.TrimSpace(sni) != "" {
+		return strings.TrimSpace(sni)
+	}
+	return domain
+}

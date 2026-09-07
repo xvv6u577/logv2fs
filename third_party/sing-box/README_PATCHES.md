@@ -17,6 +17,7 @@
 | `protocol/vmess/inbound.go` | 同 VLESS，对应 `option.VMessUser`（AlterId） |
 | `protocol/trojan/inbound.go` | 同 VLESS，墓碑用 `Password == ""` 标记 |
 | `protocol/hysteria2/inbound.go` | 保存用户配置、保护用户名读取，并新增运行时增删与用户表重建逻辑 |
+| `protocol/anytls/inbound.go` | 保存用户表；因 sing-anytls 无 UpdateUsers，AddUser/RemoveUser 通过重建 Service 生效（墓碑清空 Password） |
 
 ## 设计原则
 

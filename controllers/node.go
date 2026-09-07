@@ -118,7 +118,7 @@ func UpsertNodes() gin.HandlerFunc {
 			submittedKeys = append(submittedKeys, subscriptionNodeKey(domain))
 		}
 
-		inactiveFilter := bson.M{"type": bson.M{"$in": []string{"reality", "hysteria2", "vlessCDN"}}}
+		inactiveFilter := bson.M{"type": bson.M{"$in": []string{"reality", "hysteria2", "anytls", "vlessCDN"}}}
 		if len(submittedKeys) > 0 {
 			inactiveFilter["$nor"] = submittedKeys
 		}
@@ -178,7 +178,7 @@ func GetSingboxNodes() gin.HandlerFunc {
 		pipeline := mongo.Pipeline{
 			{{Key: "$match", Value: bson.D{
 				{Key: "status", Value: "active"},
-				{Key: "type", Value: bson.D{{Key: "$in", Value: bson.A{"reality", "hysteria2"}}}},
+				{Key: "type", Value: bson.D{{Key: "$in", Value: bson.A{"reality", "hysteria2", "anytls"}}}},
 				{Key: "domain", Value: bson.D{{Key: "$ne", Value: ""}}},
 			}}},
 			{{Key: "$sort", Value: bson.D{{Key: "weight", Value: 1}, {Key: "updated_at", Value: -1}}}},
