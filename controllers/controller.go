@@ -9,6 +9,7 @@ import (
 	"net"
 	"os"
 	"strconv"
+	"strings"
 	"unicode"
 
 	"net/http"
@@ -84,6 +85,111 @@ func validatePasswordStrength(pwd string) error {
 var (
 	validate = validator.New()
 )
+
+// allowedCountryCodes 定义支持的国家/地区代码（ISO 3166-1 alpha-2，小写）。
+// 为避免引入过长常量列表，这里选取常见的节点落地国家；后续需要可按需扩展。
+var allowedCountryCodes = map[string]struct{}{
+	"us": {}, "ca": {}, "mx": {},
+	"br": {}, "ar": {}, "cl": {},
+	"gb": {}, "de": {}, "fr": {}, "nl": {}, "se": {}, "no": {}, "fi": {}, "dk": {}, "es": {}, "it": {}, "ch": {}, "pl": {}, "cz": {},
+	"ru": {}, "ua": {},
+	"tr": {}, "ae": {}, "sa": {},
+	"jp": {}, "kr": {}, "sg": {}, "hk": {}, "tw": {}, "th": {}, "vn": {}, "my": {}, "id": {}, "ph": {}, "au": {}, "nz": {},
+}
+
+// normalizeAndValidateCountryCode 规范化并校验国家代码。
+// 业务约定：
+//   - 空字符串视为“未打标签”，无需报错；
+//   - 非空时必须是 allowedCountryCodes 中的小写双字母代码。
+func normalizeAndValidateCountryCode(raw string) (string, error) {
+	code := strings.ToLower(strings.TrimSpace(raw))
+	if code == "" {
+		return "", nil
+	}
+	if len(code) != 2 {
+		return "", errors.New("country 必须是 2 位小写字母的国家代码，例如 us、hk、sg")
+	}
+	if _, ok := allowedCountryCodes[code]; !ok {
+		return "", errors.New("不支持的国家代码，请使用常见的 ISO 3166-1 alpha-2 小写代码，例如 us、hk、sg")
+	}
+	return code, nil
+}
+
+// parseCountryFilterParam 解析 include/exclude 查询参数，忽略非法或不支持的值。
+// 返回去重后的合法代码切片；为空切片时表示“未设置过滤条件”。
+func parseCountryFilterParam(raw string) []string {
+	if raw == "" {
+		return nil
+	}
+	seen := make(map[string]struct{})
+	var result []string
+	for _, part := range strings.Split(raw, ",") {
+		code := strings.ToLower(strings.TrimSpace(part))
+		if code == "" {
+			continue
+		}
+		if _, ok := allowedCountryCodes[code]; !ok {
+			continue
+		}
+		if _, ok := seen[code]; ok {
+			continue
+		}
+		seen[code] = struct{}{}
+		result = append(result, code)
+	}
+	if len(result) == 0 {
+		return nil
+	}
+	return result
+}
+
+// filterSubscriptionNodesByCountry 按国家代码过滤订阅节点。
+//
+// 约定：
+//   - include 参数存在时：仅保留 country 在 include 列表中的节点；
+//     未打标签（country 为空或非法）的节点会被排除；
+//   - exclude 参数存在时：排除 country 在 exclude 列表中的节点；
+//   - 两者同时存在时：先应用 include，再应用 exclude；
+//   - 当两者都为空时，不做过滤（保持现有订阅 URL 完全兼容）。
+func filterSubscriptionNodesByCountry(c *gin.Context, nodes []SubscriptionNode) []SubscriptionNode {
+	includeCodes := parseCountryFilterParam(c.Query("include"))
+	excludeCodes := parseCountryFilterParam(c.Query("exclude"))
+
+	if len(includeCodes) == 0 && len(excludeCodes) == 0 {
+		return nodes
+	}
+
+	includeSet := make(map[string]struct{}, len(includeCodes))
+	for _, code := range includeCodes {
+		includeSet[code] = struct{}{}
+	}
+	excludeSet := make(map[string]struct{}, len(excludeCodes))
+	for _, code := range excludeCodes {
+		excludeSet[code] = struct{}{}
+	}
+
+	filtered := make([]SubscriptionNode, 0, len(nodes))
+	for _, n := range nodes {
+		country := strings.ToLower(strings.TrimSpace(n.Country))
+		// 未打标签节点：只有当 include 存在时才会被排除。
+		if len(includeSet) > 0 {
+			if country == "" {
+				continue
+			}
+			if _, ok := includeSet[country]; !ok {
+				continue
+			}
+		}
+		// exclude 仅对带标签节点生效；未打标签节点不会被误伤。
+		if country != "" {
+			if _, ok := excludeSet[country]; ok {
+				continue
+			}
+		}
+		filtered = append(filtered, n)
+	}
+	return filtered
+}
 
 type (
 	TrafficAtPeriod  = model.TrafficAtPeriod
@@ -672,6 +778,9 @@ func GetSubscripionURL() gin.HandlerFunc {
 
 		cur.All(context.Background(), &activeGlobalNodes)
 
+		// 按国家代码过滤节点；未提供 include/exclude 时保持原有行为。
+		activeGlobalNodes = filterSubscriptionNodesByCountry(c, activeGlobalNodes)
+
 		// projections include status, user_id, uuid,
 		var projections = bson.D{
 			{Key: "status", Value: 1},
@@ -795,6 +904,12 @@ func ReturnSingboxJson() gin.HandlerFunc {
 		defer cur.Close(context.Background())
 
 		cur.All(context.Background(), &subscriptionNodes)
+
+		// 按国家代码过滤节点；未提供 include/exclude 时保持原有行为。
+		subscriptionNodes = filterSubscriptionNodesByCountry(c, subscriptionNodes)
+
+		// 按国家代码过滤节点；未提供 include/exclude 时保持原有行为。
+		subscriptionNodes = filterSubscriptionNodesByCountry(c, subscriptionNodes)
 
 		if user.Status == "plain" {
 
