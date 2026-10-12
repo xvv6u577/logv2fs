@@ -67,6 +67,7 @@ type SubscriptionNode struct {
 	ID           primitive.ObjectID `json:"_id,omitempty" bson:"_id,omitempty"`
 	Type         string             `json:"type" bson:"type"`
 	Remark       string             `json:"remark" bson:"remark"`
+	Country      string             `json:"country,omitempty" bson:"country,omitempty"`
 	Domain       string             `json:"domain" bson:"domain" validate:"required,min=2,max=100"`
 	IP           string             `json:"ip" bson:"ip"`
 	SNI          string             `json:"sni" bson:"sni"`

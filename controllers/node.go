@@ -75,11 +75,21 @@ func UpsertNodes() gin.HandlerFunc {
 
 		nodeCol := database.GetCollection(model.SubscriptionNode{})
 		submittedKeys := make([]bson.M, 0, len(rawFormData))
+		var err error
 
 		for _, domain := range rawFormData {
 			if domain.Remark == "" {
 				continue
 			}
+			// 规范化并校验国家代码；留空表示“不打标签”，保持向后兼容。
+			normalizedCountry, err := normalizeAndValidateCountryCode(domain.Country)
+			if err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+				log.Printf("normalizeAndValidateCountryCode error: %v", err)
+				return
+			}
+			domain.Country = normalizedCountry
+
 			if domain.Type == "reality" {
 				domain.PUBLIC_KEY = getPublicKey()
 				domain.SHORT_ID = getShortID()
@@ -89,6 +99,7 @@ func UpsertNodes() gin.HandlerFunc {
 				"$set": bson.M{
 					"type":          domain.Type,
 					"remark":        domain.Remark,
+					"country":       domain.Country,
 					"domain":        domain.Domain,
 					"ip":            domain.IP,
 					"sni":           domain.SNI,
@@ -109,7 +120,7 @@ func UpsertNodes() gin.HandlerFunc {
 				},
 			}
 			opts := options.Update().SetUpsert(true)
-			_, err := nodeCol.UpdateOne(context.TODO(), filter, update, opts)
+			_, err = nodeCol.UpdateOne(context.TODO(), filter, update, opts)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 				log.Printf("UpdateOne in subscription_nodes error: %v", err)
@@ -123,7 +134,7 @@ func UpsertNodes() gin.HandlerFunc {
 			inactiveFilter["$nor"] = submittedKeys
 		}
 		inactiveUpdate := bson.M{"$set": bson.M{"status": "inactive", "updated_at": current}}
-		_, err := nodeCol.UpdateMany(context.TODO(), inactiveFilter, inactiveUpdate)
+		_, err = nodeCol.UpdateMany(context.TODO(), inactiveFilter, inactiveUpdate)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			log.Printf("UpdateMany in subscription_nodes error: %v", err)

@@ -16,6 +16,7 @@ const AddNode = () => {
 	// 初始化表单数据
 	const initialState = {
 		type: "reality",
+		country: "",
 		domain: "",
 		ip: "",
 		remark: "",
@@ -26,7 +27,7 @@ const AddNode = () => {
 		weight: 0, // 权重字段，默认为0
 	};
 	const [formData, setFormData] = useState(initialState);
-	const { type, remark, domain, uuid, path, sni, ip, server_port, weight } = formData;	
+	const { type, country, remark, domain, uuid, path, sni, ip, server_port, weight } = formData;	
 
 	const dispatch = useDispatch();
 	const message = useSelector((state) => state.message);
@@ -65,6 +66,11 @@ const AddNode = () => {
 			if (isNaN(value)) {
 				value = 0;
 			}
+		}
+
+		// 对于 country 字段，限制为 2 位小写字母，避免输入异常值
+		if (name === 'country') {
+			value = value.toLowerCase().replace(/[^a-z]/g, "").slice(0, 2);
 		}
 		
 		setFormData((prevState) => ({ ...prevState, [name]: value }));
@@ -126,6 +132,7 @@ const AddNode = () => {
 		if (remark.length > 0) {
 			const newNode = {
 				type,
+				country,
 				remark,
 				domain,
 				ip,
@@ -220,6 +227,12 @@ const AddNode = () => {
 					<span className="text-white font-mono">{node.server_port || "None"}</span>
 				</div>
 				<div>
+					<span className="text-gray-400">Country: </span>
+					<span className="text-white font-mono">
+						{node.country ? node.country.toUpperCase() : "—"}
+					</span>
+				</div>
+				<div>
 					<span className="text-gray-400">Weight: </span>
 					<span className="text-white font-mono">{node.weight !== undefined ? node.weight : 0}</span>
 				</div>
@@ -300,6 +313,36 @@ const AddNode = () => {
 								className={styles.input}
 								placeholder="节点备注名称"
 							/>
+						</div>
+
+						<div>
+							<label className={styles.label}>国家代码（可选）</label>
+							<input
+								type="text"
+								name="country"
+								onChange={onChange}
+								value={country}
+								className={styles.input}
+								placeholder="例如 us, hk, sg（小写 ISO 3166-1 alpha-2）"
+								aria-label="country code"
+								list="country-options"
+							/>
+							<datalist id="country-options">
+								<option value="us" />
+								<option value="hk" />
+								<option value="sg" />
+								<option value="jp" />
+								<option value="kr" />
+								<option value="gb" />
+								<option value="de" />
+								<option value="nl" />
+								<option value="fr" />
+								<option value="ca" />
+								<option value="au" />
+							</datalist>
+							<p className="text-xs text-gray-500 mt-1">
+								用于订阅过滤，例如 <code>?include=us,jp</code> 或 <code>?exclude=hk,sg</code>。
+							</p>
 						</div>
 
 						<div>
