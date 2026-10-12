@@ -4,6 +4,13 @@
  * SSL check 策略：通过 cloudflare:sockets 建立原始 TCP 连接，
  * 手动发送 TLS 1.2 ClientHello，解析握手帧，从 X.509 DER 证书
  * 中提取 issuer 和 notAfter，不依赖任何第三方 API。
+ *
+ * AnyTLS 同步：scheduled() 开始时从 logv2fs httpserver 的 /v1/cert-targets
+ * 拉取 AnyTLS 节点（SNI + IP + 端口），upsert 到 ssl_certificates（source='anytls'）。
+ * 检查时连接 connect_host（节点 IP），ClientHello 的 SNI 仍为 domain。
+ *
+ * 告警：状态变为 expiring / expired（可选 error）时通过 Telegram 推送一次，
+ * 以 last_alert_status 去重；恢复为 valid 时发送恢复通知并清空 last_alert_status。
  */
 
 import { connect } from 'cloudflare:sockets';
@@ -15,8 +22,24 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 interface Env {
   SUPABASE_URL: string;
+  /** Secret：wrangler secret put SUPABASE_ANON_KEY */
   SUPABASE_ANON_KEY: string;
   ASSETS: { fetch: typeof fetch };
+  /** Var：logv2fs httpserver 根地址，如 https://panel.example.com；为空则跳过 AnyTLS 同步 */
+  LOGV2FS_API_URL?: string;
+  /** Secret：与 logv2fs .env 中 CERT_TARGETS_TOKEN 相同 */
+  CERT_TARGETS_TOKEN?: string;
+  /** Secret：Telegram Bot token；与 TELEGRAM_CHAT_ID 同时配置才会发送告警 */
+  TELEGRAM_BOT_TOKEN?: string;
+  /** Secret 或 Var：Telegram chat id */
+  TELEGRAM_CHAT_ID?: string;
+  /** Var：设为 "true" 时，检查失败（error）也发送告警 */
+  ALERT_ON_ERROR?: string;
+  /** Secret：可选。设置后 /api/* 需要 Authorization: Bearer <ADMIN_TOKEN> */
+  ADMIN_TOKEN?: string;
+  /** Secret：可选。Cloudflare API token（Zone Read + SSL and Certificates Read），
+   *  用于读取托管在 Cloudflare 上的域名的边缘证书（Worker 无法 connect() 到 Cloudflare IP） */
+  CF_API_TOKEN?: string;
 }
 
 interface Todo {
@@ -27,6 +50,7 @@ interface Todo {
 }
 
 type CertStatus = 'valid' | 'expiring' | 'expired' | 'error' | 'pending';
+type CertSource = 'manual' | 'anytls';
 
 interface SSLCertificate {
   id?: number;
@@ -38,9 +62,25 @@ interface SSLCertificate {
   last_checked?: string;
   status?: CertStatus;
   error_message?: string;
+  connect_host?: string | null; // 实际 TCP 连接目标（如节点 IP），为空时连接 domain
+  source?: CertSource;
+  last_alert_status?: CertStatus | null;
   created_at?: string;
   updated_at?: string;
 }
+
+/** 执行一次证书检查需要的行字段 */
+interface CertRow {
+  id: number;
+  domain: string;
+  port: number;
+  connect_host?: string | null;
+  source?: CertSource;
+  tags?: string[] | null;
+  last_alert_status?: CertStatus | null;
+}
+
+const CERT_ROW_COLUMNS = 'id, domain, port, connect_host, source, tags, last_alert_status';
 
 interface CertInfo {
   expiry: Date;
@@ -380,68 +420,384 @@ function calcStatus(expiry: Date): CertStatus {
   return 'valid';
 }
 
-/**
- * 直接连接域名的指定端口（默认 443），完成 TLS 握手，
- * 从服务端证书中解析有效期和颁发者，写入数据库。
- *
- * 注意：SNI（TLS ClientHello 中携带的域名）始终只使用纯域名 `domain`，
- * 不能包含端口号，否则服务端无法正确匹配证书。
- */
-async function checkSSLCertificate(domain: string, port: number, supabase: SupabaseClient): Promise<void> {
-  const socket = connect({ hostname: domain, port });
+/** 去掉 IPv6 字面量两侧的方括号，connect() 需要裸地址 */
+function normalizeHost(host: string): string {
+  const h = host.trim();
+  return h.startsWith('[') && h.endsWith(']') ? h.slice(1, -1) : h;
+}
+
+interface CheckResult {
+  status: CertStatus;
+  days?: number;
+  expiry?: Date;
+  issuer?: string;
+  error?: string;
+}
+
+/** 建立 TCP 连接、发送 ClientHello、解析证书；不触碰数据库 */
+async function probeCertificate(connectHost: string, sni: string, port: number): Promise<CertInfo> {
+  const socket = connect({ hostname: connectHost, port });
   const writer = socket.writable.getWriter();
   const reader = socket.readable.getReader();
+  let timer: ReturnType<typeof setTimeout> | undefined;
 
   try {
-    await Promise.race([
+    return await Promise.race([
       (async () => {
-        // 1. 发送 TLS 1.2 ClientHello
-        await writer.write(buildClientHello(domain));
-
-        // 2. 从 TLS 握手流中提取证书 DER
+        // SNI（ClientHello 中携带的域名）始终使用纯域名，不能是 IP 或带端口
+        await writer.write(buildClientHello(sni));
         const certDER = await extractCertDER(new StreamBuffer(reader));
-
-        // 3. 解析 X.509 证书
-        const { expiry, issuer } = parseX509(certDER);
-        const status = calcStatus(expiry);
-        const days   = Math.floor((expiry.getTime() - Date.now()) / 86_400_000);
-
-        // 4. 更新数据库
-        const { error } = await supabase
-          .from('ssl_certificates')
-          .update({
-            expiry_date:   expiry.toISOString(),
-            issuer,
-            status,
-            last_checked:  new Date().toISOString(),
-            error_message: null,
-          })
-          .eq('domain', domain);
-
-        if (error) throw error;
-        console.log(`[SSL] ${domain}:${port} -> ${status} (${days}d remaining)`);
+        return parseX509(certDER);
       })(),
-
       // 15 秒超时，防止 Worker 挂起
-      new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('Connection timed out after 15s')), 15_000)
-      ),
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new Error('Connection timed out after 15s')), 15_000);
+      }),
     ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+    // 超时时 reader 仍有未完成的 read，releaseLock 会抛错并掩盖真实错误；先关连接，释放锁失败忽略
+    await socket.close().catch(() => {});
+    try { writer.releaseLock(); } catch { /* ignore */ }
+    try { reader.releaseLock(); } catch { /* ignore */ }
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// Cloudflare 托管域名：通过 Cloudflare API 读取边缘证书
+// ─────────────────────────────────────────────────────────────
+
+const CF_API_BASE = 'https://api.cloudflare.com/client/v4';
+/** 写入 issuer 的标记，前端据此显示 Cloudflare 徽章 */
+const CF_EDGE_MARKER = ' (Cloudflare 边缘)';
+const CF_ZONE_CACHE_TTL_MS = 5 * 60_000;
+
+interface CfZone { id: string; name: string }
+interface CfCertificate { hosts?: string[]; issuer?: string; expires_on?: string; status?: string }
+interface CfCertPack { status?: string; hosts?: string[]; certificates?: CfCertificate[] }
+
+let cfZoneCache: { at: number; promise: Promise<CfZone[]> } | null = null;
+
+async function cfApi<T>(env: Env, path: string): Promise<{ result: T; result_info?: { total_pages?: number } }> {
+  const resp = await fetch(`${CF_API_BASE}${path}`, {
+    headers: { Authorization: `Bearer ${env.CF_API_TOKEN}`, Accept: 'application/json' },
+  });
+  const body: any = await resp.json().catch(() => null);
+  if (!resp.ok || !body?.success) {
+    const msg = body?.errors?.map((e: any) => `${e.code}: ${e.message}`).join('; ') || `HTTP ${resp.status}`;
+    throw new Error(`Cloudflare API ${path.split('?')[0]} failed: ${msg}`);
+  }
+  return body;
+}
+
+/** 列出 token 可见的全部 zone（分页）；同一 isolate 内缓存 5 分钟，并发检查共享同一请求 */
+function listCfZones(env: Env): Promise<CfZone[]> {
+  if (cfZoneCache && Date.now() - cfZoneCache.at < CF_ZONE_CACHE_TTL_MS) return cfZoneCache.promise;
+  const promise = (async () => {
+    const zones: CfZone[] = [];
+    for (let page = 1; page <= 50; page++) {
+      const body = await cfApi<CfZone[]>(env, `/zones?per_page=50&page=${page}`);
+      zones.push(...body.result.map(z => ({ id: z.id, name: z.name.toLowerCase() })));
+      if (page >= (body.result_info?.total_pages ?? 1)) break;
+    }
+    return zones;
+  })();
+  cfZoneCache = { at: Date.now(), promise };
+  promise.catch(() => { if (cfZoneCache?.promise === promise) cfZoneCache = null; });
+  return promise;
+}
+
+/** 找出 name 等于 domain 或为其后缀（.zone）的 zone，取最长匹配 */
+function matchZone(zones: CfZone[], domain: string): CfZone | null {
+  const d = domain.toLowerCase().replace(/\.$/, '');
+  let best: CfZone | null = null;
+  for (const z of zones) {
+    if ((d === z.name || d.endsWith(`.${z.name}`)) && (!best || z.name.length > best.name.length)) best = z;
+  }
+  return best;
+}
+
+/** 0 = 不覆盖，1 = 通配符覆盖（单级），2 = 精确匹配 */
+function hostCoverage(hosts: string[] | undefined, domain: string): 0 | 1 | 2 {
+  let cov: 0 | 1 | 2 = 0;
+  for (const raw of hosts ?? []) {
+    const h = raw.toLowerCase();
+    if (h === domain) return 2;
+    if (h.startsWith('*.')) {
+      const base = h.slice(2);
+      const i = domain.indexOf('.');
+      if (i > 0 && domain.slice(i + 1) === base) cov = 1;
+    }
+  }
+  return cov;
+}
+
+/**
+ * 从 Cloudflare API 读取 domain 的边缘证书到期时间。
+ * 返回 null 表示不适用（未配置 token / 无匹配 zone / 无匹配证书），由调用方回退到直连探测。
+ */
+async function cfEdgeCertificate(env: Env, domain: string): Promise<CertInfo | null> {
+  if (!env.CF_API_TOKEN) return null;
+  const zone = matchZone(await listCfZones(env), domain);
+  if (!zone) return null;
+
+  const body = await cfApi<CfCertPack[]>(env, `/zones/${zone.id}/ssl/certificate_packs?status=all&per_page=50`);
+  const d = domain.toLowerCase();
+  const exact: CfCertificate[] = [];
+  const wildcard: CfCertificate[] = [];
+  for (const pack of body.result ?? []) {
+    if (pack.status !== 'active') continue;
+    for (const cert of pack.certificates ?? []) {
+      if (cert.status !== 'active' || !cert.expires_on) continue;
+      const cov = hostCoverage(cert.hosts ?? pack.hosts, d);
+      if (cov === 2) exact.push(cert);
+      else if (cov === 1) wildcard.push(cert);
+    }
+  }
+  const chosen = exact.length ? exact : wildcard;
+  let best: { expiry: Date; issuer: string } | null = null;
+  for (const c of chosen) {
+    const expiry = new Date(c.expires_on!);
+    if (isNaN(expiry.getTime())) continue;
+    if (!best || expiry > best.expiry) best = { expiry, issuer: c.issuer || 'Unknown' };
+  }
+  if (!best) {
+    console.log(`[SSL] ${domain}: zone ${zone.name} has no active certificate covering it`);
+    return null;
+  }
+  return { expiry: best.expiry, issuer: `${best.issuer}${CF_EDGE_MARKER}` };
+}
+
+/**
+ * 按行检查证书：连接 connect_host（为空则 domain）的指定端口，
+ * SNI 使用 domain；结果按 id 写回数据库，并处理告警状态迁移。
+ */
+async function checkSSLCertificate(row: CertRow, supabase: SupabaseClient, env: Env): Promise<CheckResult> {
+  const port = row.port || DEFAULT_PORT;
+  const host = row.connect_host ? normalizeHost(row.connect_host) : row.domain;
+  const label = host === row.domain ? `${row.domain}:${port}` : `${row.domain}:${port} via ${host}`;
+  let result: CheckResult;
+
+  try {
+    // 未指定 connect_host 时，先尝试 Cloudflare API（托管在 Cloudflare 的域名无法直连探测）
+    let info: CertInfo | null = null;
+    let cfNote = '';
+    if (!row.connect_host && env.CF_API_TOKEN) {
+      try {
+        info = await cfEdgeCertificate(env, row.domain);
+        if (info) console.log(`[SSL] ${label}: using Cloudflare API edge certificate`);
+      } catch (err: any) {
+        cfNote = err?.message ?? String(err);
+        console.error(`[SSL] ${label}: Cloudflare API lookup failed: ${cfNote}`);
+      }
+    }
+    if (!info) {
+      try {
+        info = await probeCertificate(host, row.domain, port);
+      } catch (err: any) {
+        const msg = err?.message ?? 'Unknown error';
+        const hint = cfNote
+          ? `（Cloudflare API 查询失败：${cfNote}）`
+          : '（若该域名托管在 Cloudflare，Worker 无法直连其 IP；请确认 CF_API_TOKEN 能读取该 zone 的证书）';
+        throw new Error(`${msg} ${hint}`);
+      }
+    }
+    const { expiry, issuer } = info;
+    const days = Math.floor((expiry.getTime() - Date.now()) / 86_400_000);
+    result = { status: calcStatus(expiry), days, expiry, issuer };
+
+    const { error } = await supabase
+      .from('ssl_certificates')
+      .update({
+        expiry_date:   expiry.toISOString(),
+        issuer,
+        status:        result.status,
+        last_checked:  new Date().toISOString(),
+        error_message: null,
+      })
+      .eq('id', row.id);
+    if (error) throw error;
+    console.log(`[SSL] ${label} -> ${result.status} (${days}d remaining)`);
   } catch (err: any) {
-    console.error(`[SSL] ${domain}:${port} failed: ${err.message}`);
+    const message = err?.message ?? 'Unknown error';
+    console.error(`[SSL] ${label} failed: ${message}`);
+    result = { status: 'error', error: message };
     await supabase
       .from('ssl_certificates')
       .update({
         status:        'error',
-        error_message: err.message ?? 'Unknown error',
+        error_message: message,
         last_checked:  new Date().toISOString(),
       })
-      .eq('domain', domain);
-  } finally {
-    writer.releaseLock();
-    reader.releaseLock();
-    await socket.close().catch(() => {});
+      .eq('id', row.id);
   }
+
+  try {
+    await handleAlertTransition(row, result, supabase, env);
+  } catch (err: any) {
+    console.error(`[Alert] ${label} alert handling failed: ${err?.message ?? err}`);
+  }
+  return result;
+}
+
+// ─────────────────────────────────────────────────────────────
+// Telegram 告警（以 last_alert_status 去重）
+// ─────────────────────────────────────────────────────────────
+
+const ALERT_ICONS: Partial<Record<CertStatus, string>> = {
+  expiring: '⚠️',
+  expired:  '⛔',
+  error:    '❗',
+  valid:    '✅',
+};
+
+function telegramConfigured(env: Env): boolean {
+  return Boolean(env.TELEGRAM_BOT_TOKEN && env.TELEGRAM_CHAT_ID);
+}
+
+async function sendTelegram(env: Env, text: string): Promise<boolean> {
+  if (!telegramConfigured(env)) return false;
+  try {
+    const resp = await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: env.TELEGRAM_CHAT_ID, text, disable_web_page_preview: true }),
+    });
+    if (!resp.ok) {
+      console.error(`[Alert] Telegram API responded ${resp.status}`);
+      return false;
+    }
+    return true;
+  } catch (err: any) {
+    console.error(`[Alert] Telegram request failed: ${err?.message ?? err}`);
+    return false;
+  }
+}
+
+function formatAlert(row: CertRow, r: CheckResult, recovered: boolean): string {
+  const target = `${row.domain}:${row.port || DEFAULT_PORT}`;
+  const lines = [
+    recovered
+      ? `${ALERT_ICONS.valid} 证书已恢复正常：${target}`
+      : `${ALERT_ICONS[r.status] ?? ''} 证书${r.status === 'expired' ? '已过期' : r.status === 'expiring' ? '即将过期' : '检查失败'}：${target}`,
+  ];
+  if (row.connect_host) lines.push(`连接地址：${row.connect_host}`);
+  if (row.source === 'anytls') lines.push('来源：AnyTLS 同步');
+  if (row.tags?.length) lines.push(`标签：${row.tags.join(', ')}`);
+  if (r.expiry) lines.push(`到期时间：${r.expiry.toISOString()}（剩余 ${r.days} 天）`);
+  if (r.issuer) lines.push(`颁发者：${r.issuer}`);
+  if (r.error) lines.push(`错误：${r.error}`);
+  return lines.join('\n');
+}
+
+/**
+ * 状态迁移规则：
+ *  - expiring / expired（以及 ALERT_ON_ERROR=true 时的 error）与 last_alert_status 不同 → 发送并记录；
+ *  - valid 且 last_alert_status 非空 → 发送恢复通知（如已配置 Telegram）并清空；
+ *  - error 但未开启 ALERT_ON_ERROR → 不改变 last_alert_status（避免瞬时失败打断去重）；
+ *  - Telegram 未配置时不发送、也不记录（配置后会补发当前状态）。
+ */
+async function handleAlertTransition(row: CertRow, r: CheckResult, supabase: SupabaseClient, env: Env): Promise<void> {
+  const last = row.last_alert_status ?? null;
+  const alertOnError = (env.ALERT_ON_ERROR ?? '').toLowerCase() === 'true';
+  const alertable = r.status === 'expiring' || r.status === 'expired' || (alertOnError && r.status === 'error');
+
+  if (alertable) {
+    if (r.status === last) return;
+    if (!telegramConfigured(env)) return;
+    if (await sendTelegram(env, formatAlert(row, r, false))) {
+      await supabase.from('ssl_certificates').update({ last_alert_status: r.status }).eq('id', row.id);
+    }
+    return;
+  }
+
+  if (r.status === 'valid' && last) {
+    if (telegramConfigured(env)) await sendTelegram(env, formatAlert(row, r, true));
+    await supabase.from('ssl_certificates').update({ last_alert_status: null }).eq('id', row.id);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// AnyTLS 节点同步（logv2fs /v1/cert-targets → ssl_certificates）
+// ─────────────────────────────────────────────────────────────
+
+interface CertTarget {
+  sni: string;
+  ip: string;
+  port: string;
+  remark: string;
+}
+
+function isCertTargetList(v: unknown): v is CertTarget[] {
+  return Array.isArray(v) && v.every(t =>
+    t && typeof t === 'object' && typeof (t as any).sni === 'string' && typeof (t as any).port === 'string');
+}
+
+/**
+ * 从 logv2fs 拉取 AnyTLS 节点并 upsert 到 ssl_certificates。
+ *  - 以 (domain, port) 为唯一键；已存在的手动记录会被接管为 source='anytls'，标签合并保留；
+ *  - 不再返回的 anytls 记录会被删除；若接口返回空列表则跳过删除（防误配置清空）；
+ *  - 未配置 LOGV2FS_API_URL / CERT_TARGETS_TOKEN 时直接跳过。
+ */
+async function syncAnyTLSTargets(env: Env, supabase: SupabaseClient): Promise<void> {
+  if (!env.LOGV2FS_API_URL || !env.CERT_TARGETS_TOKEN) {
+    console.log('[Sync] LOGV2FS_API_URL or CERT_TARGETS_TOKEN not set; skip AnyTLS sync');
+    return;
+  }
+
+  const url = `${env.LOGV2FS_API_URL.replace(/\/+$/, '')}/v1/cert-targets`;
+  const resp = await fetch(url, { headers: { 'X-Cert-Token': env.CERT_TARGETS_TOKEN, Accept: 'application/json' } });
+  if (!resp.ok) {
+    console.error(`[Sync] ${url} responded ${resp.status}; skip`);
+    return;
+  }
+  const body: unknown = await resp.json();
+  if (!isCertTargetList(body)) {
+    console.error('[Sync] unexpected response shape; skip');
+    return;
+  }
+
+  // 规范化 + 去重
+  const targets = new Map<string, { domain: string; port: number; connect_host: string | null; remark: string }>();
+  for (const t of body) {
+    const domain = t.sni.trim().toLowerCase();
+    const port = Number(t.port) || DEFAULT_PORT;
+    if (!DOMAIN_RE.test(domain) || port < 1 || port > 65535) {
+      console.warn(`[Sync] skip invalid target ${t.sni}:${t.port}`);
+      continue;
+    }
+    const key = `${domain}:${port}`;
+    if (!targets.has(key)) {
+      targets.set(key, { domain, port, connect_host: t.ip?.trim() ? normalizeHost(t.ip) : null, remark: t.remark ?? '' });
+    }
+  }
+
+  const { data: existing, error: exErr } = await supabase
+    .from('ssl_certificates')
+    .select('id, domain, port, source, tags');
+  if (exErr) throw exErr;
+  const existingByKey = new Map<string, { id: number; source?: string; tags?: string[] | null }>();
+  for (const e of existing ?? []) existingByKey.set(`${e.domain}:${e.port}`, e);
+
+  const rows = [...targets.entries()].map(([key, t]) => {
+    const prevTags = existingByKey.get(key)?.tags ?? [];
+    const tags = [...new Set([...prevTags, 'anytls', ...(t.remark ? [t.remark] : [])])];
+    return { domain: t.domain, port: t.port, connect_host: t.connect_host, source: 'anytls', tags };
+  });
+
+  if (rows.length) {
+    const { error } = await supabase.from('ssl_certificates').upsert(rows, { onConflict: 'domain,port' });
+    if (error) throw error;
+  }
+
+  const stale = (existing ?? []).filter(e => e.source === 'anytls' && !targets.has(`${e.domain}:${e.port}`));
+  if (stale.length && targets.size === 0) {
+    console.warn(`[Sync] API returned no targets; keep ${stale.length} existing anytls rows`);
+  } else if (stale.length) {
+    const { error } = await supabase.from('ssl_certificates').delete().in('id', stale.map(e => e.id));
+    if (error) throw error;
+  }
+  console.log(`[Sync] AnyTLS targets upserted=${rows.length} removed=${targets.size === 0 ? 0 : stale.length}`);
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -462,6 +818,22 @@ const ok     = (data: unknown, status = 200) => json({ success: true,  data }, s
 const fail   = (message: string, status = 400) => json({ success: false, error: message }, status);
 const server = (err: any) =>
   json({ success: false, error: err?.message ?? 'Server error', details: err?.details ?? null }, 500);
+
+/** 常量时间字符串比较 */
+function timingSafeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
+
+/** ADMIN_TOKEN 未配置时放行（向后兼容）；配置后要求 Authorization: Bearer <token> */
+function isAuthorized(req: Request, env: Env): boolean {
+  if (!env.ADMIN_TOKEN) return true;
+  const auth = req.headers.get('Authorization') ?? '';
+  const token = auth.startsWith('Bearer ') ? auth.slice(7).trim() : '';
+  return token !== '' && timingSafeEqual(token, env.ADMIN_TOKEN);
+}
 
 const DOMAIN_RE = /^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9][a-z0-9-]{0,61}[a-z0-9]$/i;
 
@@ -500,6 +872,7 @@ async function handleCertificates(
   path: string,
   supabase: SupabaseClient,
   ctx: ExecutionContext,
+  env: Env,
 ): Promise<Response> {
   const method = req.method;
 
@@ -522,30 +895,32 @@ async function handleCertificates(
     const parsed = parseDomainInput(body.domain);
     if (!parsed) return fail('域名格式不正确，端口范围应为 1-65535');
 
-    // 同一域名重复添加时，视为“更新监控端口”，而不是报错阻止：
-    // 覆盖 port/tags，并重置为 pending 触发一次新的证书检查。
+    // 唯一键为 (domain, port)：同一域名可在多个端口分别监控；
+    // 相同 (domain, port) 重复添加时覆盖 tags，并重置为 pending 触发一次新的证书检查。
     const { data, error } = await supabase
       .from('ssl_certificates')
       .upsert(
         [{ domain: parsed.domain, port: parsed.port, tags: body.tags ?? [], status: 'pending' }],
-        { onConflict: 'domain' },
+        { onConflict: 'domain,port' },
       )
-      .select();
+      .select(CERT_ROW_COLUMNS);
 
     if (error) throw error;
 
-    if (data?.[0]) ctx.waitUntil(checkSSLCertificate(data[0].domain, data[0].port, supabase));
+    const created = data?.[0] as CertRow | undefined;
+    if (created) ctx.waitUntil(checkSSLCertificate(created, supabase, env));
     return ok(data, 201);
   }
 
   // POST /api/certificates/check-all
   if (path === '/api/certificates/check-all' && method === 'POST') {
-    const { data, error } = await supabase.from('ssl_certificates').select('domain, port');
+    // 先同步 AnyTLS 节点，失败不影响后续检查
+    try { await syncAnyTLSTargets(env, supabase); } catch (e) { console.error('[Sync] failed:', e); }
+    const { data, error } = await supabase.from('ssl_certificates').select(CERT_ROW_COLUMNS);
     if (error) throw error;
-    if (data?.length) {
-      ctx.waitUntil(
-        Promise.allSettled(data.map(c => checkSSLCertificate(c.domain, c.port, supabase)))
-      );
+    const rows = (data ?? []) as CertRow[];
+    if (rows.length) {
+      ctx.waitUntil(Promise.allSettled(rows.map(c => checkSSLCertificate(c, supabase, env))));
     }
     return ok({ message: `正在检查 ${data?.length ?? 0} 个域名...` });
   }
@@ -581,11 +956,11 @@ async function handleCertificates(
   if (subPath === '/check' && method === 'POST') {
     const { data: cert, error } = await supabase
       .from('ssl_certificates')
-      .select('domain, port')
+      .select(CERT_ROW_COLUMNS)
       .eq('id', id)
       .single();
     if (error || !cert) return fail('未找到该域名', 404);
-    ctx.waitUntil(checkSSLCertificate(cert.domain, cert.port, supabase));
+    ctx.waitUntil(checkSSLCertificate(cert as CertRow, supabase, env));
     return ok({ message: '正在检查证书...' });
   }
 
@@ -670,14 +1045,27 @@ export default {
   /** Cron Trigger：定时检查所有域名的证书 */
   async scheduled(_ctrl: ScheduledController, env: Env, _ctx: ExecutionContext): Promise<void> {
     console.log('[Cron] Starting scheduled SSL check...');
+    if (!env.SUPABASE_URL || !env.SUPABASE_ANON_KEY) {
+      console.error('[Cron] SUPABASE_URL / SUPABASE_ANON_KEY not configured');
+      return;
+    }
     const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_ANON_KEY);
 
-    const { data, error } = await supabase.from('ssl_certificates').select('domain, port');
-    if (error) { console.error('[Cron] Failed to fetch domains:', error); return; }
-    if (!data?.length) { console.log('[Cron] No domains to check'); return; }
+    // 1. 先同步 AnyTLS 节点；失败不影响后续检查
+    try {
+      await syncAnyTLSTargets(env, supabase);
+    } catch (err: any) {
+      console.error('[Cron] AnyTLS sync failed:', err?.message ?? err);
+    }
 
-    console.log(`[Cron] Checking ${data.length} domains...`);
-    await Promise.allSettled(data.map(c => checkSSLCertificate(c.domain, c.port, supabase)));
+    // 2. 检查全部记录（含刚同步进来的 pending 记录）
+    const { data, error } = await supabase.from('ssl_certificates').select(CERT_ROW_COLUMNS);
+    if (error) { console.error('[Cron] Failed to fetch domains:', error); return; }
+    const rows = (data ?? []) as CertRow[];
+    if (!rows.length) { console.log('[Cron] No domains to check'); return; }
+
+    console.log(`[Cron] Checking ${rows.length} domains...`);
+    await Promise.allSettled(rows.map(c => checkSSLCertificate(c, supabase, env)));
     console.log('[Cron] Done');
   },
 
@@ -695,11 +1083,18 @@ export default {
       return new Response(null, { status: 204, headers: CORS_HEADERS });
     }
 
+    if (!isAuthorized(req, env)) {
+      return fail('Unauthorized', 401);
+    }
+
+    if (!env.SUPABASE_URL || !env.SUPABASE_ANON_KEY) {
+      return fail('SUPABASE_URL / SUPABASE_ANON_KEY not configured', 500);
+    }
     const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_ANON_KEY);
 
     try {
       if (pathname.startsWith('/api/certificates')) {
-        return await handleCertificates(req, pathname, supabase, ctx);
+        return await handleCertificates(req, pathname, supabase, ctx, env);
       }
       if (pathname === '/api/tags' && req.method === 'GET') {
         return await handleTags(supabase);

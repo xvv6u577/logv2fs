@@ -1,8 +1,46 @@
 // ==================== 全局配置 ====================
 const API_BASE_URL = '/api';
-let currentView = 'todos';
+let currentView = 'certificates';
 let allCertificates = [];
 let allTags = [];
+
+// ==================== API 鉴权 ====================
+// Worker 配置了 ADMIN_TOKEN 时，/api/* 需要 Authorization: Bearer <token>。
+// token 保存在 localStorage；收到 401 时弹窗输入并自动重试一次。
+// 未配置 ADMIN_TOKEN 时接口不会返回 401，行为与之前完全一致。
+const ADMIN_TOKEN_KEY = 'logsbfs_admin_token';
+
+function getAdminToken() {
+  try { return localStorage.getItem(ADMIN_TOKEN_KEY) || ''; } catch { return ''; }
+}
+
+function setAdminToken(token) {
+  try {
+    if (token) localStorage.setItem(ADMIN_TOKEN_KEY, token);
+    else localStorage.removeItem(ADMIN_TOKEN_KEY);
+  } catch { /* ignore */ }
+}
+
+function withAuth(options = {}) {
+  const token = getAdminToken();
+  if (!token) return options;
+  const headers = new Headers(options.headers || {});
+  headers.set('Authorization', `Bearer ${token}`);
+  return { ...options, headers };
+}
+
+async function apiFetch(url, options = {}) {
+  let response = await fetch(url, withAuth(options));
+  if (response.status === 401) {
+    const input = window.prompt('请输入管理令牌（ADMIN_TOKEN）：', '');
+    if (input && input.trim()) {
+      setAdminToken(input.trim());
+      response = await fetch(url, withAuth(options));
+    }
+    if (response.status === 401) setAdminToken('');
+  }
+  return response;
+}
 
 // ==================== 工具函数 ====================
 
@@ -180,7 +218,7 @@ async function fetchTodos() {
   emptyDiv.classList.add('hidden');
   
   try {
-    const response = await fetch(`${API_BASE_URL}/todos`);
+    const response = await apiFetch(`${API_BASE_URL}/todos`);
     
     if (!response.ok) {
       throw new Error(`HTTP错误 ${response.status}`);
@@ -263,7 +301,7 @@ async function addTodo() {
   }
   
   try {
-    const response = await fetch(`${API_BASE_URL}/todos`, {
+    const response = await apiFetch(`${API_BASE_URL}/todos`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -295,7 +333,7 @@ async function addTodo() {
  */
 async function toggleTodo(id, completed) {
   try {
-    const response = await fetch(`${API_BASE_URL}/todos/${id}`, {
+    const response = await apiFetch(`${API_BASE_URL}/todos/${id}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json'
@@ -328,7 +366,7 @@ async function editTodo(id, currentTitle, completed) {
   
   if (newTitle && newTitle.trim() !== '' && newTitle !== currentTitle) {
     try {
-      const response = await fetch(`${API_BASE_URL}/todos/${id}`, {
+      const response = await apiFetch(`${API_BASE_URL}/todos/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json'
@@ -364,7 +402,7 @@ async function deleteTodo(id) {
   }
   
   try {
-    const response = await fetch(`${API_BASE_URL}/todos/${id}`, {
+    const response = await apiFetch(`${API_BASE_URL}/todos/${id}`, {
       method: 'DELETE'
     });
     
@@ -401,7 +439,7 @@ async function fetchCertificates() {
   emptyDiv.classList.add('hidden');
   
   try {
-    const response = await fetch(`${API_BASE_URL}/certificates`);
+    const response = await apiFetch(`${API_BASE_URL}/certificates`);
     
     if (!response.ok) {
       throw new Error(`HTTP错误 ${response.status}`);
@@ -469,6 +507,16 @@ function renderCertificates(certificates) {
         <div class="flex items-center space-x-2 flex-1 min-w-0">
           <i class="fas fa-globe ${statusClass.text} text-xl flex-shrink-0"></i>
           <h3 class="font-bold text-gray-800 truncate">${escapeHtml(cert.domain)}${cert.port && cert.port !== 443 ? `:${cert.port}` : ''}</h3>
+          ${cert.source === 'anytls' ? `
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 flex-shrink-0" title="由 logv2fs AnyTLS 节点自动同步">
+              <i class="fas fa-sync mr-1"></i>AnyTLS 同步
+            </span>
+          ` : ''}
+          ${cert.issuer && cert.issuer.includes('(Cloudflare 边缘)') ? `
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800 flex-shrink-0" title="托管在 Cloudflare，证书到期时间来自 Cloudflare API（边缘证书）">
+              <i class="fas fa-cloud mr-1"></i>Cloudflare
+            </span>
+          ` : ''}
         </div>
         <button 
           onclick="deleteCertificate(${cert.id})" 
@@ -496,6 +544,12 @@ function renderCertificates(certificates) {
       </div>
       
       <div class="space-y-2 text-sm mb-4">
+        ${cert.connect_host ? `
+          <div class="flex items-center text-gray-600" title="实际连接地址（SNI 仍为域名）">
+            <i class="fas fa-network-wired w-5 flex-shrink-0"></i>
+            <span class="ml-2 truncate">${escapeHtml(cert.connect_host)}</span>
+          </div>
+        ` : ''}
         ${cert.expiry_date ? `
           <div class="flex items-center text-gray-600">
             <i class="fas fa-calendar-alt w-5 flex-shrink-0"></i>
@@ -632,7 +686,7 @@ function addNewTag() {
  */
 async function loadTags() {
   try {
-    const response = await fetch(`${API_BASE_URL}/tags`);
+    const response = await apiFetch(`${API_BASE_URL}/tags`);
     
     if (!response.ok) {
       throw new Error(`HTTP错误 ${response.status}`);
@@ -696,7 +750,7 @@ async function addCertificate() {
     .map(checkbox => checkbox.value);
   
   try {
-    const response = await fetch(`${API_BASE_URL}/certificates`, {
+    const response = await apiFetch(`${API_BASE_URL}/certificates`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -732,7 +786,7 @@ async function deleteCertificate(id) {
   }
   
   try {
-    const response = await fetch(`${API_BASE_URL}/certificates/${id}`, {
+    const response = await apiFetch(`${API_BASE_URL}/certificates/${id}`, {
       method: 'DELETE'
     });
     
@@ -759,7 +813,7 @@ async function deleteCertificate(id) {
  */
 async function checkSingleCertificate(id) {
   try {
-    const response = await fetch(`${API_BASE_URL}/certificates/${id}/check`, {
+    const response = await apiFetch(`${API_BASE_URL}/certificates/${id}/check`, {
       method: 'POST'
     });
     
@@ -790,7 +844,7 @@ async function checkSingleCertificate(id) {
  */
 async function checkAllCertificates() {
   try {
-    const response = await fetch(`${API_BASE_URL}/certificates/check-all`, {
+    const response = await apiFetch(`${API_BASE_URL}/certificates/check-all`, {
       method: 'POST'
     });
     
@@ -866,7 +920,7 @@ async function saveEditedTags(id) {
     .map(checkbox => checkbox.value);
   
   try {
-    const response = await fetch(`${API_BASE_URL}/certificates/${id}/tags`, {
+    const response = await apiFetch(`${API_BASE_URL}/certificates/${id}/tags`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json'
@@ -912,8 +966,8 @@ function escapeHtml(text) {
 // ==================== 初始化 ====================
 
 document.addEventListener('DOMContentLoaded', () => {
-  // 加载待办事项
-  fetchTodos();
+  // 默认显示证书监控
+  switchTab('certificates');
   
   // 模态框外部点击关闭
   document.getElementById('add-cert-modal').addEventListener('click', (e) => {

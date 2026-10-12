@@ -4,6 +4,15 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>应用中心 - 待办事项 & SSL 证书监控</title>
+
+  <!-- 图标 -->
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32">
+  <link rel="alternate icon" href="/favicon.ico" sizes="16x16 32x32 48x48">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180">
+  <link rel="manifest" href="/site.webmanifest">
+  <meta name="theme-color" content="#667eea">
+  <meta name="apple-mobile-web-app-title" content="Domains">
   
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -136,9 +145,7 @@
       <div class="flex flex-col sm:flex-row items-center justify-between">
         <!-- Logo 和标题 -->
         <div class="flex items-center space-x-3 mb-4 sm:mb-0">
-          <div class="w-12 h-12 gradient-bg rounded-xl flex items-center justify-center text-white shadow-lg">
-            <i class="fas fa-rocket text-2xl"></i>
-          </div>
+          <img src="/favicon.svg" alt="Domains Monitor" class="w-12 h-12 rounded-xl shadow-lg">
           <div>
             <h1 class="text-2xl font-bold text-gray-800">应用中心</h1>
             <p class="text-sm text-gray-500">多功能管理平台</p>
@@ -149,7 +156,7 @@
         <nav class="flex space-x-1 bg-white rounded-xl p-1 shadow-inner">
           <button 
             id="tab-todos" 
-            class="tab-button px-6 py-2.5 rounded-lg font-medium text-gray-600 hover:text-primary-600 hover:bg-primary-50 transition-all duration-200 tab-active"
+            class="tab-button px-6 py-2.5 rounded-lg font-medium text-gray-600 hover:text-primary-600 hover:bg-primary-50 transition-all duration-200"
             onclick="switchTab('todos')">
             <i class="fas fa-check-circle mr-2"></i>
             <span class="hidden sm:inline">待办事项</span>
@@ -157,7 +164,7 @@
           </button>
           <button 
             id="tab-certificates" 
-            class="tab-button px-6 py-2.5 rounded-lg font-medium text-gray-600 hover:text-primary-600 hover:bg-primary-50 transition-all duration-200"
+            class="tab-button px-6 py-2.5 rounded-lg font-medium text-gray-600 hover:text-primary-600 hover:bg-primary-50 transition-all duration-200 tab-active"
             onclick="switchTab('certificates')">
             <i class="fas fa-shield-alt mr-2"></i>
             <span class="hidden sm:inline">证书监控</span>
@@ -168,7 +175,7 @@
     </header>
     
     <!-- 待办事项视图 -->
-    <div id="view-todos" class="view-container fade-in">
+    <div id="view-todos" class="view-container hidden">
       <div class="glass-effect rounded-2xl shadow-lg p-6">
         <div class="flex items-center justify-between mb-6">
           <h2 class="text-2xl font-bold text-gray-800">
@@ -221,7 +228,7 @@
     </div>
     
     <!-- SSL 证书监控视图 -->
-    <div id="view-certificates" class="view-container hidden">
+    <div id="view-certificates" class="view-container fade-in">
       <div class="glass-effect rounded-2xl shadow-lg p-6">
         <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
           <h2 class="text-2xl font-bold text-gray-800">

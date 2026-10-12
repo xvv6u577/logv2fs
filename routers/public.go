@@ -43,4 +43,9 @@ func PublicRoutes(incomingRoutes *gin.Engine) {
 
 	// verge config
 	incomingRoutes.GET("/verge/:name", controller.ReturnVergeYAML())
+
+	// AnyTLS 证书监控目标 —— 供 cloudflare-logsbfs Worker 定时同步。
+	// 不走 JWT（Worker 无用户会话），改用独立只读 token：环境变量 CERT_TARGETS_TOKEN，
+	// 请求头 X-Cert-Token 或 Authorization: Bearer。未配置 token 时接口返回 503。
+	incomingRoutes.GET("/v1/cert-targets", middleware.NoStore(), middleware.CertTargetsToken(), controller.GetCertTargets())
 }

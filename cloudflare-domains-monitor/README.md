@@ -206,3 +206,41 @@ curl -X POST https://your-worker.your-subdomain.workers.dev/api/certificates/che
 ## 许可证
 
 MIT 
+
+## AnyTLS 节点证书监控（自动同步 + Telegram 告警）
+
+Worker 每次 Cron 运行时先从 logv2fs httpserver 拉取 AnyTLS 节点（`GET /v1/cert-targets`），
+写入 `ssl_certificates`（`source='anytls'`，标签 `anytls` + 节点备注），再统一检查证书：
+
+- 连接地址为节点 IP（`connect_host`），TLS ClientHello 的 SNI 为节点 SNI（为空时回退到 domain），与客户端行为一致；
+- 唯一键改为 `(domain, port)`，同一域名可在多个端口分别监控；
+- 节点从 logv2fs 下线后，对应的 anytls 记录会在下次同步时删除（接口返回空列表时不删除，防误配置）；
+- 证书状态变为 `expiring`（≤30 天）/ `expired`（可选 `error`）时推送一次 Telegram，恢复 `valid` 时推送恢复通知；以 `last_alert_status` 去重。
+
+### 部署步骤
+
+1. **Supabase**：在 SQL Editor 执行 `migrations/add_anytls_sync.sql`（可重复执行）。必须先于新 Worker 部署。
+2. **logv2fs httpserver**：在 `.env` 中添加 `CERT_TARGETS_TOKEN=<随机长字符串>`（如 `openssl rand -hex 32`），重新编译并重启 `httpserver`。
+   未设置该变量时接口返回 503。验证：
+   ```bash
+   curl -H "X-Cert-Token: $CERT_TARGETS_TOKEN" https://<panel 域名>/v1/cert-targets
+   ```
+3. **Worker 配置**：把 `wrangler.jsonc` 中 `vars.LOGV2FS_API_URL` 改为 httpserver 根地址（不含 `/v1`），然后设置 secrets：
+   ```bash
+   npx wrangler secret put SUPABASE_ANON_KEY    # 必需（已从 wrangler.jsonc 明文中移除）
+   npx wrangler secret put CERT_TARGETS_TOKEN   # 与 logv2fs .env 一致
+   npx wrangler secret put TELEGRAM_BOT_TOKEN   # 可选
+   npx wrangler secret put TELEGRAM_CHAT_ID     # 可选
+   npx wrangler secret put CF_API_TOKEN         # 可选：Cloudflare API token（Zone Read + SSL and Certificates Read），
+                                                # 托管在 Cloudflare 的域名改为读取边缘证书包的到期时间
+   npx wrangler secret put ADMIN_TOKEN          # 可选，设置后 /api/* 需 Bearer 鉴权
+   ```
+   `ALERT_ON_ERROR` 设为 `"true"` 时检查失败也会告警。
+4. **部署**：`npm run deploy`。随后可在页面点"检查全部"，或等待下一次 Cron（每 6 小时）触发同步。
+
+### 说明
+
+- 设置 `ADMIN_TOKEN` 后，网页首次请求收到 401 时会弹窗要求输入令牌，并保存在浏览器 localStorage。
+- 检查器强制 TLS 1.2 以读取明文证书；若节点配置了 `min_version: "1.3"` 将检查失败。
+- Worker 无法 `connect()` 到 Cloudflare 自身 IP，因此托管在 Cloudflare（橙色云 / Worker 路由）的域名无法直连探测。配置 `CF_API_TOKEN` 后，未指定 `connect_host` 的记录会先按域名匹配 token 可见的 zone（最长后缀），读取 `ssl/certificate_packs` 中状态为 active 且覆盖该域名的证书（精确匹配优先于通配符），取最晚到期时间；issuer 带 `(Cloudflare 边缘)` 标记，页面显示 Cloudflare 徽章。API 失败或无匹配证书时回退到直连探测。
+- 若 httpserver 前有 Cloudflare 代理，Worker 访问它是普通 HTTPS 请求，不受 `connect()` 的 Cloudflare IP 限制；AnyTLS 节点本身应为 DNS-only 直连。
