@@ -943,7 +943,7 @@ func ReturnSingboxJson() gin.HandlerFunc {
 
 					for i, outbound := range singboxJSON.Outbounds {
 						if outboundMap, ok := outbound.(map[string]interface{}); ok {
-							if Contains(outboundTags, outboundMap["tag"].(string)) || (node.EnableOpenai) && outboundMap["tag"] == "Openai" {
+							if Contains(outboundTags, outboundMap["tag"].(string)) || (node.EnableOpenai) && isAIOutboundTag(outboundMap["tag"].(string)) {
 								if outbounds, ok := singboxJSON.Outbounds[i].(map[string]interface{}); ok {
 									if outboundsList, ok := outbounds["outbounds"].([]interface{}); ok {
 										singboxJSON.Outbounds[i].(map[string]interface{})["outbounds"] = append(outboundsList, node.Remark)
@@ -1000,7 +1000,7 @@ func ReturnSingboxJson() gin.HandlerFunc {
 
 					for i, outbound := range singboxJSON.Outbounds {
 						if outboundMap, ok := outbound.(map[string]interface{}); ok {
-							if Contains(outboundTags, outboundMap["tag"].(string)) || (node.EnableOpenai) && outboundMap["tag"] == "Openai" {
+							if Contains(outboundTags, outboundMap["tag"].(string)) || (node.EnableOpenai) && isAIOutboundTag(outboundMap["tag"].(string)) {
 								if outbounds, ok := singboxJSON.Outbounds[i].(map[string]interface{}); ok {
 									if outboundsList, ok := outbounds["outbounds"].([]interface{}); ok {
 										singboxJSON.Outbounds[i].(map[string]interface{})["outbounds"] = append(outboundsList, node.Remark)
@@ -1036,7 +1036,7 @@ func ReturnSingboxJson() gin.HandlerFunc {
 
 					for i, outbound := range singboxJSON.Outbounds {
 						if outboundMap, ok := outbound.(map[string]interface{}); ok {
-							if Contains(outboundTags, outboundMap["tag"].(string)) || (node.EnableOpenai) && outboundMap["tag"] == "Openai" {
+							if Contains(outboundTags, outboundMap["tag"].(string)) || (node.EnableOpenai) && isAIOutboundTag(outboundMap["tag"].(string)) {
 								if outbounds, ok := singboxJSON.Outbounds[i].(map[string]interface{}); ok {
 									if outboundsList, ok := outbounds["outbounds"].([]interface{}); ok {
 										singboxJSON.Outbounds[i].(map[string]interface{})["outbounds"] = append(outboundsList, node.Remark)
@@ -1082,7 +1082,7 @@ func ReturnSingboxJson() gin.HandlerFunc {
 
 					for i, outbound := range singboxJSON.Outbounds {
 						if outboundMap, ok := outbound.(map[string]interface{}); ok {
-							if Contains(outboundTags, outboundMap["tag"].(string)) || (node.EnableOpenai) && outboundMap["tag"] == "Openai" {
+							if Contains(outboundTags, outboundMap["tag"].(string)) || (node.EnableOpenai) && isAIOutboundTag(outboundMap["tag"].(string)) {
 								if outbounds, ok := singboxJSON.Outbounds[i].(map[string]interface{}); ok {
 									if outboundsList, ok := outbounds["outbounds"].([]interface{}); ok {
 										singboxJSON.Outbounds[i].(map[string]interface{})["outbounds"] = append(outboundsList, node.Remark)
@@ -1434,4 +1434,10 @@ func EnableUser() gin.HandlerFunc {
 
 		c.JSON(http.StatusOK, gin.H{"message": "User " + updatedUser.Name + " enabled successfully"})
 	}
+}
+
+// isAIOutboundTag 判断模板中的 AI 分流组标签。
+// 新标签为 "AI"；保留 "Openai" 以兼容旧模板。
+func isAIOutboundTag(tag string) bool {
+	return tag == "AI" || tag == "Openai"
 }

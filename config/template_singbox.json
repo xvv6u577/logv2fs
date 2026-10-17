@@ -132,7 +132,7 @@
             ]
         },
         {
-            "tag": "Openai",
+            "tag": "AI",
             "type": "urltest",
             "outbounds": [],
             "url": "http://www.gstatic.com/generate_204",
@@ -173,6 +173,10 @@
                 "outbound": "WeChat"
             },
             {
+                "rule_set": "geosite-ai",
+                "outbound": "AI"
+            },
+            {
                 "rule_set": "geosite-geolocation-!cn",
                 "outbound": "manual-select"
             },
@@ -195,10 +199,6 @@
             {
                 "rule_set": "geosite-microsoft",
                 "outbound": "Microsoft"
-            },
-            {
-                "rule_set": "geosite-openai",
-                "outbound": "Openai"
             }
         ],
         "rule_set": [
@@ -233,8 +233,8 @@
             {
                 "tag": "geosite-wechat",
                 "type": "remote",
-                "format": "source",
-                "url": "https://lllinter.oss-cn-hangzhou.aliyuncs.com/geo/wechat.json",
+                "format": "binary",
+                "url": "https://lllinter.oss-cn-hangzhou.aliyuncs.com/geo/geosite/wechat.srs",
                 "download_detour": "direct"
             },
             {
@@ -252,10 +252,10 @@
                 "download_detour": "direct"
             },
             {
-                "tag": "geosite-openai",
+                "tag": "geosite-ai",
                 "type": "remote",
                 "format": "binary",
-                "url": "https://lllinter.oss-cn-hangzhou.aliyuncs.com/geo/geosite/openai.srs",
+                "url": "https://lllinter.oss-cn-hangzhou.aliyuncs.com/geo/geosite/ai.srs",
                 "download_detour": "direct"
             }
         ]
