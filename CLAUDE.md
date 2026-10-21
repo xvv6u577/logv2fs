@@ -55,7 +55,7 @@ make web                # 开发态，自动代理到后端 API
 | 目录 | 角色 |
 |---|---|
 | `cmd/` | Cobra CLI 入口（`httpserver`、`singbox` 两个子命令）|
-| `controllers/` | Gin HTTP 控制器（用户、节点、缴费） |
+| `controllers/` | Gin HTTP 控制器（用户、节点） |
 | `routers/` | Gin 路由组装（公共路由 + 鉴权路由） |
 | `database/` | MongoDB 连接与集合获取 |
 | `model/` | 业务模型（含 BSON 标签） |
@@ -87,7 +87,6 @@ make web                # 开发态，自动代理到后端 API
 | `NODE_TRAFFIC_LOGS` | 节点主文档：域名、状态、时间戳等（`model/node.go`）。周期明细同样**不存本集合**。 |
 | `node_traffic_periods` | 节点周期流量：结构与用户侧类似，(owner 键为 `domain_as_id`)（`model/node.go`）。 |
 | `subscription_nodes` | 订阅用代理节点配置（类型、IP、端口、REALITY/Hysteria2/VLESS CDN 等）（`model/node.go`）。 |
-| `payment_records` | 缴费事实表；月/年等费用统计在查询接口中实时聚合，不单独物化日摊集合（`model/payment.go`）。 |
 | `CUSTOM_DATES` | 节点自定义日期（`model/types.go`）。 |
 
 读用户/节点接口可通过 `$lookup` 把 `user_traffic_periods` / `node_traffic_periods` 拼回响应里的 `daily_logs`、`monthly_logs`、`yearly_logs`，仅为 API 兼容形态，持久化以周期集合为准。
@@ -96,10 +95,8 @@ make web                # 开发态，自动代理到后端 API
 
 - `controllers/controller.go` —— 用户/登录/订阅/节点 JSON 等
 - `controllers/node.go` —— 节点增删改查
-- `controllers/payment.go` —— 缴费录入与统计
 - `model/types.go` —— 用户与流量日志模型
 - `model/node.go` —— 节点与订阅节点模型
-- `model/payment.go` —— 缴费模型与统计结构
 - `model/singbox.go` —— sing-box / Verge 配置 JSON/YAML 结构
 - `singbox/singbox_common.go` —— `UsageDataOfAll`、`InitOptionsFromConfig`
 - `singbox/singbox_mongodb.go` —— `UpdateOptionsFromMongoDB`
@@ -123,7 +120,7 @@ make web                # 开发态，自动代理到后端 API
 - **Shadowrocket / Surge / v2rayN 等**：**同一路由、同一格式** —— `GET /static/:name` 返回 **Base64** 编码的纯文本，内容为多行分享链接（`vless://…`、`hysteria2://…` 等，由 `controllers/controller.go` 中 `GetSubscripionURL` 按节点类型拼接后 `StdEncoding.EncodeToString`）。客户端填入「订阅 URL」即可；v2rayN 与 Shadowrocket 共用该端点与编码方式。
 
 ### Real-time Features
-WebSocket 推送用户流量、节点状态、缴费、用户启停等事件。
+WebSocket 推送用户流量、节点状态、用户启停等事件。
 
 ## API Structure
 
@@ -141,8 +138,6 @@ GET    /v1/getconfig/:name      生成代理配置
 GET    /v1/c47kr8               sing-box 节点列表
 GET    /v1/subscription-nodes   订阅节点
 PUT    /v1/upsert-nodes         批量插入/覆盖节点
-POST   /v1/payment              录入缴费
-GET    /v1/payment/statistics   缴费统计
 GET    /singbox/:name           sing-box JSON 订阅
 GET    /verge/:name             Verge YAML 订阅
 GET    /static/:name            Base64 多协议分享链接订阅（Shadowrocket / v2rayN 等）
@@ -212,3 +207,8 @@ docker-compose up -d
 - **修改 import 路径或模型字段时，记得同步检查 `frontend/` 与文档**
 - **新增路由时，需同步更新 `routers/public.go` 或 `routers/authorized.go`**
 - **代码改动后，跑 `go build -tags=...` 完整编译一次再提交**
+
+
+## 缴费剥离
+
+计费已迁出本仓库。运维清理 `payment_records` 与 `overdue` 状态见 `docs/REMOVE_PAYMENT_RECORDS.md`；命令 `./logv2fs migrate-overdue-status`。

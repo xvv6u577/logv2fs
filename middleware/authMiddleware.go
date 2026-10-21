@@ -116,7 +116,7 @@ func AdminOnly() gin.HandlerFunc {
 }
 
 // SelfOrAdmin 允许：当前用户访问自己（path 中的 :name 等于 token email），或者管理员任意访问。
-// 用于 /v1/user/:name、/v1/payment/user/:email 等"按用户名读取"的接口。
+// 用于 /v1/user/:name 等"按用户名读取"的接口。
 func SelfOrAdmin(paramName string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		role := c.GetString("user_type")

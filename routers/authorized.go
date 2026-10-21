@@ -49,22 +49,13 @@ func AuthorizedRoutes(incomingRoutes *gin.Engine) {
 
 		admin.PUT("/custom-date", controller.SaveCustomDate())
 		admin.GET("/custom-dates", controller.GetCustomDates())
-
-		admin.POST("/payment", controller.AddPaymentRecord())
-		admin.GET("/payment/statistics", controller.GetPaymentStatistics())
-		admin.GET("/payment/records", controller.GetPaymentRecords())
-		admin.DELETE("/payment/:id", controller.DeletePaymentRecord())
-		admin.PUT("/payment/:id", controller.UpdatePaymentRecord())
 	}
 
 	// =============== 本人或管理员可访问 ===============
-	// 路径中的 :name / :email 是用户自身标识，普通用户只能访问与自己匹配的资源。
+	// 路径中的 :name 是用户自身标识，普通用户只能访问与自己匹配的资源。
 	incomingRoutes.GET("/v1/user/:name",
 		middleware.SelfOrAdmin("name"),
 		controller.GetUserByName())
-	incomingRoutes.GET("/v1/payment/user/:email",
-		middleware.SelfOrAdmin("email"),
-		controller.GetUserPayments())
 
 	// =============== 任意已登录用户 ===============
 	incomingRoutes.GET("/v1/subscription-nodes", controller.GetSubscriptionNodes())

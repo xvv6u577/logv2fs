@@ -12,7 +12,6 @@ import Footer from "./components/footer";
 import Mypanel from "./components/mypanel";
 import Nodes from "./components/nodes";
 import AddNode from "./components/addNode";
-import PaymentInput from "./components/paymentInput";
 import { PrivateRoute, AdminRoute } from "./components/PrivateRoute";
 import ErrorBoundary from "./components/ErrorBoundary";
 import {logoBase64} from "./components/logoImage"
@@ -587,8 +586,6 @@ function App() {
 					<Route path="/user" element={adminLayout(User)} />
 					<Route path="/addnode" element={adminLayout(AddNode)} />
 					<Route path="/nodes" element={adminLayout(Nodes)} />
-					<Route path="/paymentinput" element={adminLayout(PaymentInput)} />
-
 					<Route path="/" element={<LandingPage />} />
 				</Routes>
 			</BrowserRouter>
