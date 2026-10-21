@@ -68,27 +68,20 @@ function Nodes() {
 				const response = await api.get("custom-dates");
 
 				const defaultDate = getDefaultDate();
-				const indexMapping = {};
-
-				if (response.data && Object.keys(response.data).length > 0) {
-					// 后端返回的是 domain_as_id -> date 映射，转换为 index -> date
-					singboxNodes.forEach((node, index) => {
-						indexMapping[index] = response.data[node.domain_as_id] || defaultDate;
-					});
-				} else {
-					// 没有任何保存记录，所有节点使用默认日期
-					singboxNodes.forEach((_, index) => {
-						indexMapping[index] = defaultDate;
-					});
-				}
-				setCustomDates(indexMapping);
+				const saved = response.data || {};
+				// 以 domain_as_id 为键，与后端 custom-dates 返回的映射保持一致
+				const mapping = {};
+				singboxNodes.forEach((node) => {
+					mapping[node.domain_as_id] = saved[node.domain_as_id] || defaultDate;
+				});
+				setCustomDates(mapping);
 			} catch (error) {
 				console.error('初始化自定义日期失败:', error);
 				// 出错时也回退到默认日期，保证 UI 可用
 				const defaultDate = getDefaultDate();
 				const fallback = {};
-				singboxNodes.forEach((_, index) => {
-					fallback[index] = defaultDate;
+				singboxNodes.forEach((node) => {
+					fallback[node.domain_as_id] = defaultDate;
 				});
 				setCustomDates(fallback);
 			}
@@ -123,25 +116,20 @@ function Nodes() {
 	};
 
 	// 处理自定义日期变化
-	const handleCustomDateChange = (nodeIndex, date) => {
-		const newCustomDates = {
-			...customDates,
-			[nodeIndex]: date
-		};
-		setCustomDates(newCustomDates);
-		
+	const handleCustomDateChange = (domainAsId, date) => {
+		setCustomDates((prev) => ({ ...prev, [domainAsId]: date }));
+
 		// 保存到数据库
-		saveCustomDateToDatabase(nodeIndex, date);
+		saveCustomDateToDatabase(domainAsId, date);
 	};
 
 	// 保存自定义日期到数据库
-	const saveCustomDateToDatabase = async (nodeIndex, date) => {
+	const saveCustomDateToDatabase = async (domainAsId, date) => {
 		try {
-			const node = singboxNodes[nodeIndex];
-			if (!node) return;
+			if (!domainAsId) return;
 
 			await api.put("custom-date", {
-				domain_as_id: node.domain_as_id,
+				domain_as_id: domainAsId,
 				custom_date: date
 			});
 		} catch (error) {
@@ -194,10 +182,10 @@ function Nodes() {
 					{/* 自定义日期流量 - 只读显示 */}
 					<div className="text-center">
 						<p className="text-xs text-purple-200 mb-1">
-							{customDates[index] ? `自从 ${customDates[index]} 流量` : '自定义日期流量'}
+							{customDates[node.domain_as_id] ? `自从 ${customDates[node.domain_as_id]} 流量` : '自定义日期流量'}
 						</p>
 						<h3 className="font-extrabold text-purple-400 text-lg">
-							{formatBytes(calculateCustomDateTraffic(node, customDates[index]))}
+							{formatBytes(calculateCustomDateTraffic(node, customDates[node.domain_as_id]))}
 						</h3>
 					</div>
 				</div>
@@ -273,17 +261,17 @@ function Nodes() {
 								<div className="mb-3">
 									<input
 										type="date"
-										value={customDates[index] || ''}
-										onChange={(e) => handleCustomDateChange(index, e.target.value)}
+										value={customDates[node.domain_as_id] || ''}
+										onChange={(e) => handleCustomDateChange(node.domain_as_id, e.target.value)}
 										className="w-full px-3 py-2 text-sm bg-gray-600 border border-gray-500 rounded text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent"
 										placeholder="选择起始日期"
 									/>
 								</div>
 								<p className="text-base font-extrabold text-orange-200 mb-2">
-									{customDates[index] ? `自从 ${customDates[index]} 流量` : '自定义日期流量'}
+									{customDates[node.domain_as_id] ? `自从 ${customDates[node.domain_as_id]} 流量` : '自定义日期流量'}
 								</p>
 								<p className="font-bold text-orange-400 text-2xl">
-									{formatBytes(calculateCustomDateTraffic(node, customDates[index]))}
+									{formatBytes(calculateCustomDateTraffic(node, customDates[node.domain_as_id]))}
 								</p>
 							</div>
 						</div>
@@ -429,7 +417,7 @@ function Nodes() {
 								</div>
 							) : (
 								singboxNodes?.map((node, index) => (
-									<NodeCard key={index} node={node} index={index} />
+									<NodeCard key={node.domain_as_id || index} node={node} index={index} />
 								)) || []
 							)}
 						</div>

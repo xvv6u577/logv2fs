@@ -1,5 +1,6 @@
 import { useSelector, useDispatch } from "react-redux";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { Link, useLocation } from "react-router-dom";
 import { logout } from "../store/login";
 import {logoBase64} from "./logoImage"
 
@@ -10,6 +11,13 @@ const Menu = () => {
 	// 移动端折叠菜单状态管理
 	const [isNodesOpen, setIsNodesOpen] = useState(false);
 	const [isClientsOpen, setIsClientsOpen] = useState(false);
+	const location = useLocation();
+
+	// 路由切换（SPA 无刷新）后收起移动端折叠菜单
+	useEffect(() => {
+		setIsNodesOpen(false);
+		setIsClientsOpen(false);
+	}, [location.pathname]);
 
 	const handleLogout = (e) => {
 		dispatch(logout());
@@ -40,14 +48,14 @@ const Menu = () => {
 	return (
 		<header className="text-gray-400 bg-gray-900 body-font">
 			<div className="mx-auto flex flex-wrap p-5 flex-col md:flex-row items-center">
-				<a href="/user" className="flex title-font font-medium items-center text-white mb-4 md:mb-0">
+				<Link to="/user" className="flex title-font font-medium items-center text-white mb-4 md:mb-0">
 					<img alt="logo" src={logoBase64}></img>
 					<span className="ml-3 text-xl">Logv2fs Frontend</span>
-				</a>
+				</Link>
 				<nav className="md:mr-auto md:ml-4 md:py-1 md:pl-4 md:border-l md:border-gray-700 flex flex-wrap items-center text-base justify-center">
 					{loginState.jwt.role === "admin" && (
 						<>
-							<a className="mr-5 hover:text-white" href="/user">User</a>
+							<Link className="mr-5 hover:text-white" to="/user">User</Link>
 							
 							{/* Nodes 二级菜单 - 桌面端悬停，移动端点击 */}
 							<div className="relative mr-5 group">
@@ -72,12 +80,12 @@ const Menu = () => {
 								{/* 桌面端下拉菜单 - 悬停显示 */}
 								<div className="hidden md:block absolute left-0 mt-2 w-48 bg-gray-800 rounded-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
 									<div className="py-1">
-										<a href="/nodes" className="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white">
+										<Link to="/nodes" className="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white">
 											节点监控
-										</a>
-									<a href="/addnode" className="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white">
+										</Link>
+									<Link to="/addnode" className="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white">
 										添加节点
-									</a>
+									</Link>
 									</div>
 								</div>
 							</div>
@@ -86,12 +94,12 @@ const Menu = () => {
 							<div className="block md:hidden w-full">
 								{isNodesOpen && (
 									<div className="ml-4 mt-2 space-y-1">
-										<a href="/nodes" className="block text-sm text-gray-300 hover:text-white py-1">
+										<Link to="/nodes" className="block text-sm text-gray-300 hover:text-white py-1">
 											节点监控
-										</a>
-									<a href="/addnode" className="block text-sm text-gray-300 hover:text-white py-1">
+										</Link>
+									<Link to="/addnode" className="block text-sm text-gray-300 hover:text-white py-1">
 										添加节点
-									</a>
+									</Link>
 									</div>
 								)}
 							</div>
@@ -99,7 +107,7 @@ const Menu = () => {
 						</>
 					)}
 					
-					<a className="mr-5 hover:text-white" href="/mypanel">My Panel</a>
+					<Link className="mr-5 hover:text-white" to="/mypanel">My Panel</Link>
 					
 					{/* Clients 二级菜单 - 桌面端悬停，移动端点击 */}
 					<div className="relative mr-5 group">
@@ -124,18 +132,18 @@ const Menu = () => {
 						{/* 桌面端下拉菜单 - 悬停显示 */}
 						<div className="hidden md:block absolute left-0 mt-2 w-48 bg-gray-800 rounded-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
 							<div className="py-1">
-								<a href="/macos" className="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white">
+								<Link to="/macos" className="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white">
 									MacOS
-								</a>
-								<a href="/windows" className="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white">
+								</Link>
+								<Link to="/windows" className="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white">
 									Windows
-								</a>
-								<a href="/iphone" className="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white">
+								</Link>
+								<Link to="/iphone" className="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white">
 									iPhone/iPad
-								</a>
-								<a href="/android" className="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white">
+								</Link>
+								<Link to="/android" className="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white">
 									Android
-								</a>
+								</Link>
 							</div>
 						</div>
 					</div>
@@ -144,18 +152,18 @@ const Menu = () => {
 					<div className="block md:hidden w-full">
 						{isClientsOpen && (
 							<div className="ml-4 mt-2 space-y-1">
-								<a href="/macos" className="block text-sm text-gray-300 hover:text-white py-1">
+								<Link to="/macos" className="block text-sm text-gray-300 hover:text-white py-1">
 									MacOS
-								</a>
-								<a href="/windows" className="block text-sm text-gray-300 hover:text-white py-1">
+								</Link>
+								<Link to="/windows" className="block text-sm text-gray-300 hover:text-white py-1">
 									Windows
-								</a>
-								<a href="/iphone" className="block text-sm text-gray-300 hover:text-white py-1">
+								</Link>
+								<Link to="/iphone" className="block text-sm text-gray-300 hover:text-white py-1">
 									iPhone/iPad
-								</a>
-								<a href="/android" className="block text-sm text-gray-300 hover:text-white py-1">
+								</Link>
+								<Link to="/android" className="block text-sm text-gray-300 hover:text-white py-1">
 									Android
-								</a>
+								</Link>
 							</div>
 						)}
 					</div>

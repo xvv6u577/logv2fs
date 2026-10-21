@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { alert, success, reset } from "../store/message";
 import Alert from "./alert";
@@ -100,6 +100,46 @@ const AddNode = () => {
 	const isSameSubscriptionNode = (a, b) =>
 		a.remark === b.remark && (a.ip || "") === (b.ip || "");
 
+	// 规范化节点列表用于比较：只取表单可编辑字段，按 (remark, ip) 排序，忽略空占位项
+	const normalizeNodes = (list) =>
+		(list || [])
+			.filter((n) => n && n.remark)
+			.map((n) => ({
+				type: n.type || "",
+				country: n.country || "",
+				remark: n.remark || "",
+				domain: n.domain || "",
+				ip: n.ip || "",
+				server_port: n.server_port || "",
+				enable_openai: !!n.enable_openai,
+				uuid: n.uuid || "",
+				path: n.path || "",
+				sni: n.sni || "",
+				weight: parseInt(n.weight) || 0,
+			}))
+			.sort((a, b) => `${a.remark}\u0000${a.ip}`.localeCompare(`${b.remark}\u0000${b.ip}`));
+
+	// 列表与已加载（已提交）数据不一致时，视为有未保存的改动
+	const isDirty = useMemo(
+		() => JSON.stringify(normalizeNodes(nodes)) !== JSON.stringify(normalizeNodes(subscriptionNodes)),
+		[nodes, subscriptionNodes]
+	);
+
+	// 没有任何节点开启 AI 分组时，sing-box 的 AI 出站组为空，客户端会启动失败
+	const validNodes = nodes.filter((n) => n && n.remark);
+	const noAiNode = validNodes.length > 0 && !validNodes.some((n) => n.enable_openai);
+
+	// 有未保存改动时，关闭/刷新页面前提示
+	useEffect(() => {
+		if (!isDirty) return;
+		const handler = (e) => {
+			e.preventDefault();
+			e.returnValue = "";
+		};
+		window.addEventListener("beforeunload", handler);
+		return () => window.removeEventListener("beforeunload", handler);
+	}, [isDirty]);
+
 	// 当现有节点数据加载完成后，初始化 nodes 状态
 	useEffect(() => {
 		if (subscriptionNodes.length > 0) {
@@ -159,6 +199,9 @@ const AddNode = () => {
 	};
 
 	const removeNode = (nodeToRemove) => {
+		if (!window.confirm(`确定要从列表中删除节点 "${nodeToRemove.remark}"${nodeToRemove.ip ? ` (${nodeToRemove.ip})` : ""} 吗？\n点击"更新节点配置"提交后，该节点将被停用。`)) {
+			return;
+		}
 		setNodes((prevState) => prevState.filter((n) => !isSameSubscriptionNode(n, nodeToRemove)));
 	};
 
@@ -237,7 +280,7 @@ const AddNode = () => {
 					<span className="text-white font-mono">{node.weight !== undefined ? node.weight : 0}</span>
 				</div>
 				<div>
-					<span className="text-gray-400">OpenAI: </span>
+					<span className="text-gray-400">AI 分组: </span>
 					<span className={`font-medium ${node.enable_openai ? "text-green-400" : "text-red-400"}`}>
 						{node.enable_openai ? "Yes" : "No"}
 					</span>
@@ -448,7 +491,7 @@ const AddNode = () => {
 									checked={enableOpenai}
 									className="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500 focus:ring-2"
 								/>
-								<span className={styles.label + " mb-0"}>启用 OpenAI</span>
+								<span className={styles.label + " mb-0"}>AI 分组</span>
 							</label>
 						</div>
 					</div>
@@ -472,6 +515,22 @@ const AddNode = () => {
 					</button>
 				</div>
 			</div>
+
+			{/* 未保存改动 / AI 分组为空 提示 */}
+			{(isDirty || noAiNode) && (
+				<div className="space-y-3 mb-6">
+					{isDirty && (
+						<div className="bg-yellow-900 bg-opacity-40 border border-yellow-700 rounded-lg px-4 py-3 text-yellow-300 text-sm">
+							节点列表有未保存的改动，请点击底部"更新节点配置"提交，否则离开页面后改动会丢失。
+						</div>
+					)}
+					{noAiNode && (
+						<div className="bg-red-900 bg-opacity-40 border border-red-700 rounded-lg px-4 py-3 text-red-300 text-sm">
+							当前没有任何节点开启"AI 分组"：sing-box 订阅中的 AI 出站组将为空，客户端会启动失败。请至少为一个节点开启。
+						</div>
+					)}
+				</div>
+			)}
 
 			{/* 节点列表 */}
 			<div className="mb-8">
@@ -522,7 +581,7 @@ const AddNode = () => {
 							type="submit"
 							className={`${styles.button} ${styles.buttonSuccess} px-8 py-3 text-lg`}
 						>
-							更新节点配置 ({nodes.length} 个节点)
+							更新节点配置 ({nodes.length} 个节点){isDirty ? " ·未保存" : ""}
 						</button>
 					</form>
 				</div>
