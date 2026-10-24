@@ -41,6 +41,12 @@
                 "server": "localDns"
             },
             {
+                "domain_suffix": [
+                    "undervineyard.com"
+                ],
+                "server": "localDns"
+            },
+            {
                 "rule_set": "geosite-category-ads-all",
                 "action": "predefined",
                 "rcode": "NOERROR"
@@ -162,8 +168,13 @@
                 "action": "reject"
             },
             {
+                "domain_suffix": [
+                    "undervineyard.com"
+                ],
+                "outbound": "direct"
+            },
+            {
                 "domain": [
-                    "w8.undervineyard.com",
                     "d.metacubex.one"
                 ],
                 "outbound": "direct"

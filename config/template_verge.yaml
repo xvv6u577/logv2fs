@@ -42,6 +42,7 @@ proxy-groups:
     tolerance: 50
 
 rules:
+  - DOMAIN-SUFFIX,undervineyard.com,DIRECT
   - GEOIP,LAN,DIRECT
   - GEOIP,CN,DIRECT
   - MATCH,节点选择
