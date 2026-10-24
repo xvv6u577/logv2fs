@@ -22,7 +22,7 @@ const User = () => {
 	const [searchTerm, setSearchTerm] = useState("");
 	const [sortBy, setSortBy] = useState("role");
 	const [sortDir, setSortDir] = useState("desc");
-	const [filterStatus, setFilterStatus] = useState("all");
+	const [filterStatus, setFilterStatus] = useState("plain");
 	const [drawerUser, setDrawerUser] = useState(null);
 	const [drawerTab, setDrawerTab] = useState("overview");
 	const [editUser, setEditUser] = useState(null);
