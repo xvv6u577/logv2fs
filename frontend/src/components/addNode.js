@@ -79,7 +79,6 @@ const AddNode = () => {
 	const returnType = (type) => {
 		switch (type) {
 			case "reality": return "Reality";
-			case "hysteria2": return "Hysteria2";
 			case "vlessCDN": return "VLessCDN";
 			case "anytls": return "AnyTLS";
 			default: return type;
@@ -89,7 +88,6 @@ const AddNode = () => {
 	const getBadgeStyle = (type) => {
 		switch (type) {
 			case "reality": return styles.badgeReality;
-			case "hysteria2": return styles.badgeHysteria;
 			case "vlessCDN": return styles.badgeVless;
 			case "anytls": return styles.badgeAnytls;
 			default: return styles.badgeReality;
@@ -340,7 +338,6 @@ const AddNode = () => {
 								className={styles.select}
 							>
 								<option value="reality">Reality</option>
-								<option value="hysteria2">Hysteria2</option>
 								<option value="vlessCDN">VLessCDN</option>
 								<option value="anytls">AnyTLS</option>
 							</select>

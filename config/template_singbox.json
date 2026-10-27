@@ -67,7 +67,6 @@
                 "server": "remote"
             }
         ],
-        "independent_cache": true,
         "strategy": "ipv4_only"
     },
     "inbounds": [
@@ -218,56 +217,72 @@
                 "type": "remote",
                 "format": "binary",
                 "url": "https://lllinter.oss-cn-hangzhou.aliyuncs.com/geo/geoip/cn.srs",
-                "download_detour": "direct"
+                "http_client": {
+                    "detour": "direct"
+                }
             },
             {
                 "tag": "geosite-cn",
                 "type": "remote",
                 "format": "binary",
                 "url": "https://lllinter.oss-cn-hangzhou.aliyuncs.com/geo/geosite/cn.srs",
-                "download_detour": "direct"
+                "http_client": {
+                    "detour": "direct"
+                }
             },
             {
                 "tag": "geosite-geolocation-!cn",
                 "type": "remote",
                 "format": "binary",
                 "url": "https://lllinter.oss-cn-hangzhou.aliyuncs.com/geo/geosite/geolocation-!cn.srs",
-                "download_detour": "direct"
+                "http_client": {
+                    "detour": "direct"
+                }
             },
             {
                 "tag": "geosite-category-ads-all",
                 "type": "remote",
                 "format": "binary",
                 "url": "https://lllinter.oss-cn-hangzhou.aliyuncs.com/geo/geosite/category-ads-all.srs",
-                "download_detour": "direct"
+                "http_client": {
+                    "detour": "direct"
+                }
             },
             {
                 "tag": "geosite-wechat",
                 "type": "remote",
                 "format": "binary",
                 "url": "https://lllinter.oss-cn-hangzhou.aliyuncs.com/geo/geosite/wechat.srs",
-                "download_detour": "direct"
+                "http_client": {
+                    "detour": "direct"
+                }
             },
             {
                 "tag": "geosite-apple",
                 "type": "remote",
                 "format": "binary",
                 "url": "https://lllinter.oss-cn-hangzhou.aliyuncs.com/geo/geosite/apple.srs",
-                "download_detour": "direct"
+                "http_client": {
+                    "detour": "direct"
+                }
             },
             {
                 "tag": "geosite-microsoft",
                 "type": "remote",
                 "format": "binary",
                 "url": "https://lllinter.oss-cn-hangzhou.aliyuncs.com/geo/geosite/microsoft.srs",
-                "download_detour": "direct"
+                "http_client": {
+                    "detour": "direct"
+                }
             },
             {
                 "tag": "geosite-ai",
                 "type": "remote",
                 "format": "binary",
                 "url": "https://lllinter.oss-cn-hangzhou.aliyuncs.com/geo/geosite/ai.srs",
-                "download_detour": "direct"
+                "http_client": {
+                    "detour": "direct"
+                }
             }
         ]
     }
