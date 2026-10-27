@@ -156,7 +156,7 @@ func GetSubscriptionNodes() gin.HandlerFunc {
 		var activeNodes []SubscriptionNode
 		// admin UI 完全隐藏 hysteria2：过滤掉 type 为 hysteria2 的订阅节点。
 		var filter = bson.D{
-			{Key: "type", Value: bson.D{{Key: "$nin", bson.A{"work", "hysteria2"}}}},
+			{Key: "type", Value: bson.D{{Key: "$nin", Value: bson.A{"work", "hysteria2"}}}},
 			{Key: "status", Value: bson.D{{Key: "$ne", Value: "inactive"}}},
 		}
 		cur, err := database.GetCollection(model.SubscriptionNode{}).Find(context.TODO(), filter)
