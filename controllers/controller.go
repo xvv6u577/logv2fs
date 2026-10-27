@@ -810,14 +810,6 @@ func GetSubscripionURL() gin.HandlerFunc {
 					}
 				}
 
-				if node.Type == "hysteria2" {
-					if len(sub) == 0 {
-						sub = "hysteria2://" + user.User_id + "@" + formattedIP + ":" + node.SERVER_PORT + "?insecure=1&sni=bing.com#" + node.Remark
-					} else {
-						sub = sub + "\n" + "hysteria2://" + user.User_id + "@" + formattedIP + ":" + node.SERVER_PORT + "?insecure=1&sni=bing.com#" + node.Remark
-					}
-				}
-
 				// anytls:// 供 Shadowrocket / v2rayN（sing-box 核）；password 为 User_id。
 				if node.Type == "anytls" {
 					link := buildAnyTLSShareLink(node, user.User_id)
@@ -908,9 +900,6 @@ func ReturnSingboxJson() gin.HandlerFunc {
 		// 按国家代码过滤节点；未提供 include/exclude 时保持原有行为。
 		subscriptionNodes = filterSubscriptionNodesByCountry(c, subscriptionNodes)
 
-		// 按国家代码过滤节点；未提供 include/exclude 时保持原有行为。
-		subscriptionNodes = filterSubscriptionNodesByCountry(c, subscriptionNodes)
-
 		if user.Status == "plain" {
 
 			jsonFile, err = os.ReadFile(helper.CurrentPath() + "/config/template_singbox.json")
@@ -927,7 +916,7 @@ func ReturnSingboxJson() gin.HandlerFunc {
 				return
 			}
 
-			// append reality and hysteria2 nodes to outbounds in jsonfile.
+			// 仅将 reality / anytls / vlessCDN 节点追加到 outbounds；hysteria2 已在客户端订阅中软废弃。
 			for _, node := range subscriptionNodes {
 
 				server_port, _ := strconv.Atoi(node.SERVER_PORT)
@@ -992,42 +981,6 @@ func ReturnSingboxJson() gin.HandlerFunc {
 								PublicKey: getPublicKey(),
 								ShortID:   getShortID(),
 							},
-						},
-					})
-				}
-
-				if node.Type == "hysteria2" {
-
-					for i, outbound := range singboxJSON.Outbounds {
-						if outboundMap, ok := outbound.(map[string]interface{}); ok {
-							if Contains(outboundTags, outboundMap["tag"].(string)) || (node.EnableOpenai) && isAIOutboundTag(outboundMap["tag"].(string)) {
-								if outbounds, ok := singboxJSON.Outbounds[i].(map[string]interface{}); ok {
-									if outboundsList, ok := outbounds["outbounds"].([]interface{}); ok {
-										singboxJSON.Outbounds[i].(map[string]interface{})["outbounds"] = append(outboundsList, node.Remark)
-									}
-								}
-							}
-						}
-					}
-
-					singboxJSON.Outbounds = append(singboxJSON.Outbounds, Hysteria2JSON{
-						Tag:        node.Remark,
-						Type:       "hysteria2",
-						Server:     helper.FormatIPForURL(node.IP),
-						ServerPort: server_port,
-						UpMbps:     100,
-						DownMbps:   100,
-						Password:   user.User_id,
-						TLS: struct {
-							Enabled    bool     `json:"enabled"`
-							ServerName string   `json:"server_name"`
-							Insecure   bool     `json:"insecure"`
-							Alpn       []string `json:"alpn"`
-						}{
-							Enabled:    true,
-							ServerName: "bing.com",
-							Insecure:   true,
-							Alpn:       []string{"h3"},
 						},
 					})
 				}
@@ -1229,7 +1182,7 @@ func ReturnVergeYAML() gin.HandlerFunc {
 				return
 			}
 
-			// append reality and hysteria2 nodes to outbounds in yamlfile.
+			// 仅将 reality / anytls / vlessCDN 节点追加到 proxies；hysteria2 已在客户端订阅中软废弃。
 			for _, node := range subscriptionNodes {
 
 				server_port, _ := strconv.Atoi(node.SERVER_PORT)
@@ -1260,26 +1213,6 @@ func ReturnVergeYAML() gin.HandlerFunc {
 							PublicKey: getPublicKey(),
 							ShortID:   getShortID(),
 						},
-					})
-				}
-
-				if node.Type == "hysteria2" {
-
-					for i, proxy := range singboxYAML.ProxyGroups {
-						if proxy.Type == "select" || proxy.Type == "url-test" {
-							singboxYAML.ProxyGroups[i].Proxies = append(singboxYAML.ProxyGroups[i].Proxies, node.Remark)
-						}
-					}
-
-					singboxYAML.Proxies = append(singboxYAML.Proxies, Hysteria2YAML{
-						Name:           node.Remark,
-						Type:           "hysteria2",
-						Server:         helper.FormatIPForURL(node.IP),
-						Port:           server_port,
-						Password:       user.User_id,
-						Sni:            "bing.com",
-						SkipCertVerify: true,
-						Alpn:           []string{"h3"},
 					})
 				}
 
