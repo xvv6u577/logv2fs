@@ -1,289 +1,272 @@
 {
-    "log": {
-        "level": "warn",
-        "timestamp": true
-    },
-    "experimental": {
-        "cache_file": {
-            "enabled": true,
-            "store_fakeip": false
-        }
-    },
-    "dns": {
-        "servers": [
-            {
-                "type": "https",
-                "tag": "proxyDns",
-                "server": "8.8.8.8",
-                "path": "/dns-query",
-                "detour": "manual-select"
-            },
-            {
-                "type": "https",
-                "tag": "localDns",
-                "server": "223.5.5.5",
-                "path": "/dns-query"
-            },
-            {
-                "type": "fakeip",
-                "tag": "remote",
-                "inet4_range": "198.18.0.0/15",
-                "inet6_range": "fc00::/18"
-            }
-        ],
-        "rules": [
-            {
-                "domain": [
-                    "ghproxy.com",
-                    "cdn.jsdelivr.net",
-                    "testingcf.jsdelivr.net"
-                ],
-                "server": "localDns"
-            },
-            {
-                "domain_suffix": [
-                    "undervineyard.com"
-                ],
-                "server": "localDns"
-            },
-            {
-                "rule_set": "geosite-category-ads-all",
-                "action": "predefined",
-                "rcode": "NOERROR"
-            },
-            {
-                "rule_set": "geosite-cn",
-                "server": "localDns"
-            },
-            {
-                "rule_set": "geosite-geolocation-!cn",
-                "server": "proxyDns"
-            },
-            {
-                "query_type": [
-                    "A",
-                    "AAAA"
-                ],
-                "server": "remote"
-            }
-        ],
-        "strategy": "ipv4_only"
-    },
-    "inbounds": [
-        {
-            "type": "tun",
-            "address": [
-                "172.19.0.1/30"
-            ],
-            "mtu": 9000,
-            "auto_route": true,
-            "strict_route": true,
-            "endpoint_independent_nat": false,
-            "stack": "mixed",
-            "platform": {
-                "http_proxy": {
-                    "enabled": true,
-                    "server": "127.0.0.1",
-                    "server_port": 2080
-                }
-            }
-        },
-        {
-            "type": "mixed",
-            "listen": "127.0.0.1",
-            "listen_port": 2080,
-            "users": []
-        }
-    ],
-    "outbounds": [
-        {
-            "tag": "manual-select",
-            "type": "selector",
-            "outbounds": [
-                "auto"
-            ]
-        },
-        {
-            "tag": "direct",
-            "type": "direct"
-        },
-        {
-            "tag": "auto",
-            "type": "urltest",
-            "outbounds": [],
-            "url": "http://www.gstatic.com/generate_204",
-            "interval": "1m",
-            "tolerance": 50
-        },
-        {
-            "tag": "WeChat",
-            "type": "selector",
-            "outbounds": [
-                "direct"
-            ]
-        },
-        {
-            "tag": "Apple",
-            "type": "selector",
-            "outbounds": [
-                "direct"
-            ]
-        },
-        {
-            "tag": "Microsoft",
-            "type": "selector",
-            "outbounds": [
-                "direct"
-            ]
-        },
-        {
-            "tag": "AI",
-            "type": "urltest",
-            "outbounds": [],
-            "url": "http://www.gstatic.com/generate_204",
-            "interval": "1m",
-            "tolerance": 50
-        }
-    ],
-    "route": {
-        "auto_detect_interface": true,
-        "final": "manual-select",
-        "default_domain_resolver": "localDns",
-        "rules": [
-            {
-                "action": "sniff"
-            },
-            {
-                "protocol": "dns",
-                "action": "hijack-dns"
-            },
-            {
-                "network": "udp",
-                "port": 443,
-                "action": "reject"
-            },
-            {
-                "rule_set": "geosite-category-ads-all",
-                "action": "reject"
-            },
-            {
-                "domain_suffix": [
-                    "undervineyard.com"
-                ],
-                "outbound": "direct"
-            },
-            {
-                "domain": [
-                    "d.metacubex.one"
-                ],
-                "outbound": "direct"
-            },
-            {
-                "rule_set": "geosite-wechat",
-                "outbound": "WeChat"
-            },
-            {
-                "rule_set": "geosite-ai",
-                "outbound": "AI"
-            },
-            {
-                "rule_set": "geosite-geolocation-!cn",
-                "outbound": "manual-select"
-            },
-            {
-                "ip_is_private": true,
-                "outbound": "direct"
-            },
-            {
-                "rule_set": "geoip-cn",
-                "outbound": "direct"
-            },
-            {
-                "rule_set": "geosite-cn",
-                "outbound": "direct"
-            },
-            {
-                "rule_set": "geosite-apple",
-                "outbound": "Apple"
-            },
-            {
-                "rule_set": "geosite-microsoft",
-                "outbound": "Microsoft"
-            }
-        ],
-        "rule_set": [
-            {
-                "tag": "geoip-cn",
-                "type": "remote",
-                "format": "binary",
-                "url": "https://lllinter.oss-cn-hangzhou.aliyuncs.com/geo/geoip/cn.srs",
-                "http_client": {
-                    "detour": "direct"
-                }
-            },
-            {
-                "tag": "geosite-cn",
-                "type": "remote",
-                "format": "binary",
-                "url": "https://lllinter.oss-cn-hangzhou.aliyuncs.com/geo/geosite/cn.srs",
-                "http_client": {
-                    "detour": "direct"
-                }
-            },
-            {
-                "tag": "geosite-geolocation-!cn",
-                "type": "remote",
-                "format": "binary",
-                "url": "https://lllinter.oss-cn-hangzhou.aliyuncs.com/geo/geosite/geolocation-!cn.srs",
-                "http_client": {
-                    "detour": "direct"
-                }
-            },
-            {
-                "tag": "geosite-category-ads-all",
-                "type": "remote",
-                "format": "binary",
-                "url": "https://lllinter.oss-cn-hangzhou.aliyuncs.com/geo/geosite/category-ads-all.srs",
-                "http_client": {
-                    "detour": "direct"
-                }
-            },
-            {
-                "tag": "geosite-wechat",
-                "type": "remote",
-                "format": "binary",
-                "url": "https://lllinter.oss-cn-hangzhou.aliyuncs.com/geo/geosite/wechat.srs",
-                "http_client": {
-                    "detour": "direct"
-                }
-            },
-            {
-                "tag": "geosite-apple",
-                "type": "remote",
-                "format": "binary",
-                "url": "https://lllinter.oss-cn-hangzhou.aliyuncs.com/geo/geosite/apple.srs",
-                "http_client": {
-                    "detour": "direct"
-                }
-            },
-            {
-                "tag": "geosite-microsoft",
-                "type": "remote",
-                "format": "binary",
-                "url": "https://lllinter.oss-cn-hangzhou.aliyuncs.com/geo/geosite/microsoft.srs",
-                "http_client": {
-                    "detour": "direct"
-                }
-            },
-            {
-                "tag": "geosite-ai",
-                "type": "remote",
-                "format": "binary",
-                "url": "https://lllinter.oss-cn-hangzhou.aliyuncs.com/geo/geosite/ai.srs",
-                "http_client": {
-                    "detour": "direct"
-                }
-            }
-        ]
+  "log": {
+    "level": "warn",
+    "timestamp": true
+  },
+  "experimental": {
+    "cache_file": {
+      "enabled": true,
+      "store_fakeip": false
     }
+  },
+  "dns": {
+    "servers": [
+      {
+        "type": "https",
+        "tag": "proxyDns",
+        "server": "8.8.8.8",
+        "path": "/dns-query",
+        "detour": "manual-select"
+      },
+      {
+        "type": "https",
+        "tag": "localDns",
+        "server": "223.5.5.5",
+        "path": "/dns-query"
+      },
+      {
+        "type": "fakeip",
+        "tag": "remote",
+        "inet4_range": "198.18.0.0/15",
+        "inet6_range": "fc00::/18"
+      }
+    ],
+    "rules": [
+      {
+        "domain": [
+          "ghproxy.com",
+          "cdn.jsdelivr.net",
+          "testingcf.jsdelivr.net"
+        ],
+        "server": "localDns"
+      },
+      {
+        "domain_suffix": [
+          "undervineyard.com"
+        ],
+        "server": "localDns"
+      },
+      {
+        "rule_set": "geosite-category-ads-all",
+        "action": "predefined",
+        "rcode": "NOERROR"
+      },
+      {
+        "rule_set": "geosite-cn",
+        "server": "localDns"
+      },
+      {
+        "rule_set": "geosite-geolocation-!cn",
+        "server": "proxyDns"
+      },
+      {
+        "query_type": [
+          "A",
+          "AAAA"
+        ],
+        "server": "remote"
+      }
+    ],
+    "strategy": "ipv4_only"
+  },
+  "inbounds": [
+    {
+      "type": "tun",
+      "address": [
+        "172.19.0.1/30"
+      ],
+      "mtu": 9000,
+      "auto_route": true,
+      "strict_route": true,
+      "endpoint_independent_nat": false,
+      "stack": "mixed",
+      "platform": {
+        "http_proxy": {
+          "enabled": true,
+          "server": "127.0.0.1",
+          "server_port": 2080
+        }
+      }
+    },
+    {
+      "type": "mixed",
+      "listen": "127.0.0.1",
+      "listen_port": 2080,
+      "users": []
+    }
+  ],
+  "outbounds": [
+    {
+      "tag": "manual-select",
+      "type": "selector",
+      "outbounds": [
+        "auto"
+      ]
+    },
+    {
+      "tag": "direct",
+      "type": "direct"
+    },
+    {
+      "tag": "auto",
+      "type": "urltest",
+      "outbounds": [],
+      "url": "http://www.gstatic.com/generate_204",
+      "interval": "1m",
+      "tolerance": 50
+    },
+    {
+      "tag": "WeChat",
+      "type": "selector",
+      "outbounds": [
+        "direct"
+      ]
+    },
+    {
+      "tag": "Apple",
+      "type": "selector",
+      "outbounds": [
+        "direct"
+      ]
+    },
+    {
+      "tag": "Microsoft",
+      "type": "selector",
+      "outbounds": [
+        "direct"
+      ]
+    },
+    {
+      "tag": "AI",
+      "type": "urltest",
+      "outbounds": [],
+      "url": "http://www.gstatic.com/generate_204",
+      "interval": "1m",
+      "tolerance": 50
+    }
+  ],
+  "http_clients": [
+    {
+      "tag": "rule-set-dl",
+      "domain_resolver": "localDns"
+    }
+  ],
+  "route": {
+    "auto_detect_interface": true,
+    "final": "manual-select",
+    "default_domain_resolver": "localDns",
+    "rules": [
+      {
+        "action": "sniff"
+      },
+      {
+        "protocol": "dns",
+        "action": "hijack-dns"
+      },
+      {
+        "network": "udp",
+        "port": 443,
+        "action": "reject"
+      },
+      {
+        "rule_set": "geosite-category-ads-all",
+        "action": "reject"
+      },
+      {
+        "domain_suffix": [
+          "undervineyard.com"
+        ],
+        "outbound": "direct"
+      },
+      {
+        "domain": [
+          "d.metacubex.one"
+        ],
+        "outbound": "direct"
+      },
+      {
+        "rule_set": "geosite-wechat",
+        "outbound": "WeChat"
+      },
+      {
+        "rule_set": "geosite-ai",
+        "outbound": "AI"
+      },
+      {
+        "rule_set": "geosite-geolocation-!cn",
+        "outbound": "manual-select"
+      },
+      {
+        "ip_is_private": true,
+        "outbound": "direct"
+      },
+      {
+        "rule_set": "geoip-cn",
+        "outbound": "direct"
+      },
+      {
+        "rule_set": "geosite-cn",
+        "outbound": "direct"
+      },
+      {
+        "rule_set": "geosite-apple",
+        "outbound": "Apple"
+      },
+      {
+        "rule_set": "geosite-microsoft",
+        "outbound": "Microsoft"
+      }
+    ],
+    "rule_set": [
+      {
+        "tag": "geoip-cn",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://lllinter.oss-cn-hangzhou.aliyuncs.com/geo/geoip/cn.srs"
+      },
+      {
+        "tag": "geosite-cn",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://lllinter.oss-cn-hangzhou.aliyuncs.com/geo/geosite/cn.srs"
+      },
+      {
+        "tag": "geosite-geolocation-!cn",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://lllinter.oss-cn-hangzhou.aliyuncs.com/geo/geosite/geolocation-!cn.srs"
+      },
+      {
+        "tag": "geosite-category-ads-all",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://lllinter.oss-cn-hangzhou.aliyuncs.com/geo/geosite/category-ads-all.srs"
+      },
+      {
+        "tag": "geosite-wechat",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://lllinter.oss-cn-hangzhou.aliyuncs.com/geo/geosite/wechat.srs"
+      },
+      {
+        "tag": "geosite-apple",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://lllinter.oss-cn-hangzhou.aliyuncs.com/geo/geosite/apple.srs"
+      },
+      {
+        "tag": "geosite-microsoft",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://lllinter.oss-cn-hangzhou.aliyuncs.com/geo/geosite/microsoft.srs"
+      },
+      {
+        "tag": "geosite-ai",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://lllinter.oss-cn-hangzhou.aliyuncs.com/geo/geosite/ai.srs"
+      }
+    ],
+    "default_http_client": "rule-set-dl"
+  }
 }

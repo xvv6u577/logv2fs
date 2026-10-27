@@ -102,6 +102,7 @@ type SingboxJSON struct {
 	Inbounds     []interface{} `json:"inbounds"`
 	Experimental interface{}   `json:"experimental"`
 	Outbounds    []interface{} `json:"outbounds"`
+	HttpClients  interface{}   `json:"http_clients,omitempty"`
 	Route        interface{}   `json:"route"`
 }
 
