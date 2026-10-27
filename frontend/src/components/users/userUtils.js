@@ -85,6 +85,7 @@ export function filterUsers(users, { searchTerm, filterStatus }) {
 		filtered = filtered.filter(
 			(u) =>
 				u.email_as_id?.toLowerCase().includes(q) ||
+				(Array.isArray(u.email_as_id_aliases) && u.email_as_id_aliases.some((a) => a?.toLowerCase().includes(q))) ||
 				u.name?.toLowerCase().includes(q) ||
 				u.role?.toLowerCase().includes(q) ||
 				u.remark?.toLowerCase().includes(q)

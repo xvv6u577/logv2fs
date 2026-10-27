@@ -1,8 +1,10 @@
 package helper
 
 import (
+	"context"
 	"errors"
 	"log"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -26,9 +28,13 @@ func MatchUserTypeAndName(c *gin.Context, userEmail string) (err error) {
 	err = nil
 
 	if userType == "normal" && email != userEmail {
-		err = errors.New("unauthorized to access this resource")
-		log.Printf("unauthorized to access this resource")
-		return err
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		if !SameUserID(ctx, email, userEmail) {
+			err = errors.New("unauthorized to access this resource")
+			log.Printf("unauthorized to access this resource")
+			return err
+		}
 	}
 	err = CheckUserType(c, userType)
 

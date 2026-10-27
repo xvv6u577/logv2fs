@@ -9,6 +9,7 @@ import (
 	"github.com/robfig/cron"
 	box "github.com/sagernet/sing-box"
 	"github.com/xvv6u577/logv2fs/database"
+	helper "github.com/xvv6u577/logv2fs/helpers"
 	"github.com/xvv6u577/logv2fs/model"
 	"github.com/xvv6u577/logv2fs/singbox"
 	"go.mongodb.org/mongo-driver/bson"
@@ -69,10 +70,16 @@ func LogUserTraffic(collection *mongo.Collection, email string, timestamp time.T
 	month := timestamp.Format("200601")
 	year := timestamp.Format("2006")
 
+	// 节点 stats 可能仍携带旧别名；一律归一到当前主 email_as_id 再写库。
+	canonical := email
+	if resolved, err := helper.ResolveCanonicalEmailAsId(ctx, email); err == nil && resolved != "" {
+		canonical = resolved
+	}
+
 	// 1) 用户主文档：累加 used、刷新 updated_at
 	if _, err := collection.UpdateOne(
 		ctx,
-		bson.M{"email_as_id": email},
+		helper.UserIDFilter(email),
 		bson.M{
 			"$inc": bson.M{"used": traffic},
 			"$set": bson.M{"updated_at": now},
@@ -82,7 +89,7 @@ func LogUserTraffic(collection *mongo.Collection, email string, timestamp time.T
 		return err
 	}
 
-	// 2) 周期集合：按日/月/年分别 upsert
+	// 2) 周期集合：按日/月/年分别 upsert（写到主 ID 下）
 	periodCol := database.GetCollection(model.UserTrafficPeriod{})
 	for _, item := range []struct {
 		kind   string
@@ -92,9 +99,9 @@ func LogUserTraffic(collection *mongo.Collection, email string, timestamp time.T
 		{"monthly", month},
 		{"yearly", year},
 	} {
-		if err := upsertTrafficPeriod(ctx, periodCol, "email_as_id", email, item.kind, item.period, traffic, now); err != nil {
+		if err := upsertTrafficPeriod(ctx, periodCol, "email_as_id", canonical, item.kind, item.period, traffic, now); err != nil {
 			log.Printf("用户流量周期 upsert 失败 email=%s kind=%s period=%s err=%v",
-				email, item.kind, item.period, err)
+				canonical, item.kind, item.period, err)
 			return err
 		}
 	}

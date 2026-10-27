@@ -12,6 +12,8 @@ import (
 type UserTrafficLogs struct {
 	ID            primitive.ObjectID `json:"_id" bson:"_id"`
 	Email_As_Id   string             `json:"email_as_id" bson:"email_as_id"`
+	// EmailAsIdAliases 历史邮箱 ID（如可读用户名）。主 ID 改为 UUID 后，旧 ID 仍可通过别名登录/拉订阅。
+	EmailAsIdAliases []string `json:"email_as_id_aliases,omitempty" bson:"email_as_id_aliases,omitempty"`
 	Password      string             `json:"password" validate:"required,min=6"`
 	UUID          string             `json:"uuid" bson:"uuid"`
 	Role          string             `json:"role" bson:"role" validate:"required,eq=admin|eq=normal"`                 // role: "admin", "normal"

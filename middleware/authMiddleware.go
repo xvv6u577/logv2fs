@@ -126,7 +126,12 @@ func SelfOrAdmin(paramName string) gin.HandlerFunc {
 		}
 		target := c.Param(paramName)
 		caller := c.GetString("email")
-		if target == "" || caller == "" || target != caller {
+		if target == "" || caller == "" {
+			c.JSON(http.StatusForbidden, gin.H{"error": "forbidden"})
+			c.Abort()
+			return
+		}
+		if target != caller && !helper.SameUserID(c.Request.Context(), caller, target) {
 			c.JSON(http.StatusForbidden, gin.H{"error": "forbidden"})
 			c.Abort()
 			return

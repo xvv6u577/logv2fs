@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/xvv6u577/logv2fs/database"
+	helper "github.com/xvv6u577/logv2fs/helpers"
 	"github.com/xvv6u577/logv2fs/model"
 	singboxctl "github.com/xvv6u577/logv2fs/singbox"
 	"go.mongodb.org/mongo-driver/bson"
@@ -29,18 +30,19 @@ func NormalizeStatus(status string) string {
 }
 
 type userRecord struct {
-	EmailAsId string `bson:"email_as_id"`
-	UUID      string `bson:"uuid"`
-	UserId    string `bson:"user_id"`
-	Name      string `bson:"name"`
-	Role      string `bson:"role"`
-	Status    string `bson:"status"`
+	EmailAsId string   `bson:"email_as_id"`
+	Aliases   []string `bson:"email_as_id_aliases"`
+	UUID      string   `bson:"uuid"`
+	UserId    string   `bson:"user_id"`
+	Name      string   `bson:"name"`
+	Role      string   `bson:"role"`
+	Status    string   `bson:"status"`
 }
 
 func loadUser(ctx context.Context, emailAsId string) (*userRecord, error) {
 	var u userRecord
 	err := database.GetCollection(model.UserTrafficLogs{}).
-		FindOne(ctx, bson.M{"email_as_id": emailAsId}).
+		FindOne(ctx, helper.UserIDFilter(emailAsId)).
 		Decode(&u)
 	if err != nil {
 		return nil, err
@@ -54,7 +56,7 @@ func updateStatus(ctx context.Context, emailAsId, status string) (*userRecord, e
 	var updated userRecord
 	err := database.GetCollection(model.UserTrafficLogs{}).FindOneAndUpdate(
 		ctx,
-		bson.M{"email_as_id": emailAsId},
+		helper.UserIDFilter(emailAsId),
 		bson.M{"$set": bson.M{"status": status, "updated_at": now}},
 		options.FindOneAndUpdate().SetReturnDocument(options.After),
 	).Decode(&updated)
@@ -79,7 +81,13 @@ func SetUserDisabled(ctx context.Context, emailAsId string) (*userRecord, error)
 	if err != nil {
 		return nil, err
 	}
-	go singboxctl.SafeDisableUser(updated.EmailAsId)
+	ids := append([]string{updated.EmailAsId}, updated.Aliases...)
+	for _, id := range ids {
+		if id == "" {
+			continue
+		}
+		go singboxctl.SafeDisableUser(id)
+	}
 	log.Printf("[userstatus] 用户 %s 已手动禁用", updated.Name)
 	return updated, nil
 }
@@ -90,11 +98,18 @@ func SetUserEnabled(ctx context.Context, emailAsId string) (*userRecord, error) 
 	if err != nil {
 		return nil, err
 	}
+	// 主 ID 启用；顺带清掉节点上可能残留的别名用户名
 	go singboxctl.SafeEnableUser(singboxctl.AddUserRequest{
 		EmailAsId: updated.EmailAsId,
 		UUID:      updated.UUID,
 		UserId:    updated.UserId,
 	})
+	for _, id := range updated.Aliases {
+		if id == "" || id == updated.EmailAsId {
+			continue
+		}
+		go singboxctl.SafeRemoveUser(id)
+	}
 	log.Printf("[userstatus] 用户 %s 已手动启用", updated.Name)
 	return updated, nil
 }

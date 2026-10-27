@@ -65,6 +65,9 @@ export default function EditUserModal({ open, user, onClose, onSubmit, submittin
 					<div>
 						<label className="block text-sm text-gray-300 mb-1">邮箱 ID</label>
 						<input type="text" value={user.email_as_id || ""} disabled className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-400 cursor-not-allowed" />
+						{Array.isArray(user.email_as_id_aliases) && user.email_as_id_aliases.length > 0 && (
+							<p className="mt-1 text-xs text-gray-400">旧 ID（仍可用）：{user.email_as_id_aliases.join(", ")}</p>
+						)}
 					</div>
 					<div>
 						<label className="block text-sm text-gray-300 mb-1">用户名</label>

@@ -367,7 +367,7 @@ func SignUp() gin.HandlerFunc {
 		}
 
 		user_email := helper.SanitizeStr(user.Email_As_Id)
-		count, err := database.GetCollection(model.UserTrafficLogs{}).CountDocuments(context.TODO(), bson.M{"email_as_id": user_email})
+		count, err := database.GetCollection(model.UserTrafficLogs{}).CountDocuments(context.TODO(), helper.UserIDFilter(user_email))
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "error occured while checking for the email"})
 			log.Printf("Checking email error: %s", err.Error())
@@ -387,6 +387,7 @@ func SignUp() gin.HandlerFunc {
 		password := HashPassword(user_email)
 		user.Password = password
 
+		user.Email_As_Id = user_email
 		user.CreatedAt = current
 		user.UpdatedAt = current
 
@@ -459,7 +460,7 @@ func Login() gin.HandlerFunc {
 		}
 
 		err := database.GetCollection(model.UserTrafficLogs{}).
-			FindOne(ctx, bson.M{"email_as_id": sanitizedEmail}).
+			FindOne(ctx, helper.UserIDFilter(sanitizedEmail)).
 			Decode(&foundUser)
 		if err != nil {
 			// 不区分"用户不存在"与"密码错误"，避免账号枚举攻击。
@@ -475,7 +476,7 @@ func Login() gin.HandlerFunc {
 			return
 		}
 
-		token, refreshToken, err := helper.GenerateAllTokens(sanitizedEmail, foundUser.UUID, foundUser.Name, foundUser.Role, foundUser.User_id)
+		token, refreshToken, err := helper.GenerateAllTokens(foundUser.Email_As_Id, foundUser.UUID, foundUser.Name, foundUser.Role, foundUser.User_id)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to issue token"})
 			log.Printf("token generation failed: %v", err)
@@ -517,7 +518,7 @@ func EditUser() gin.HandlerFunc {
 
 		// 不需要验证整个结构体，因为我们只是部分更新
 
-		err := database.GetCollection(model.UserTrafficLogs{}).FindOne(ctx, bson.M{"email_as_id": helper.SanitizeStr(name)}).Decode(&foundUser)
+		err := database.GetCollection(model.UserTrafficLogs{}).FindOne(ctx, helper.UserIDFilter(helper.SanitizeStr(name))).Decode(&foundUser)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "user not found"})
 			log.Printf("user not found: %s", name)
@@ -570,7 +571,7 @@ func EditUser() gin.HandlerFunc {
 		var updatedUser UserTrafficLogs
 		err = database.GetCollection(model.UserTrafficLogs{}).FindOneAndUpdate(
 			ctx,
-			bson.M{"email_as_id": helper.SanitizeStr(name)},
+			helper.UserIDFilter(helper.SanitizeStr(name)),
 			bson.M{"$set": newFoundUser},
 			options.FindOneAndUpdate().SetReturnDocument(options.After),
 		).Decode(&updatedUser)
@@ -602,9 +603,11 @@ func DeleteUserByUserName() gin.HandlerFunc {
 		}
 
 		var user UserTrafficLogs
-		filter := bson.M{"email_as_id": name}
+		name = helper.SanitizeStr(name)
+		filter := helper.UserIDFilter(name)
 		var projections = bson.D{
 			{Key: "email_as_id", Value: 1},
+			{Key: "email_as_id_aliases", Value: 1},
 			{Key: "name", Value: 1},
 		}
 		err := database.GetCollection(model.UserTrafficLogs{}).FindOne(context.TODO(), filter, options.FindOne().SetProjection(projections)).Decode(&user)
@@ -628,16 +631,22 @@ func DeleteUserByUserName() gin.HandlerFunc {
 			return
 		}
 
-		// 同步清理拆分出去的周期流量数据，避免新建同名用户时残留历史
+		// 同步清理拆分出去的周期流量数据（主 ID + 别名），避免新建同名用户时残留历史
+		ids := append([]string{user.Email_As_Id}, user.EmailAsIdAliases...)
 		if _, err := database.GetCollection(model.UserTrafficPeriod{}).DeleteMany(
 			context.TODO(),
-			bson.M{"email_as_id": name},
+			bson.M{"email_as_id": bson.M{"$in": ids}},
 		); err != nil {
 			log.Printf("DeleteUserByUserName - cleanup user_traffic_periods failed: %s", err.Error())
 		}
 
-		// 异步通知 sing-box 把该用户从认证列表彻底移除
-		go singboxctl.SafeRemoveUser(user.Email_As_Id)
+		// 异步通知 sing-box：主 ID 与别名都尝试移除（兼容迁移前后节点状态）
+		for _, id := range ids {
+			if id == "" {
+				continue
+			}
+			go singboxctl.SafeRemoveUser(id)
+		}
 
 		log.Printf("Delete user %s successfully!", user.Name)
 		c.JSON(http.StatusOK, gin.H{"message": "Delete user " + user.Name + " successfully!"})
@@ -660,6 +669,7 @@ func GetAllUsers() gin.HandlerFunc {
 		pipeline := mongo.Pipeline{
 			{{Key: "$project", Value: bson.D{
 				{Key: "email_as_id", Value: 1},
+				{Key: "email_as_id_aliases", Value: 1},
 				{Key: "uuid", Value: 1},
 				{Key: "name", Value: 1},
 				{Key: "role", Value: 1},
@@ -710,9 +720,10 @@ func GetUserByName() gin.HandlerFunc {
 
 		// 单用户详情：通过聚合管道注入 daily/monthly/yearly_logs，全部周期不截断。
 		pipeline := mongo.Pipeline{
-			{{Key: "$match", Value: bson.D{{Key: "email_as_id", Value: name}}}},
+			{{Key: "$match", Value: helper.UserIDFilter(helper.SanitizeStr(name))}},
 			{{Key: "$project", Value: bson.D{
 				{Key: "email_as_id", Value: 1},
+				{Key: "email_as_id_aliases", Value: 1},
 				{Key: "used", Value: 1},
 				{Key: "uuid", Value: 1},
 				{Key: "name", Value: 1},
@@ -788,7 +799,7 @@ func GetSubscripionURL() gin.HandlerFunc {
 			{Key: "uuid", Value: 1},
 		}
 		var user UserTrafficLogs
-		err = database.GetCollection(model.UserTrafficLogs{}).FindOne(context.TODO(), bson.M{"email_as_id": name}, options.FindOne().SetProjection(projections)).Decode(&user)
+		err = database.GetCollection(model.UserTrafficLogs{}).FindOne(context.TODO(), helper.UserIDFilter(name), options.FindOne().SetProjection(projections)).Decode(&user)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			log.Printf("GetSubscripionURL error: %v", err)
@@ -873,7 +884,7 @@ func ReturnSingboxJson() gin.HandlerFunc {
 			{Key: "user_id", Value: 1},
 			{Key: "uuid", Value: 1},
 		}
-		err = database.GetCollection(model.UserTrafficLogs{}).FindOne(context.TODO(), bson.M{"email_as_id": name}, options.FindOne().SetProjection(projections)).Decode(&user)
+		err = database.GetCollection(model.UserTrafficLogs{}).FindOne(context.TODO(), helper.UserIDFilter(name), options.FindOne().SetProjection(projections)).Decode(&user)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			log.Printf("ReturnSingboxJson failed: %s", err.Error())
@@ -1144,7 +1155,7 @@ func ReturnVergeYAML() gin.HandlerFunc {
 			{Key: "uuid", Value: 1},
 		}
 		var user UserTrafficLogs
-		err = database.GetCollection(model.UserTrafficLogs{}).FindOne(context.TODO(), bson.M{"email_as_id": name}, options.FindOne().SetProjection(projections)).Decode(&user)
+		err = database.GetCollection(model.UserTrafficLogs{}).FindOne(context.TODO(), helper.UserIDFilter(name), options.FindOne().SetProjection(projections)).Decode(&user)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			log.Printf("ReturnVergeYAML failed: %s", err.Error())

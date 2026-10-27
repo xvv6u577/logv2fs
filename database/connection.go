@@ -96,6 +96,18 @@ func ensureCoreIndexes(ctx context.Context, client *mongo.Client) {
 		}
 		log.Printf("ensureCoreIndexes: %s 唯一索引就绪 (%s, kind, period)", job.collection, job.ownerKey)
 	}
+
+	// 用户别名多键索引：订阅/登录按旧 email_as_id 查找
+	userCol := db.Collection("USER_TRAFFIC_LOGS")
+	aliasIdx := mongo.IndexModel{
+		Keys:    bson.D{{Key: "email_as_id_aliases", Value: 1}},
+		Options: options.Index().SetName("idx_email_as_id_aliases"),
+	}
+	if _, err := userCol.Indexes().CreateOne(ctx, aliasIdx); err != nil {
+		log.Printf("ensureCoreIndexes 警告: email_as_id_aliases 索引失败: %v", err)
+	} else {
+		log.Printf("ensureCoreIndexes: USER_TRAFFIC_LOGS.email_as_id_aliases 索引就绪")
+	}
 }
 
 // function to get the MongoDB client

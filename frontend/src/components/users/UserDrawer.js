@@ -78,9 +78,15 @@ export default function UserDrawer({ user, open, onClose, onCopy, tab = "overvie
 							<span className="text-gray-400">用户名：</span>
 							<span className="text-white">{user.name || "—"}</span>
 						</div>
-						<div>
+						<div className="sm:col-span-2">
 							<span className="text-gray-400">邮箱 ID：</span>
 							<span className="text-white break-all">{user.email_as_id || "—"}</span>
+							{Array.isArray(user.email_as_id_aliases) && user.email_as_id_aliases.length > 0 && (
+								<div className="mt-1 text-xs text-gray-400">
+									旧 ID（仍可用）：
+									<span className="text-gray-300 break-all">{user.email_as_id_aliases.join(", ")}</span>
+								</div>
+							)}
 						</div>
 						<div>
 							<span className="text-gray-400">状态：</span>
